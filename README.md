@@ -8,25 +8,32 @@ Library is split into several modules:
   - color - Color (colour in English) related stuff.
   - fx - Fixed point arithmetic using NumPy data types.
   - math - Useful for mathematical code.
+  - nd - ND-array operations.
   - prng - Pseudo-Random Number Generators. Currently just xoroshiro128+.
+  - test - Helpers for unit testing.
   - vcd - Value Change Dump (from Verilog) reader and writer.
   - yaml - Extended YAML parser, useful for implementing DSLs on top of YAML.
 
-Some useful scripts are provided which show how to use some parts of the library
-modules.
+Some useful scripts are provided in `dmppl/scripts` which show how to use some
+parts of the library modules.
 
-  - corgen - (Correlation Generator) Model SoC signal relations.
-    Part of my PhD project.
-    TODO: add
-  - eva - (EVent Analysis) Measure and visualize correlations between
-    measurements.
-    Part of my PhD project.
-    TODO: add
+  - beamer-times - Report the time breakdown for beamer presentations by reading
+    annotations in the LaTeX.
   - parvec - Generate pseudorandom parameter vectors for design space
     exploration with repeatable results.
   - vcd-utils - Convert VCD (Verilog IEEE1364) files to/from YAML and CSV,
     extract information, or cleanup dodgy VCDs using the forgiving reader
     with strict writer.
+
+Some experiments are given in `dmppl/experiments` which are likely not useful
+to most people.
+
+  - relest - (Relationship Estimation) Model SoC signal relations.
+    Part of my PhD project presented at LOD2019.
+  - eva - (EVent Analysis) Measure and visualize correlations between
+    measurements.
+    Part of my PhD project.
+    TODO: add
 
 Uses [semantic versioning](https://semver.org/spec/v2.0.0.html)
 
@@ -61,10 +68,10 @@ things.
 
 TODO:
 
-  1. Upload to GitHub and PyPI.
+  1. Upload to PyPI.
   2. mypy
-  3. Integrate eva, corgen, corgen-ffnn
+  3. Integrate eva, relest-ffnn
   4. Implement vch, vchlite
   5. Expand documentation here
   6. Sphinx/readthedocs
-  7. Change convention to snake case for idiomatic Python and rust.
+  7. Change convention to snake case for idiomatic Python and rust?

@@ -1,0 +1,21 @@
+
+# Build directory used setuptools.
+build/*
+dist/*
+*.egg-info/*
+
+# Python temporary files.
+*/__pycache__/*
+*.pyc
+*.pyo
+
+# Python virtual environments.
+venv*
+vtst*
+
+# Coverage reports.
+.coverage_*
+coverage*_html_report/*
+
+# Experiment results.
+**/*results/*

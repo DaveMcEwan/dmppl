@@ -468,7 +468,11 @@ def plot_scores(metrics, scores_conglomerate): # {{{
 
     markers = [".", "o", "x", "^", "s", "*", "", "", "", ""]
 
-    fig = 0
+    # figsize used to set dimensions in inches.
+    # ax.set_aspect() doesn't work for KDE where Y-axis is scaled.
+    figsize = (8, 5)
+
+    fignum = 0
     for res_nm,scores in scores_conglomerate:
         # NOTE scores.shape: (<n_sys>, <n_stats>, <n_metrics>)
         if 3 != len(scores.shape): continue # No systems of this type.
@@ -489,9 +493,8 @@ def plot_scores(metrics, scores_conglomerate): # {{{
             fd.write(str(table_avgd))
 
         for c,cmp_nm in enumerate(statNames):
-            # Plot distribution density for metrics.
-            # One plot per Tru, Pos, Neg.
-            fig += 1; plt.figure(fig)
+
+            fignum += 1; fig = plt.figure(fignum, figsize=figsize)
 
             for i,nm in enumerate(metricNames):
 

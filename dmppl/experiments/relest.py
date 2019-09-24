@@ -8,13 +8,13 @@
 # Dave McEwan 2019-04-09
 #
 # Run like:
-#    relest.py scoreplot
+#    relest.py score
 #   OR
 #    relest.py exportcsv
 # Output directory is ./results/
 #
 # Regenerate results for paper with:
-#   time (./relest.py -v scoreplot && ./relest.py -v exportcsv --load-estimated)
+#   time (./relest.py -v score && ./relest.py -v exportcsv --load-estimated)
 
 # Single time window with single behaviour.
 #   ==> Rectangular window is fine.
@@ -58,7 +58,8 @@ import glob
 
 # NOTE: dmppl doesn't include these packages by default so you need to install
 # them manually with something like:
-#   source venv3.7/bin/activate && pip install prettytable seaborn
+#   source venv3.7/bin/activate && pip install joblib prettytable seaborn
+from joblib import Parallel, delayed
 from prettytable import PrettyTable
 import seaborn as sns
 import matplotlib
@@ -75,7 +76,90 @@ __version__ = "0.1.0"
 # Global for convenience since it's used all over the place.
 outdir = None
 
-statNames = ["TPR", "TNR", "PPV", "NPV", "ACC", "BACC", "MCC", "BMI"]
+metrics = [
+    ("Ham", ndHam),
+    ("Tmt", ndTmt),
+    ("Cls", ndCls),
+    ("Cos", ndCos),
+    ("Cov", ndCov),
+    ("Dep", ndDep),
+]
+nMetrics = len(metrics)
+metricNames = [nm for nm,fn in metrics]
+
+# TODO: Move stats to separate module
+
+def TPR(TP, FP, FN, TN): # {{{
+    '''True Positive Rate (Sensitivity, Recall)
+    '''
+    return TP / (TP + FN)
+# }}} TPR
+
+def TNR(TP, FP, FN, TN): # {{{
+    '''True Negative Rate (Specificity, Selectivity)
+    '''
+    return TN / (TN + FP)
+# }}} TNR
+
+def PPV(TP, FP, FN, TN): # {{{
+    '''Positive Predictive Value (Precision)
+    '''
+    return TP / (TP + FP)
+# }}} PPV
+
+def NPV(TP, FP, FN, TN): # {{{
+    '''Negative Predictive Value
+    '''
+    return TN / (TN + FN)
+# }}} NPV
+
+def ACC(TP, FP, FN, TN): # {{{
+    '''Accuracy
+    '''
+    return (TN + TP) / (TN + TP + FN + FP)
+# }}} ACC
+
+def BACC(TP, FP, FN, TN): # {{{
+    '''Balanced Accuracy
+    '''
+    tpr = TPR(TP, FP, FN, TN)
+    tnr = TNR(TP, FP, FN, TN)
+    return (tpr + tnr) / 2
+# }}} BACC
+
+def MCC(TP, FP, FN, TN): # {{{
+    '''Matthews Correlation Coefficient
+
+    https://en.wikipedia.org/wiki/Matthews_correlation_coefficient
+    '''
+    return (TP*TN - FP*FN) / np.sqrt((TP+FP) * (TP+FN) * (TN+FP) * (TN+FN))
+# }}} MCC
+
+def BMI(TP, FP, FN, TN): # {{{
+    '''Book-Maker's Informedness, Youden's_J_statistic
+
+    https://en.wikipedia.org/wiki/Youden%27s_J_statistic
+    '''
+    tpr = TPR(TP, FP, FN, TN)
+    tnr = TNR(TP, FP, FN, TN)
+    return tpr + tnr - 1
+# }}} BMI
+
+# https://en.wikipedia.org/wiki/Confusion_matrix
+# https://en.wikipedia.org/wiki/Evaluation_of_binary_classifiers
+stats = [
+    ("TPR", TPR),
+    ("TNR", TNR),
+    ("PPV", PPV),
+    ("NPV", NPV),
+    ("ACC", ACC),
+    ("BACC", BACC),
+    ("MCC", MCC),
+    ("BMI", BMI),
+]
+nStats = len(stats)
+statNames = [nm for nm,fn in stats]
+
 
 def arcsine_invCDF(u): # {{{
     '''Arcsine distribution inverse CDF
@@ -87,15 +171,15 @@ def arcsine_invCDF(u): # {{{
     return float(r)
 # }}} def arcsine_invCDF
 
-def construct_system(sysNum, n_maxm): # {{{
+def constructSystem(sysNum, n_maxm): # {{{
 
     systems_dir = outdir + "systems" + os.sep
     mkDirP(systems_dir)
 
     # Type of system.
-    # 0 - all AND
-    # 1 - all OR
-    # 2 - all XOR
+    # 0 - only AND
+    # 1 - only OR
+    # 2 - only XOR
     # 3 - monogamous mix
     # 4 - LHA mix
     sysType = int(choice(range(5)))
@@ -169,9 +253,9 @@ def construct_system(sysNum, n_maxm): # {{{
     saveYml(system, systems_dir + system["name"])
 
     return system
-# }}} def construct_system
+# }}} def constructSystem
 
-def system_known(system): # {{{
+def systemKnown(system): # {{{
 
     m = system["m"]
     consrc = system["consrc"]
@@ -195,9 +279,9 @@ def system_known(system): # {{{
                fmt='%d', delimiter='')
 
     return known
-# }}} def system_known
+# }}} def systemKnown
 
-def generate_evs(system, n_time): # {{{
+def generateSamples(system, n_time): # {{{
     sysname = system["name"]
     n_src = system["n_src"]
     density = system["density"]
@@ -246,9 +330,10 @@ def generate_evs(system, n_time): # {{{
     np.savetxt(fname_evs_full + ".txt", evs.astype(np.int),
                fmt='%d', delimiter='')
     return evs
-# }}} def generate_evs
+# }}} def generateSamples
 
-def export_csv_KnownMeasured(system, evs, known, estimated, n_time, metrics): # {{{
+def export_csv_KnownMeasured(system, evs, known, estimated, n_time): # {{{
+    # TODO: This all needs looking at. Probably broken!
 
     def metricIndex(nm):
         nms = [m[0] for m in metrics]
@@ -337,15 +422,14 @@ def export_csv_KnownMeasured(system, evs, known, estimated, n_time, metrics): # 
                 )
                 fd.write(line + '\n')
 
-    return 0
+    return
 # }}} def export_csv_KnownMeasured
 
-def estimate_similarities(system, metrics, evs, n_time): # {{{
+def performEstimations(system, evs, n_time): # {{{
 
     estimateds_dir = outdir + "estimated" + os.sep
     mkDirP(estimateds_dir)
 
-    nMetrics = len(metrics)
     m = system["m"]
 
     #W = powsineCoeffs(n_time, 0) # Rectangular
@@ -363,68 +447,27 @@ def estimate_similarities(system, metrics, evs, n_time): # {{{
                 estimated[f][i][j] = fn(W, evs[j], evs[i])
                 np.savetxt(fname_estimated + ".%s.txt" % nm,
                            estimated[f], fmt='%0.03f')
+
     saveNpy(estimated, fname_estimated)
     return estimated
-# }}} def estimate_similarities
+# }}} def performEstimations
 
-def compare_scores(system, known, estimated, metrics, scorespace): # {{{
-    nMetrics = len(metrics)
-    metricNames = [nm for nm,fn in metrics]
+def scoreSystem(system, known, estimated): # {{{
 
-    # Calculate similarity metrics into matrices and compare.
+    # Calculate confusion matrix for each metric in parallel.
     kno_pos = np.asarray([known for _ in estimated])
     kno_neg = 1 - kno_pos
-    mea_pos = estimated
-    mea_neg = 1 - estimated
-    TN = np.sum(np.triu(np.minimum(kno_neg, mea_neg), 1), axis=(1,2))
-    TP = np.sum(np.triu(np.minimum(kno_pos, mea_pos), 1), axis=(1,2))
-    FN = np.sum(np.triu(np.minimum(kno_pos, mea_neg), 1), axis=(1,2))
-    FP = np.sum(np.triu(np.minimum(kno_neg, mea_pos), 1), axis=(1,2))
+    est_pos = estimated
+    est_neg = 1 - estimated
+    TN = np.sum(np.triu(np.minimum(kno_neg, est_neg), 1), axis=(1,2))
+    TP = np.sum(np.triu(np.minimum(kno_pos, est_pos), 1), axis=(1,2))
+    FN = np.sum(np.triu(np.minimum(kno_pos, est_neg), 1), axis=(1,2))
+    FP = np.sum(np.triu(np.minimum(kno_neg, est_pos), 1), axis=(1,2))
     assert FN.shape == TN.shape == TP.shape == FP.shape == \
         (nMetrics,), (FN.shape, TN.shape, TP.shape, FP.shape)
 
-    # Higher is always better.
-    # https://en.wikipedia.org/wiki/Confusion_matrix
-    # https://en.wikipedia.org/wiki/Evaluation_of_binary_classifiers
     with np.errstate(divide='ignore', invalid='ignore'):
-
-        # True Positive Rate, Sensitivity, Recall
-        TPR = TP / (TP + FN)
-
-        # True Negative Rate, Specificity, Selectivity
-        TNR = TN / (TN + FP)
-
-        # Positive Predictive Value, Precision
-        PPV = TP / (TP + FP)
-
-        # Negative Predictive Value
-        NPV = TN / (TN + FN)
-
-        # Accuracy
-        # NOTE: does not perform well with imbalanced data sets.
-        ACC = (TN + TP) / (TN + TP + FN + FP)
-
-        # Balanced Accuracy
-        BACC = (TPR + TNR) / 2
-
-        # Matthews Correlation Coefficient
-        # https://en.wikipedia.org/wiki/Matthews_correlation_coefficient
-        MCC = (TP*TN - FP*FN) / np.sqrt((TP+FP) * (TP+FN) * (TN+FP) * (TN+FN))
-
-        # Book-Maker's Informedness, Youden's_J_statistic
-        # https://en.wikipedia.org/wiki/Youden%27s_J_statistic
-        BMI = TPR + TNR - 1
-
-    assert (nMetrics,) == TPR.shape == TNR.shape \
-                       == PPV.shape == NPV.shape \
-                       == ACC.shape == BACC.shape \
-                       == MCC.shape == BMI.shape, \
-        (nMetrics, TPR.shape, TNR.shape,
-                   PPV.shape, NPV.shape,
-                   ACC.shape, BACC.shape,
-                   MCC.shape, BMI.shape)
-
-    sysScore = [TPR, TNR, PPV, NPV, ACC, BACC, MCC, BMI]
+        sysScore = [fn(TP, FP, FN, TN) for nm,fn in stats]
 
     # Print score for this system in table.
     scoretable_dir = outdir + "scoretables" + os.sep
@@ -440,32 +483,38 @@ def compare_scores(system, known, estimated, metrics, scorespace): # {{{
     with open(fname_table, 'w') as fd:
         fd.write(str(table))
 
+    return (system["sysType"], sysScore)
+# }}} def scoreSystem
 
-    scores_and = scorespace[0]
-    scores_or  = scorespace[1]
-    scores_xor = scorespace[2]
-    scores_mix = scorespace[3]
-    scores_lha = scorespace[4]
-    scores_all = scorespace[5]
+def tabulateScores(scoresByTypename): # {{{
 
-    scores_all.append(sysScore)
+    for sysTypename,scores in scoresByTypename:
+        # NOTE scores.shape: (<n_sys>, <n_stats>, <n_metrics>)
+        if 3 != len(scores.shape): continue # No systems of this type.
 
-    sysType = system["sysType"]
-    if 0 == sysType: scores_and.append(sysScore)
-    elif 1 == sysType: scores_or.append(sysScore)
-    elif 2 == sysType: scores_xor.append(sysScore)
-    elif 3 == sysType: scores_mix.append(sysScore)
-    elif 4 == sysType: scores_lha.append(sysScore)
+        # Average scores over all systems and tabulate.
+        sysScoresMean = np.mean(scores, axis=0)
 
-    return None
-# }}} def compare_scores
+        table = PrettyTable(["Metric"] + statNames)
+        rows = zip(metricNames, *sysScoresMean)
+        for row in rows:
+            rowStrings = [(col if 0 == i else "%.04f" % col) \
+                          for i,col in enumerate(row)]
+            table.add_row(rowStrings)
 
-def plot_scores(metrics, scores_conglomerate): # {{{
+        #dbg(table)
+        with open(outdir + "mean.%s.table.txt" % sysTypename, 'w') as fd:
+            fd.write(str(table))
 
-    metricNames = [nm for nm,fn in metrics]
+    return
+# }}} def tabulateScores
 
-    plot_dir = outdir + "plot" + os.sep
-    mkDirP(plot_dir)
+def plotScores(scoresByTypename): # {{{
+
+    plotDir = outdir + "plot" + os.sep
+    mkDirP(plotDir)
+    plotPathFmtPdf = plotDir + "relest_%s_%s.pdf"
+    plotPathFmtPng = plotDir + "relest_%s_%s.png"
 
     markers = [".", "o", "x", "^", "s", "*", "", "", "", ""]
 
@@ -474,48 +523,31 @@ def plot_scores(metrics, scores_conglomerate): # {{{
     figsize = (8, 5)
 
     fignum = 0
-    for res_nm,scores in scores_conglomerate:
+    for sysTypename,scores in scoresByTypename:
         # NOTE scores.shape: (<n_sys>, <n_stats>, <n_metrics>)
         if 3 != len(scores.shape): continue # No systems of this type.
 
-        # Average scores over all systems and tabulate.
-        system_mean = np.mean(scores, axis=0)
-
-        fname_avgd = outdir + "mean.%s.table.txt" % res_nm
-        table_avgd = PrettyTable(["Metric"] + statNames)
-        rows = zip(metricNames, *system_mean)
-        for row in rows:
-            rowStrings = [(col if 0 == i else "%.04f" % col) \
-                          for i,col in enumerate(row)]
-            table_avgd.add_row(rowStrings)
-
-        #dbg(table_avgd)
-        with open(fname_avgd, 'w') as fd:
-            fd.write(str(table_avgd))
-
-        for c,cmp_nm in enumerate(statNames):
+        for s,statName in enumerate(statNames):
 
             fignum += 1; fig = plt.figure(fignum, figsize=figsize)
 
-            for i,nm in enumerate(metricNames):
+            for i,metricName in enumerate(metricNames):
 
-                dataset = np.nan_to_num(scores[:, c, i])
+                dataset = np.nan_to_num(scores[:, s, i])
                 if 1 == dataset.shape[0]: # Seaborn won't plot single values.
                     # Repeat existing value to avoid crash.
                     dataset = [dataset[0], dataset[0]+1e-5]
 
-                sns.kdeplot(dataset, label=nm, marker=markers[i], markevery=5)
+                sns.kdeplot(dataset, label=metricName, marker=markers[i], markevery=5)
 
             plt.legend()
             plt.yticks([])
             plt.xlim(0, 1)
-            plt.savefig(plot_dir + "relest_%s_%s.pdf" % (res_nm, cmp_nm),
-                        bbox_inches="tight")
-            plt.savefig(plot_dir + "relest_%s_%s.png" % (res_nm, cmp_nm),
-                        bbox_inches="tight")
+            plt.savefig(plotPathFmtPdf % (sysTypename, statName), bbox_inches="tight")
+            plt.savefig(plotPathFmtPng % (sysTypename, statName), bbox_inches="tight")
             plt.close()
 
-    return 0
+    return
 # }}} def plot_scores
 
 # {{{ argparser
@@ -534,14 +566,19 @@ argparser.add_argument("outdir",
 
 argparser.add_argument("action",
     type=str,
-    default="scoreplot",
-    choices=["scoreplot", "exportcsv"],
+    default="score",
+    choices=["score", "exportcsv"],
     help="What to do...")
 
 argparser.add_argument("-q", "--quickdbg",
     default=False,
     action='store_true',
     help="Use very low preset values for n_time, n_sys, n_maxm. Just for debug.")
+
+argparser.add_argument("-j", "--n_jobs",
+    type=int,
+    default=-2,
+    help="Number of parallel jobs, where applicable.")
 
 argparser.add_argument("--load-system",
     default=False,
@@ -590,23 +627,12 @@ def main(args): # {{{
     outdir = args.outdir + \
         ("" if args.outdir.endswith(os.sep) else os.sep)
 
+    mkDirP(outdir)
+
     if args.quickdbg:
         args.n_time = 20
         args.n_sys = 20
         args.n_maxm = 10
-
-    mkDirP(outdir)
-
-    metrics = [
-        #("cEx", ndCex),
-        ("Ham", ndHam),
-        ("Tmt", ndTmt),
-        ("Cls", ndCls),
-        ("Cos", ndCos),
-        ("Cov", ndCov),
-        ("Dep", ndDep),
-    ]
-    nMetrics = len(metrics)
 
     # Use of generator comprehensions allows only required data to be
     # either generated or read from file once.
@@ -623,7 +649,7 @@ def main(args): # {{{
     if args.action == "exportcsv":
         load_score = False
         make_score = False
-    elif args.action == "scoreplot":
+    elif args.action == "score":
         load_score = args.load_score
         make_score = not load_score
 
@@ -649,13 +675,13 @@ def main(args): # {{{
     elif make_system:
         verb("Constructing systems... ", end='')
         n_sys = args.n_sys
-        systems = [construct_system(sysNum, args.n_maxm) \
+        systems = [constructSystem(sysNum, args.n_maxm) \
                    for sysNum in range(n_sys)]
-        knowns = (system_known(system) for system in systems)
+        knowns = (systemKnown(system) for system in systems)
         verb("Done")
 
 
-    # Generate data from constructed systems.
+    # Generate and collect EVent Samples (EVS) from constructed systems.
     if load_evs:
         verb("Loading EVSs... ", end='')
         EVSs_fname_fmt = outdir + "evs" + os.sep + \
@@ -669,7 +695,7 @@ def main(args): # {{{
     elif make_evs:
         verb("Generating EVSs... ", end='')
         n_time = args.n_time
-        EVSs = (generate_evs(system, n_time) for system in systems)
+        EVSs = (generateSamples(system, n_time) for system in systems)
         verb("Lazy")
 
 
@@ -684,51 +710,55 @@ def main(args): # {{{
         verb("Lazy")
     elif make_estimated:
         verb("Performing estimations... ", end='')
-        estimateds = (estimate_similarities(system, metrics, evs,
-                                          n_time) \
-                     for system,evs in zip(systems, EVSs))
+        estimateds = (performEstimations(system, evs, n_time) \
+                      for system,evs in zip(systems, EVSs))
         verb("Lazy")
 
 
     if args.action == "exportcsv":
-
+        # NOTE: Incomplete and probably broken.
         verb("Exporting CSVs... ", end='')
         for system,evs,known,estimated in zip(systems,EVSs,knowns,estimateds):
-            export_csv_KnownMeasured(system, evs, known, estimated,
-                                     n_time, metrics)
+            export_csv_KnownMeasured(system, evs, known, estimated, n_time)
         verb("Done")
 
-    elif args.action == "scoreplot":
+    elif args.action == "score":
 
-        # Average scores over systems.
-        # 3 is |{ACC, PPV, NPV}|
-        fname_scores = outdir + "scores.%s"
-        scorespace_names = ["and", "or", "xor", "mix", "lha", "all"]
-        scorespace = tuple([] for _ in scorespace_names)
+        fnameFmtScores = outdir + "scores.%s"
+        sysTypenames = ["and", "or", "xor", "mix", "lha"] # "all" is appended
 
         if load_score:
             verb("Loading scores... ", end='')
-            scores_conglomerate = [(nm, loadNpy(fname_scores % nm)) \
-                                    for nm in scorespace_names]
+            scoresByTypename = [(sysTypename, loadNpy(fnameFmtScores % sysTypename)) \
+                                for sysTypename in sysTypenames + ["all"]]
             verb("Done")
         elif make_score:
-            verb("Scoring metric performance... ", end='')
-            # Score how well each metric performed.
-            for system,known,estimated in zip(systems,knowns,estimateds):
-                compare_scores(system, known, estimated, metrics, scorespace)
-
-            scores_conglomerate = [(nm, np.asarray(scorespace[i])) \
-                                    for i,nm in enumerate(scorespace_names)]
+            verb("Scoring metric performance of each system... ", end='')
+            # Parallelize (one job per system) scoring which includes performing
+            # or loading the estimations since they are lazy.
+            # NOTE: scores is ( (<sysType>, <sysScore>), ... )
+            scores = Parallel(n_jobs=args.n_jobs) \
+                (delayed(scoreSystem)(s, k, e) \
+                    for s,k,e in zip(systems,knowns,estimateds))
             verb("Done")
+
+            # NOTE: Each score ndarray shape is (<n_sys>, <nStats>, <nMetrics>)
+            scoresByTypename = \
+                [(sysTypename, np.asarray([score for t,score in scores if t == i]) ) \
+                 for i,sysTypename in enumerate(sysTypenames)] + \
+                [("all", np.asarray([score for _,score in scores]))]
 
             verb("Saving scores... ", end='')
-            assert np.asarray(scorespace[-1]).shape == (n_sys, len(statNames), nMetrics)
-            for nm,scores in scores_conglomerate:
-                saveNpy(scores, fname_scores % nm)
+            for sysTypename,monotypeScores in scoresByTypename:
+                saveNpy(monotypeScores, fnameFmtScores % sysTypename)
             verb("Done")
 
+        verb("Tabulating... ", end='')
+        tabulateScores(scoresByTypename)
+        verb("Done")
+
         verb("Plotting... ", end='')
-        plot_scores(metrics, scores_conglomerate)
+        plotScores(scoresByTypename)
         verb("Done")
 
 

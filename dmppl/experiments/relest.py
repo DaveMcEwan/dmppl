@@ -87,7 +87,7 @@ def arcsine_invCDF(u): # {{{
     return float(r)
 # }}} def arcsine_invCDF
 
-def construct_system(sysnum, n_maxm): # {{{
+def construct_system(sysNum, n_maxm): # {{{
 
     systems_dir = outdir + "systems" + os.sep
     mkDirP(systems_dir)
@@ -98,10 +98,10 @@ def construct_system(sysnum, n_maxm): # {{{
     # 2 - all XOR
     # 3 - monogamous mix
     # 4 - LHA mix
-    systype = int(choice(range(5)))
+    sysType = int(choice(range(5)))
 
     # Unique name allowing simple id/search.
-    name = "system%06d" % (sysnum)
+    name = "system%06d" % (sysNum)
 
     # Number of measurement nodes.
     n_src = int(np.ceil(uniform() * (n_maxm-1))) + 1
@@ -128,14 +128,14 @@ def construct_system(sysnum, n_maxm): # {{{
     assert len(consrc) == n_dst, "Need a list of sources for each dst."
 
     # Operations used to combine connections.
-    assert systype in range(5)
-    if systype in [0,1,2]: # all AND/OR/XOR
-        conop = [[None] + [systype]*(n-1) \
+    assert sysType in range(5)
+    if sysType in [0,1,2]: # all AND/OR/XOR
+        conop = [[None] + [sysType]*(n-1) \
                  for n in n_con]
-    elif systype == 3: # monogamous mix
+    elif sysType == 3: # monogamous mix
         conop = [[None] + [int(choice(range(3)))]*(n-1) \
                  for n in n_con]
-    elif systype == 4: # LHA mix
+    elif sysType == 4: # LHA mix
         conop = [[None] + [int(choice(range(3))) for ss in range(n-1)] \
                  for n in n_con]
     assert len(conop) == n_dst, "Need a list of operations for each dst."
@@ -156,7 +156,7 @@ def construct_system(sysnum, n_maxm): # {{{
 
     # Save system in YAML format.
     system = {
-        "systype": systype,
+        "sysType": sysType,
         "name": name,
         "n_src": n_src,
         "n_dst": n_dst,
@@ -371,13 +371,6 @@ def compare_scores(system, known, estimated, metrics, scorespace): # {{{
     nMetrics = len(metrics)
     metricNames = [nm for nm,fn in metrics]
 
-    scores_and = scorespace[0]
-    scores_or  = scorespace[1]
-    scores_xor = scorespace[2]
-    scores_mix = scorespace[3]
-    scores_lha = scorespace[4]
-    scores_all = scorespace[5]
-
     # Calculate similarity metrics into matrices and compare.
     kno_pos = np.asarray([known for _ in estimated])
     kno_neg = 1 - kno_pos
@@ -431,14 +424,14 @@ def compare_scores(system, known, estimated, metrics, scorespace): # {{{
                    ACC.shape, BACC.shape,
                    MCC.shape, BMI.shape)
 
-    system_score = [TPR, TNR, PPV, NPV, ACC, BACC, MCC, BMI]
+    sysScore = [TPR, TNR, PPV, NPV, ACC, BACC, MCC, BMI]
 
     # Print score for this system in table.
     scoretable_dir = outdir + "scoretables" + os.sep
     mkDirP(scoretable_dir)
     fname_table = scoretable_dir + system["name"] + ".table.txt"
     table = PrettyTable(["Metric"] + statNames)
-    rows = zip(metricNames, *system_score)
+    rows = zip(metricNames, *sysScore)
     for row in rows:
         rowStrings = [(col if 0 == i else "%.04f" % col) \
                       for i,col in enumerate(row)]
@@ -447,14 +440,22 @@ def compare_scores(system, known, estimated, metrics, scorespace): # {{{
     with open(fname_table, 'w') as fd:
         fd.write(str(table))
 
-    scores_all.append(system_score)
 
-    systype = system["systype"]
-    if 0 == systype: scores_and.append(system_score)
-    elif 1 == systype: scores_or.append(system_score)
-    elif 2 == systype: scores_xor.append(system_score)
-    elif 3 == systype: scores_mix.append(system_score)
-    elif 4 == systype: scores_lha.append(system_score)
+    scores_and = scorespace[0]
+    scores_or  = scorespace[1]
+    scores_xor = scorespace[2]
+    scores_mix = scorespace[3]
+    scores_lha = scorespace[4]
+    scores_all = scorespace[5]
+
+    scores_all.append(sysScore)
+
+    sysType = system["sysType"]
+    if 0 == sysType: scores_and.append(sysScore)
+    elif 1 == sysType: scores_or.append(sysScore)
+    elif 2 == sysType: scores_xor.append(sysScore)
+    elif 3 == sysType: scores_mix.append(sysScore)
+    elif 4 == sysType: scores_lha.append(sysScore)
 
     return None
 # }}} def compare_scores
@@ -648,8 +649,8 @@ def main(args): # {{{
     elif make_system:
         verb("Constructing systems... ", end='')
         n_sys = args.n_sys
-        systems = [construct_system(sysnum, args.n_maxm) \
-                   for sysnum in range(n_sys)]
+        systems = [construct_system(sysNum, args.n_maxm) \
+                   for sysNum in range(n_sys)]
         knowns = (system_known(system) for system in systems)
         verb("Done")
 

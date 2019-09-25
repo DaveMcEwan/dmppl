@@ -70,6 +70,7 @@ from dmppl.base import *
 from dmppl.math import *
 from dmppl.nd import *
 from dmppl.yaml import *
+import dmppl.stats
 
 __version__ = "0.1.0"
 
@@ -89,73 +90,17 @@ metricNames = [nm for nm,fn in metrics]
 
 # TODO: Move stats to separate module
 
-def TPR(TP, FP, FN, TN): # {{{
-    '''True Positive Rate (Sensitivity, Recall)
-    '''
-    return TP / (TP + FN)
-# }}} TPR
-
-def TNR(TP, FP, FN, TN): # {{{
-    '''True Negative Rate (Specificity, Selectivity)
-    '''
-    return TN / (TN + FP)
-# }}} TNR
-
-def PPV(TP, FP, FN, TN): # {{{
-    '''Positive Predictive Value (Precision)
-    '''
-    return TP / (TP + FP)
-# }}} PPV
-
-def NPV(TP, FP, FN, TN): # {{{
-    '''Negative Predictive Value
-    '''
-    return TN / (TN + FN)
-# }}} NPV
-
-def ACC(TP, FP, FN, TN): # {{{
-    '''Accuracy
-    '''
-    return (TN + TP) / (TN + TP + FN + FP)
-# }}} ACC
-
-def BACC(TP, FP, FN, TN): # {{{
-    '''Balanced Accuracy
-    '''
-    tpr = TPR(TP, FP, FN, TN)
-    tnr = TNR(TP, FP, FN, TN)
-    return (tpr + tnr) / 2
-# }}} BACC
-
-def MCC(TP, FP, FN, TN): # {{{
-    '''Matthews Correlation Coefficient
-
-    https://en.wikipedia.org/wiki/Matthews_correlation_coefficient
-    '''
-    return (TP*TN - FP*FN) / np.sqrt((TP+FP) * (TP+FN) * (TN+FP) * (TN+FN))
-# }}} MCC
-
-def BMI(TP, FP, FN, TN): # {{{
-    '''Book-Maker's Informedness, Youden's_J_statistic
-
-    https://en.wikipedia.org/wiki/Youden%27s_J_statistic
-    '''
-    tpr = TPR(TP, FP, FN, TN)
-    tnr = TNR(TP, FP, FN, TN)
-    return tpr + tnr - 1
-# }}} BMI
-
 # https://en.wikipedia.org/wiki/Confusion_matrix
 # https://en.wikipedia.org/wiki/Evaluation_of_binary_classifiers
 stats = [
-    ("TPR", TPR),
-    ("TNR", TNR),
-    ("PPV", PPV),
-    ("NPV", NPV),
-    ("ACC", ACC),
-    ("BACC", BACC),
-    ("MCC", MCC),
-    ("BMI", BMI),
+    ("TPR",  dmppl.stats.truePositiveRate),
+    ("TNR",  dmppl.stats.trueNegativeRate),
+    ("PPV",  dmppl.stats.positivePredictiveValue),
+    ("NPV",  dmppl.stats.negativePredictiveValue),
+    ("ACC",  dmppl.stats.accuracy),
+    ("BACC", dmppl.stats.balancedAccuracy),
+    ("MCC",  dmppl.stats.matthewsCorrelation),
+    ("BMI",  dmppl.stats.bookmakersInformedness),
 ]
 nStats = len(stats)
 statNames = [nm for nm,fn in stats]

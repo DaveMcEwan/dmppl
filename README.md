@@ -10,6 +10,7 @@ Library is split into several modules:
   - math - Useful for mathematical code.
   - nd - ND-array operations.
   - prng - Pseudo-Random Number Generators. Currently just xoroshiro128+.
+  - stats - Statistics. Currently just for binary classifiers.
   - test - Helpers for unit testing.
   - vcd - Value Change Dump (from Verilog) reader and writer.
   - yaml - Extended YAML parser, useful for implementing DSLs on top of YAML.

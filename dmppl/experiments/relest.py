@@ -326,46 +326,46 @@ def generateSamples(system, n_time): # {{{
 
     evs = np.vstack((evs_src, evs_dst))
     fname_evs_full = EVSs_dir + sysname + ".evs"
-    saveNpy(evs, fname_evs_full)
     np.savetxt(fname_evs_full + ".txt", evs.astype(np.int),
                fmt='%d', delimiter='')
-    return evs
+    saveNpy(evs, fname_evs_full)
+    return
 # }}} def generateSamples
 
-def export_csv_KnownMeasured(system, evs, known, estimated, n_time): # {{{
-    # TODO: This all needs looking at. Probably broken!
+def exportCsv(system, evs, known, estimated, n_time): # {{{
+    '''Write a CSV file for a single system containing various metrics on the
+    node-to-node relationships.
 
-    def metricIndex(nm):
-        nms = [m[0] for m in metrics]
-        return indexDefault(nms, nm)
+    This is intended to be used as a dataset to feed a learning model.
+    '''
 
-    Ham_idx = metricIndex("Ham")
-    Tmt_idx = metricIndex("Tmt")
-    Cls_idx = metricIndex("Cls")
-    Cos_idx = metricIndex("Cos")
-    Cov_idx = metricIndex("Cov")
-    Dep_idx = metricIndex("Dep")
-
-    csv_dir = outdir + "csv" + os.sep
-    mkDirP(csv_dir)
-
-    line_fmt = ", ".join([
-        "{known_XpairY:d}",
-        "{Ex_X:0.6f}",
-        "{Ex_Y:0.6f}",
-        "{Ex_XgivenY:0.6f}",
-        "{Ex_YgivenX:0.6f}",
-        "{Ex_XconvY:0.6f}",
-        "{Ex_XabsdifY:0.6f}",
-        "{Ham:0.6f}", # Reflection of Ex_XabsdifY.
-        "{Tmt:0.6f}",
-        "{Cls:0.6f}",
-        "{Cos:0.6f}",
-        "{Cov:0.6f}",
-        "{Dep:0.6f}",
-    ])
+    csvDir = outdir + "csv" + os.sep
+    mkDirP(csvDir)
 
     sysname = system["name"]
+    fnameCsv = csvDir + sysname + ".csv"
+
+    # [ (<title>, <format>), ... ]
+    columns = [
+        ("Xnode",       "{Xnode:d}"),
+        ("Ynode",       "{Ynode:d}"),
+        ("Known",       "{known_XpairY:d}"),
+        ("Ex[X]",       "{Ex_X:0.6f}"),
+        ("Ex[Y]",       "{Ex_Y:0.6f}"),
+        ("Ex[X|Y]",     "{Ex_XgivenY:0.6f}"),
+        ("Ex[Y|X]",     "{Ex_YgivenX:0.6f}"),
+        ("Ex[X*Y]",     "{Ex_XconvY:0.6f}"),
+        ("Ex[|X-Y|]",   "{Ex_XabsdifY:0.6f}"),
+        ('"Ham(X,Y)"',    "{Ham:0.6f}"),
+        ('"Tmt(X,Y)"',    "{Tmt:0.6f}"),
+        ('"Cls(X,Y)"',    "{Cls:0.6f}"),
+        ('"Cos(X,Y)"',    "{Cos:0.6f}"),
+        ('"Cov(X,Y)"',    "{Cov:0.6f}"),
+        ('"Dep(X,Y)"',    "{Dep:0.6f}"),
+    ]
+    titleLine = ", ".join([t for t,f in columns])
+    lineFmt = ", ".join([f for t,f in columns])
+
     m = system["m"]
     assert m == len(evs), (m, len(evs))
     assert known.shape == (m,m), (known.shape, m)
@@ -375,13 +375,15 @@ def export_csv_KnownMeasured(system, evs, known, estimated, n_time): # {{{
     W = powsineCoeffs(n_time, 2) # Raised Cosine
     #W = powsineCoeffs(n_time, 4) # Alternative Blackman
 
-    fname_csv = csv_dir + sysname + ".KnownMeasured.csv"
-    with open(fname_csv, 'a') as fd:
-        for i in range(m): # Row "from"
-            for j in range(i+1, m): # Column "to". Upper triangle only.
+    with open(fnameCsv, 'w') as fd:
+        print(titleLine, file=fd)
 
-                X = evs[j]
-                Y = evs[i]
+        # NOTE: All metrics are symmetrical,
+        for i in range(m): # Row
+            for j in range(i+1, m): # Column. Upper triangle only.
+
+                X = evs[i]
+                Y = evs[j]
 
                 # Find known value.
                 known_XpairY = known[i][j]
@@ -396,16 +398,17 @@ def export_csv_KnownMeasured(system, evs, known, estimated, n_time): # {{{
 
                 Ex_XabsdifY = ndEx(W, ndAbsDiff(X, Y))
 
-                # Calculate metrics.
-                Ham = ndHam(W, X, Y) if Ham_idx is None else estimated[Ham_idx][i][j]
-                Tmt = ndTmt(W, X, Y) if Tmt_idx is None else estimated[Tmt_idx][i][j]
-                Cls = ndCls(W, X, Y) if Cls_idx is None else estimated[Cls_idx][i][j]
-                Cos = ndCos(W, X, Y) if Cos_idx is None else estimated[Cos_idx][i][j]
-                Cov = ndCov(W, X, Y) if Cov_idx is None else estimated[Cov_idx][i][j]
-                Dep = ndDep(W, X, Y) if Dep_idx is None else estimated[Dep_idx][i][j]
+                # Lookup metrics from previous calculation.
+                Ham = estimated[metricNames.index("Ham")][i][j]
+                Tmt = estimated[metricNames.index("Tmt")][i][j]
+                Cls = estimated[metricNames.index("Cls")][i][j]
+                Cos = estimated[metricNames.index("Cos")][i][j]
+                Cov = estimated[metricNames.index("Cov")][i][j]
+                Dep = estimated[metricNames.index("Dep")][i][j]
 
-                # Format into data line.
-                line = line_fmt.format(
+                line = lineFmt.format(
+                    Xnode       =i,
+                    Ynode       =j,
                     known_XpairY=known_XpairY,
                     Ex_X        =Ex_X,
                     Ex_Y        =Ex_Y,
@@ -420,10 +423,10 @@ def export_csv_KnownMeasured(system, evs, known, estimated, n_time): # {{{
                     Cov         =Cov,
                     Dep         =Dep,
                 )
-                fd.write(line + '\n')
+                print(line, file=fd)
 
     return
-# }}} def export_csv_KnownMeasured
+# }}} def exportCsv
 
 def performEstimations(system, evs, n_time): # {{{
 
@@ -449,7 +452,7 @@ def performEstimations(system, evs, n_time): # {{{
                            estimated[f], fmt='%0.03f')
 
     saveNpy(estimated, fname_estimated)
-    return estimated
+    return
 # }}} def performEstimations
 
 def scoreSystem(system, known, estimated): # {{{
@@ -628,6 +631,7 @@ def main(args): # {{{
         ("" if args.outdir.endswith(os.sep) else os.sep)
 
     mkDirP(outdir)
+    verb("outdir: %s" % outdir)
 
     if args.quickdbg:
         args.n_time = 20
@@ -636,15 +640,14 @@ def main(args): # {{{
 
     # Use of generator comprehensions allows only required data to be
     # either generated or read from file once.
+    if args.load_score:      args.load_estimated = True
     if args.load_estimated:  args.load_evs = True
-    if args.load_evs:       args.load_system = True
+    if args.load_evs:        args.load_system = True
 
     load_system = args.load_system
     make_system = not load_system
     load_evs = args.load_evs
-    make_evs = not load_evs
     load_estimated = args.load_estimated
-    make_estimated = not load_estimated
 
     if args.action == "exportcsv":
         load_score = False
@@ -681,46 +684,54 @@ def main(args): # {{{
         verb("Done")
 
 
-    # Generate and collect EVent Samples (EVS) from constructed systems.
-    if load_evs:
-        verb("Loading EVSs... ", end='')
-        EVSs_fname_fmt = outdir + "evs" + os.sep + \
-                         "system*.evs.npy.gz"
-        EVSs_fnames = sorted([f for f in glob.glob(EVSs_fname_fmt)])
-        assert len(systems) == len(EVSs_fnames)
+    # Generate and write EVent Samples (EVS) from constructed systems to disk.
+    if not load_evs:
+        verb("Generating EVSs... ", end='', sv_tm=True)
+        n_time = args.n_time
+        _ = Parallel(n_jobs=args.n_jobs) \
+                (delayed(generateSamples)(system, n_time) \
+                    for system in systems)
+        verb("Done", rpt_tm=True)
+
+    # Lazily read EVS from disk.
+    verb("Loading EVSs... ", end='')
+    EVSs_fname_fmt = outdir + "evs" + os.sep + \
+                     "system*.evs.npy.gz"
+    EVSs_fnames = sorted([f for f in glob.glob(EVSs_fname_fmt)])
+    assert len(systems) == len(EVSs_fnames)
+    EVSs = (loadNpy(f) for f in EVSs_fnames)
+
+    n_time = loadNpy(EVSs_fnames[0]).shape[1]
+    verb("Lazy")
+
+
+    # Perform estimations on generated data and write out to disk.
+    if not load_estimated:
+        verb("Performing estimations... ", end='', sv_tm=True)
+        _ = Parallel(n_jobs=args.n_jobs) \
+                (delayed(performEstimations)(system, evs, n_time) \
+                    for system,evs in zip(systems, EVSs))
+        verb("Done", rpt_tm=True)
+
+        # Redefine generator to allow it to be reconsumed later
         EVSs = (loadNpy(f) for f in EVSs_fnames)
 
-        n_time = loadNpy(EVSs_fnames[0]).shape[1]
-        verb("Lazy")
-    elif make_evs:
-        verb("Generating EVSs... ", end='')
-        n_time = args.n_time
-        EVSs = (generateSamples(system, n_time) for system in systems)
-        verb("Lazy")
-
-
-    # Perform estimations on generated data.
-    if load_estimated:
-        verb("Loading estimations... ", end='')
-        estimateds_fname_fmt = outdir + "estimated" + os.sep + \
-                              "system*.estimated.npy.gz"
-        estimateds_fnames = sorted([f for f in glob.glob(estimateds_fname_fmt)])
-        assert len(systems) == len(estimateds_fnames)
-        estimateds = (loadNpy(f) for f in estimateds_fnames)
-        verb("Lazy")
-    elif make_estimated:
-        verb("Performing estimations... ", end='')
-        estimateds = (performEstimations(system, evs, n_time) \
-                      for system,evs in zip(systems, EVSs))
-        verb("Lazy")
+    # Lazily read estimations from disk.
+    verb("Loading estimations... ", end='')
+    estimateds_fname_fmt = outdir + "estimated" + os.sep + \
+                          "system*.estimated.npy.gz"
+    estimateds_fnames = sorted([f for f in glob.glob(estimateds_fname_fmt)])
+    assert len(systems) == len(estimateds_fnames)
+    estimateds = (loadNpy(f) for f in estimateds_fnames)
+    verb("Lazy")
 
 
     if args.action == "exportcsv":
         # NOTE: Incomplete and probably broken.
-        verb("Exporting CSVs... ", end='')
+        verb("Exporting CSVs... ", end='', sv_tm=True)
         for system,evs,known,estimated in zip(systems,EVSs,knowns,estimateds):
-            export_csv_KnownMeasured(system, evs, known, estimated, n_time)
-        verb("Done")
+            exportCsv(system, evs, known, estimated, n_time)
+        verb("Done", rpt_tm=True)
 
     elif args.action == "score":
 
@@ -733,14 +744,14 @@ def main(args): # {{{
                                 for sysTypename in sysTypenames + ["all"]]
             verb("Done")
         elif make_score:
-            verb("Scoring metric performance of each system... ", end='')
+            verb("Scoring metric performance of each system... ", end='', sv_tm=True)
             # Parallelize (one job per system) scoring which includes performing
             # or loading the estimations since they are lazy.
             # NOTE: scores is ( (<sysType>, <sysScore>), ... )
             scores = Parallel(n_jobs=args.n_jobs) \
                 (delayed(scoreSystem)(s, k, e) \
                     for s,k,e in zip(systems,knowns,estimateds))
-            verb("Done")
+            verb("Done", rpt_tm=True)
 
             # NOTE: Each score ndarray shape is (<n_sys>, <nStats>, <nMetrics>)
             scoresByTypename = \
@@ -753,14 +764,13 @@ def main(args): # {{{
                 saveNpy(monotypeScores, fnameFmtScores % sysTypename)
             verb("Done")
 
-        verb("Tabulating... ", end='')
+        verb("Tabulating... ", end='', sv_tm=True)
         tabulateScores(scoresByTypename)
-        verb("Done")
+        verb("Done", rpt_tm=True)
 
-        verb("Plotting... ", end='')
+        verb("Plotting... ", end='', sv_tm=True)
         plotScores(scoresByTypename)
-        verb("Done")
-
+        verb("Done", rpt_tm=True)
 
     return 0
 # }}} def main

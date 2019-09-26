@@ -142,6 +142,7 @@ def initCfg(args, evcCfg): # {{{
     cfg.__dict__.update(evcCfg)
 
     verb("Saving... ", end='')
+
     with open(eva.paths.fname_cfg, 'w') as fd:
         toml.dump(cfg.__dict__, fd)
 
@@ -237,11 +238,22 @@ def checkEvc(evc): # {{{
     return
 # }}} def checkEvc
 
-def expandEvc(evc): # {{{
+def expandEvc(args, evc): # {{{
     '''Perform substitutions in EVC to create and save EVCX.
 
     Does not include config since that goes into a separate file.
     '''
+
+    def infoEvcx(evcx): # {{{
+        '''Print information about EVCX.
+        '''
+
+        for k,v in evcx.items():
+            msg = "%s %s <-- %s" % (v["type"], k, v["hook"])
+            info(msg, prefix="INFO:EVCX: ")
+
+    # }}} def infoEvcx
+
     reInt = r"[+-]?\d+"
     reEvcRange = re.compile(r"^" +
                             reInt +
@@ -271,6 +283,8 @@ def expandEvc(evc): # {{{
 
         return ret_
     # }}} def evcSubstitute
+
+    verb("Expanding EVC to EVCX... ", end='')
 
     evcx = {}
     for measure in evc.get("measure", []):
@@ -321,8 +335,15 @@ def expandEvc(evc): # {{{
                 #"leq": leq,
             }
 
+    verb("Saving... ", end='')
+
     with open(eva.paths.fname_evcx, 'w') as fd:
         toml.dump(evcx, fd)
+
+    eva.verb("Done")
+
+    if args.info:
+        infoEvcx(evcx)
 
     return evcx
 # }}} def expandEvc
@@ -336,19 +357,31 @@ def evaInit(args): # {{{
 
     mkDirP(eva.paths.outdir)
 
-    evcx = expandEvc(evc)
+    evcx = expandEvc(args, evc)
 
     eva.cfg = initCfg(args, evc["config"])
 
+    # TODO: How to specify simple functions like reflection, derivatives, FFT?
+    # event: 1 <==> non-Zero, 0 otherwise
+    # binary_rise: 1 <==> posedge, 0 otherwise
+    # binary_fall: 1 <==> negedge, 0 otherwise
+    # normal_pos0: (f_i)
+    # normal_neg0: (1 - f_i)
+    # normal_pos1: (f_i)'
+    # normal_neg1: (1 - f_i)'
+    # normal_pos2: (f_i)''
+    # normal_neg2: (1 - f_i)''
+    # ...
+
+    # TODO: Gather common measurement types and initialize arrays.
+    # TODO: How long should arrays be? Set a max in config?
+    # evsEvent = np.zeros(shapeEvent, dtype=np.bool)
+    # evsBinary = np.zeros(shapeBinary, dtype=np.bool)
+    # evsNormal = np.ndarray(shapeNormal, dtype=np.float64)
+    # TODO: Work through timechunks updating ndarrays.
     #with VcdReader(args.input) as vcd:
     #    checkEvcxWithVcd(evcx, vcd) # TODO: Some vcd paths must exist.
-    #
-    #
-    #    if args.info:
-    #        infoEvc(evc)
-    #
-    #    # NOTE: EVC and VCD have now been sanity checked so
-    #    mkDirP(eva.paths.outdir)
+
 
 # }}} def evaInit
 

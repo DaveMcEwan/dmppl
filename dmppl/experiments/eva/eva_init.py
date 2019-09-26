@@ -8,6 +8,7 @@ import toml
 
 # Local library imports
 from dmppl.base import *
+from dmppl.vcd import VcdReader
 
 # Project imports
 import eva_common as eva
@@ -137,7 +138,7 @@ def initCfg(args, evcCfg): # {{{
     verb("Initializing CFG... ", end='')
 
     cfg = Bunch()
-    cfg.__dict__.update(toml.load(eva.paths.share + "configDefault.toml"))
+    cfg.__dict__.update(toml.load(eva.appPaths.configDefault))
     cfg.__dict__.update(evcCfg)
 
     verb("Saving... ", end='')
@@ -146,35 +147,200 @@ def initCfg(args, evcCfg): # {{{
 
     verb("Done")
 
-    print(args.info)
     if args.info:
         infoCfg(cfg)
 
     return cfg
 # }}} def initCfg
 
-def processEvc(evc): # {{{
-    '''Check EVC for sanity and expand into EVCX.
+def evcCheckType(data, expected): # {{{
+    '''Check data node is expected type.
+A list of multiple expected types may be given, or just one type.
+    '''
+    assert type(expected) in [type, list, type(None)]
+
+    if expected is None:
+        ok = isinstance(data, None)
+    elif isinstance(expected, list):
+        ok = True in [isinstance(data, e) if e is not None else \
+                         isinstance(data, None) \
+                         for e in expected]
+    else:
+        ok = isinstance(data, expected)
+
+    if not ok:
+        raise EVCError_DataType(data, expected)
+# }}}
+
+def evcCheckValue(data, expected): # {{{
+    '''Check data node is expected one of a list of expected values.
+    '''
+    assert isinstance(expected, (tuple, list))
+
+    if data not in expected:
+        raise EVCError_DataValue(data, expected)
+# }}} def evcCheckValue
+
+def checkEvc(evc): # {{{
+    '''Check EVC for sanity.
     '''
 
+    # All supported config keys have a default entry of the correct type.
+    defaultConfig = toml.load(eva.appPaths.configDefault)
+    defaultConfigKeys = list(defaultConfig.keys())
+    for k,v in evc.get("config", {}).items():
+        evcCheckValue(k, defaultConfigKeys)
+        evcCheckType(v, type(defaultConfig[k]))
+
+    # TODO: Check config values in allowed ranges.
+
+    measureKeys = (
+        "hook", # String: VCD path of measurement data. Required.
+        "type", # String: in {event, binary, normal}.
+        "name", # String: Measurement name.
+        "subs", # [String]: Substitution values for name/hook.
+        #"geq",  # Real: Threshold/interval limit.
+        #"leq",  # Real: Threshold/interval limit.
+    )
+
+    measureTypes = (
+        # Binary expected to be sparse.
+        "event",
+
+        # Binary may be dense.
+        "binary",
+
+        # Real in [0, 1].
+        "normal",
+
+        # Clip and normalise within interval `GEQ <= x <= LEQ` -> normal.
+        #"interval", # Require both {geq, leq}.
+
+        # True when `GEQ <= x AND x <= LEQ` -> binary.
+        # Can be used to define true when either above or below a value.
+        # Can be used to define true when either inside or outside an interval.
+        #"threshold", # Require at least one of {geq, leq}.
+    )
+
+    measures = evc.get("measure", [])
+    # TODO: Check required hook, name, type.
+    for measure in measures:
+        for k,v in measure.items():
+            evcCheckValue(k, measureKeys)
+
+            if "type" == k:
+                evcCheckValue(v, measureTypes)
+
+            # TODO: Check subs
+
+    # TODO: More checking?
+    return
+# }}} def checkEvc
+
+def expandEvc(evc): # {{{
+    '''Perform substitutions in EVC to create and save EVCX.
+
+    Does not include config since that goes into a separate file.
+    '''
+    reInt = r"[+-]?\d+"
+    reEvcRange = re.compile(r"^" +
+                            reInt +
+                            r"\s*\.\.\s*" +
+                            reInt +
+                            r"(\s*\.\.\s*" +
+                            reInt +
+                            r")?$")
+
+    def evcSubstitute(instr, choices): # {{{
+        reEvcSubstitution = re.compile(r'({\d*})')
+
+        ret_ = instr
+
+        found = reEvcSubstitution.search(ret_)
+        i = -1
+        while found is not None:
+            found_str = ret_[found.start():found.end()].strip("{}")
+            if len(found_str) > 0:
+                i = int(found_str)
+            else:
+                i += 1
+
+            ret_ = reEvcSubstitution.sub(choices[i], ret_, count=1)
+
+            found = reEvcSubstitution.search(ret_)
+
+        return ret_
+    # }}} def evcSubstitute
+
+    evcx = {}
+    for measure in evc.get("measure", []):
+        subs = measure["subs"] if "subs" in measure else []
+
+        # `subs` guaranteed to be list of lists
+        # Each `sub` guaranteed to be homogenous list.
+        # Each `s` guaranteed to be string or int, but string may be a range.
+        assert isinstance(subs, list)
+        for sub in subs:
+            assert isinstance(sub, list)
+            for s in sub:
+                # Unsure how practical other types are.
+                assert isinstance(s, (int, str))
+
+        # Build up new list of lists of usable strings.
+        subs_ = []
+        for sub in subs:
+            sub_ = []
+            for s in sub:
+                # Range <start>..<stop>..<step>
+                if isinstance(s, str) and reEvcRange.match(s):
+                    sub_ += [str(i) for i in range(*[int(x) \
+                                                     for x in s.split("..")])]
+                else:
+                    s_ = str(s)
+                    sub_.append(s_)
+            subs_.append(sub_)
+
+        # `subs_` guaranteed to be list of lists
+        # Each `sub_` guaranteed to be homogenous list.
+        # Each `s_` guaranteed to be usable string.
+        assert isinstance(subs_, list)
+        for sub_ in subs_:
+            assert isinstance(sub_, list)
+            for s_ in sub_:
+                assert isinstance(s_, str)
+
+        subsProd = product(*subs_)
+        for subsList in subsProd:
+            fullName = evcSubstitute(measure["name"], subsList)
+            fullHook = evcSubstitute(measure["hook"], subsList)
+
+            evcx[fullName] = {
+                "hook": fullHook,
+                "type": measure["type"],
+                #"geq": geq,
+                #"leq": leq,
+            }
+
+    with open(eva.paths.fname_evcx, 'w') as fd:
+        toml.dump(evcx, fd)
 
     return evcx
-# }}} def processEvc
+# }}} def expandEvc
 
 def evaInit(args): # {{{
     '''Read in EVC and VCD to create result directory like ./foo.eva/
     '''
 
     evc = loadEvc(args)
+    checkEvc(evc)
 
     mkDirP(eva.paths.outdir)
 
-    eva.cfg = initCfg(args, evc["config"]) # TODO
+    evcx = expandEvc(evc)
 
-    #evcx = processEvc(evc) # TODO: Some keys must exist and have choice values.
-    # TODO: evcx must be saved in there too.
+    eva.cfg = initCfg(args, evc["config"])
 
-    #with VcdReader(fname_vcd) as vcd:
+    #with VcdReader(args.input) as vcd:
     #    checkEvcxWithVcd(evcx, vcd) # TODO: Some vcd paths must exist.
     #
     #
@@ -183,8 +349,6 @@ def evaInit(args): # {{{
     #
     #    # NOTE: EVC and VCD have now been sanity checked so
     #    mkDirP(eva.paths.outdir)
-
-    print(eva.paths.share)
 
 # }}} def evaInit
 

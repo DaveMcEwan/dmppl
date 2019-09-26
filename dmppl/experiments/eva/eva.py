@@ -64,6 +64,11 @@ argparser.add_argument("--savevcd",
 argparser_init = subparsers.add_parser("init",
     help=("Parse VCD with EVC(YAML) to produce EVS(NumPy)."))
 
+argparser_init.add_argument("-i", "--input",
+    type=str,
+    default=None,
+    help="Input VCD file, STDIN if not supplied.")
+
 argparser_cov = subparsers.add_parser("cov",
     help=("Apply Cov(X,Y) to EVent Samples."))
 

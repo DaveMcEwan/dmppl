@@ -7,17 +7,25 @@ fxbits = 123
 vcdhierprefix = "module:TOP.blk0."
 
 [[measure]]
+hook = "normalHook"
 type = "normal"
 name = "someNormal"
-hook = "normalHook"
 
 [[measure]]
+hook = "binaryHook" # module:TOP.blk0.binaryHook
 type = "binary"
 name = "someState"
-hook = "binaryHook"
 
 [[measure]]
+hook = "some{}.block{}.signal[{}]"
 type = "event"
-name = "bar{}"
-hook = "some.block{}.signal"
-sub = ["blue", "0..10"]
+name = "bar{}-{}-{}"
+subs = [
+  ["blue", "blah"],
+  [
+    123,
+    456,
+    789,
+  ],
+  ["0..5"],
+]

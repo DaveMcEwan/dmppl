@@ -10,6 +10,7 @@ from dmppl.base import *
 
 __version__ = "0.1.0"
 
+appPaths = Bunch()
 paths = Bunch()
 
 def initPaths(args): # {{{
@@ -35,9 +36,10 @@ def initPaths(args): # {{{
     #paths.dname_net = outdir + "net" + os.sep
 
     module = inspect.stack()[-1][1]
-    paths.basemodule = os.path.basename(os.path.realpath(module))
-    paths.directory = os.path.dirname(os.path.realpath(module))
-    paths.share = paths.directory + os.sep + "share" + os.sep
+    appPaths.basemodule = os.path.basename(os.path.realpath(module))
+    appPaths.directory = os.path.dirname(os.path.realpath(module))
+    appPaths.share = appPaths.directory + os.sep + "share" + os.sep
+    appPaths.configDefault = appPaths.share + "configDefault.toml"
 
     return
 # }}} def initPaths
@@ -50,9 +52,7 @@ def loadCfg(): # {{{
     verb("Loading CFG... ", end='')
 
     cfg = Bunch()
-
-    with open(paths.fname_cfg, 'r') as fd:
-        cfg.__dict__.update(toml.load(fd))
+    cfg.__dict__.update(toml.load(paths.fname_cfg))
 
     verb("Done")
 
@@ -60,12 +60,11 @@ def loadCfg(): # {{{
 # }}} def loadCfg
 
 def loadEvcx(): # {{{
-    '''Return associative array of measurement names to VCD path names.
+    '''Return dict of measurement names to VCD hook names.
     '''
     verb("Loading EVCX... ", end='')
 
-    with open(paths.fname_evcx, 'r') as fd:
-        evcx = toml.load(fd)
+    evcx = toml.load(paths.fname_evcx)
 
     verb("Done")
 

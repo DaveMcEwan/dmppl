@@ -1,0 +1,46 @@
+
+# Default configuration which may be overridden per-instance by the [config]
+# section in EVC.
+
+# String.
+# Preppend this to every VCD hook.
+# Just a convenience to save typing.
+vcdhierprefix = "module:TOP."
+
+# Non-negative integer.
+# Divide every VCD time by this.
+vcdtimestep = 10
+
+
+# Non-negative integer.
+# 0 means use floats for correlation operations.
+# +ve means use that number of fixed point bits for correlation operations.
+# At least 4. At most 31.
+fxbits = 0
+
+# Float
+# Alpha value for power-of-sine window function.
+# Usually a non-negative integer: 0=Rectangular, 1=Sine, 2=Hann
+powsinealpha = 0
+
+# Non-negative integer.
+# Number of cycles in a time window.
+windowsize = 64
+
+# Non-negative integer.
+# Number of cycles each time window overlaps the previous.
+windowoverlap = 0
+
+# Positive integer.
+# Number of cycles to attempt shifting backwards.
+deltabk = 64
+
+# Positive integer.
+# Number of cycles to attempt shifting forwards.
+deltafw = 1
+
+# Non-negative integer.
+# 0 is synonymous with max(deltabk, deltafw), I.E. no zooming.
+# When time-shifting by this many, apply downsampling.
+zoomdelta = 0
+

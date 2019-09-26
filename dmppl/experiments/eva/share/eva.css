@@ -1,0 +1,109 @@
+
+body {
+    background-color: black;
+    color: lime;
+    font-family: monospace;
+    padding: 5px;
+}
+
+table {
+    border-collapse: separate;
+    background-color: white;
+    border-spacing: 1px;
+    border-radius: 5px;
+    border: 1px solid black;
+}
+
+th {
+    border: 1px solid white;
+    border-radius: 5px;
+    background-color: white;
+    color: black;
+    text-align: center;
+    height: 15px;
+}
+
+th.tabletitle {
+    text-align: left;
+}
+
+th.th_d {
+    font-size: 9px;
+    width: 20px;
+    min-width: 20px;
+    max-width: 20px;
+}
+
+th.fpos > a {
+    color: blue;
+}
+
+th.gneg > a {
+    color: red;
+}
+
+th.xysel {
+    border: 1px solid lime;
+}
+
+th.varying {
+    background-color: #404040;
+    color: white;
+}
+
+td.sidelabel {
+    border: 1px solid white;
+    border-radius: 5px;
+    background-color: #404040;
+    color: lime;
+    text-align: right;
+}
+
+tr.data > td {
+    border-radius: 5px;
+    border: 1px solid white;
+    text-align: center;
+    padding: 0;
+}
+
+tr.data > td:hover {
+    border: 1px solid lime;
+}
+
+td.varying {
+    border: 1px solid white;
+    background-color: #404040;
+    color: lime;
+    text-align: left;
+    padding: 0 5px 0 5px !important;
+}
+
+td.d {
+    font-size: 9px;
+    width: 20px;
+    min-width: 20px;
+    max-width: 20px;
+}
+
+td.significant {
+    border: 1px solid blue;
+}
+
+td.invisible {
+    visibility: hidden;
+}
+
+.prime {
+    position: relative;
+    right: 0.5em;
+}
+
+/* Override Bootstrap CSS */
+.popover {
+    max-width: 100%;
+}
+
+div.controls {
+    float: right;
+    width: 14em;
+}

@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import re
+import sys
 
 # NOTE: No dependencies from outside the standard library.
 
@@ -67,8 +68,7 @@ def intToVarId(x): # {{{
 # }}} def intToVarId
 
 class VcdReader(object): # {{{
-    def __init__(self, filename):
-    #def __init__(self, filename: str):
+    def __init__(self, filename=None):
         self.filename = filename
 
     @staticmethod
@@ -315,7 +315,9 @@ class VcdReader(object): # {{{
     # }}} def vcdTimechunks
 
     def __enter__(self): # {{{
-        self.fd = open(self.filename, 'r')
+        self.fd = open(self.filename, 'r') \
+                  if self.filename is not None else \
+                  sys.stdin
 
         # Generator producing striped lines with numbers.
         lines = ((n, l.strip()) for (n,l) in enumerate(self.fd, start=1))
@@ -356,7 +358,8 @@ class VcdReader(object): # {{{
     # }}} def __enter__
 
     def __exit__(self, type, value, traceback):
-        self.fd.close()
+        if self.fd != sys.stdin:
+            self.fd.close()
 
 # }}} class VcdReader
 
@@ -540,8 +543,7 @@ def _vcdVarDefs(self): # {{{
 # }}} def _vcdVarDefs
 
 class VcdWriter(object): # {{{
-    def __init__(self, filename):
-    #def __init__(self, filename: str):
+    def __init__(self, filename=None):
         self.filename = filename
 
         # Boolean to control if a blank line is inserted above each timechunk.
@@ -734,11 +736,14 @@ class VcdWriter(object): # {{{
     # }}} def wrTimechunk
 
     def __enter__(self):
-        self.fd = open(self.filename, 'w')
+        self.fd = open(self.filename, 'w') \
+                  if self.filename is not None else \
+                  sys.stdout
         return self
 
     def __exit__(self, type, value, traceback):
-        self.fd.close()
+        if self.fd != sys.stdout:
+            self.fd.close()
 
 # }}} class VcdWriter
 

@@ -6,6 +6,11 @@ import shutil
 import types
 import unittest
 
+try:
+    from io import StringIO
+except: # Python <3.4
+    from StringIO import StringIO
+
 class Test_VcdReader(unittest.TestCase): # {{{
 
     def setUp(self):
@@ -143,6 +148,16 @@ $timescale 1ns $end
                 (4, ['C', 'Q'], ['1', "00000010"]),
             ]
             self.assertSequenceEqual(resultTimechunks, goldenTimechunks)
+
+    def test_Stdin(self):
+        sysStdin = sys.stdin
+        sys.stdin = StringIO(self.vcd0)
+        with VcdReader() as vr:
+            self.assertEqual(vr.vcdVersion, "Handwritten basic0")
+            self.assertEqual(vr.vcdDate, "Monday 12th August")
+            self.assertEqual(vr.vcdComment, "hello world")
+            self.assertTupleEqual(vr.vcdTimescale, ('1', "ns"))
+        sys.stdin = sysStdin
 
     def test_MissingEnddefs(self):
         fname = os.path.join(self.tstDir, "missingEnddefs.vcd")
@@ -296,8 +311,9 @@ b00000010 #
         self.assertEqual(goldenTxt, resultTxt)
 
     def test_NoSeparateTimechunks(self):
-        fname = os.path.join(self.tstDir, "noSeparateTimechunks.vcd")
-        with VcdWriter(fname) as vw:
+        sysStdout = sys.stdout
+        sys.stdout = StringIO()
+        with VcdWriter() as vw:
 
             vw.separateTimechunks = False # The important line.
 
@@ -313,9 +329,11 @@ b00000010 #
                 tc = (newTime,changedVarIds,newValues)
                 vw.wrTimechunk(tc)
 
+        stdoutTxt = sys.stdout.getvalue()
+        sys.stdout = sysStdout
+
         goldenTxt = rdTxt(os.path.join(self.tstDir, "golden1.vcd"))
-        resultTxt = rdTxt(os.path.join(self.tstDir, fname))
         self.maxDiff = None
-        self.assertEqual(goldenTxt, resultTxt)
+        self.assertEqual(goldenTxt, stdoutTxt)
 
 # }}} class Test_VcdWriter

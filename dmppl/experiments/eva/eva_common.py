@@ -1,8 +1,11 @@
 
+# Standard library imports
 import inspect
 
+# PyPI library imports
 import toml
 
+# Local library imports
 from dmppl.base import *
 
 __version__ = "0.1.0"

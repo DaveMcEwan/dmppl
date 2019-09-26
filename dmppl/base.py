@@ -83,6 +83,13 @@ def stripSuffix(t, s): # {{{
     return ret
 # }}} def stripSuffix
 
+def fnameAppendExt(fname, ext): # {{{
+    '''Append a given lowercase extension to a filename, if not already given.
+    '''
+    return (fname) if fname.lower().endswith('.' + ext.lower()) else \
+           (fname + '.' + ext)
+# }}} def fnameAppendExt
+
 def compose(f, g, unpack=False): # {{{
     '''Compose 2 functions together.
 

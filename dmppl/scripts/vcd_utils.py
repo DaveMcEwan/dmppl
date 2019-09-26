@@ -42,12 +42,6 @@ __version__ = "0.1.0"
 noneCsvStr = '-' # Unknown value or non-occurrence.
 occurCsvStr = '*' # Event occurrence
 
-def fnameAppendExt(fname, ext): # {{{
-#def fnameAppendExt(fname: str, ext: str) -> str:
-    return (fname) if fname.lower().endswith('.' + ext.lower()) else \
-           (fname + '.' + ext)
-# }}} def fnameAppendExt
-
 def info(args): # {{{
     fnamei = fnameAppendExt(args.input, "vcd")
 

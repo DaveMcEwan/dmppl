@@ -119,6 +119,30 @@ class Test_stripSuffix(unittest.TestCase): # {{{
 
 # }}} class Test_stripSuffix
 
+class Test_fnameAppendExt(unittest.TestCase): # {{{
+
+    def test_Basic0(self):
+        result = fnameAppendExt("hello.world", "txt")
+        self.assertEqual(result, "hello.world.txt")
+
+    def test_Basic1(self):
+        result = fnameAppendExt("hello.world.txt", "txt")
+        self.assertEqual(result, "hello.world.txt")
+
+    def test_Basic2(self):
+        result = fnameAppendExt("hello.world.foo", "txt")
+        self.assertEqual(result, "hello.world.foo.txt")
+
+    def test_Basic3(self):
+        result = fnameAppendExt("hello.world.foo.txt", "txt")
+        self.assertEqual(result, "hello.world.foo.txt")
+
+    def test_EmptyText(self):
+        result = fnameAppendExt("", "txt")
+        self.assertEqual(result, ".txt")
+
+# }}} class Test_fnameAppendExt
+
 class Test_compose(unittest.TestCase): # {{{
 
     def test_Basic0(self):

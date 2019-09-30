@@ -12,6 +12,7 @@ __version__ = "0.1.0"
 
 appPaths = Bunch()
 paths = Bunch()
+infoFlag = False
 
 def initPaths(args): # {{{
     '''Populate some convenient variables from args.

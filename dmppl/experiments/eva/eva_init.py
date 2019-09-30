@@ -95,6 +95,8 @@ def loadEvc(args): # {{{
     def infoEvc(evc): # {{{
         '''Print information about EVC.
         '''
+        if not eva.infoFlag:
+            return
 
         for k,v in evc.get("config", {}).items():
             msg = "%s = %s" % (k, v)
@@ -106,17 +108,16 @@ def loadEvc(args): # {{{
 
     # }}} def infoEvc
 
-    eva.verb("Loading EVC... ", end='')
+    verb("Loading EVC... ", end='')
 
     try:
         evc = toml.load(eva.paths.fname_evc)
     except toml.decoder.TomlDecodeError as e:
         raise EVCError_TomlLoad(e)
 
-    eva.verb("Done")
+    verb("Done")
 
-    if args.info:
-        infoEvc(evc)
+    infoEvc(evc)
 
     return evc
 # }}} def loadEvc
@@ -128,6 +129,8 @@ def initCfg(args, evcCfg): # {{{
     def infoCfg(cfg): # {{{
         '''Print information about CFG.
         '''
+        if not eva.infoFlag:
+            return
 
         for k,v in cfg.__dict__.items():
             msg = "%s = %s" % (k, v)
@@ -148,8 +151,7 @@ def initCfg(args, evcCfg): # {{{
 
     verb("Done")
 
-    if args.info:
-        infoCfg(cfg)
+    infoCfg(cfg)
 
     return cfg
 # }}} def initCfg
@@ -247,6 +249,8 @@ def expandEvc(args, evc): # {{{
     def infoEvcx(evcx): # {{{
         '''Print information about EVCX.
         '''
+        if not eva.infoFlag:
+            return
 
         for k,v in evcx.items():
             msg = "%s %s <-- %s" % (v["type"], k, v["hook"])
@@ -340,10 +344,9 @@ def expandEvc(args, evc): # {{{
     with open(eva.paths.fname_evcx, 'w') as fd:
         toml.dump(evcx, fd)
 
-    eva.verb("Done")
+    verb("Done")
 
-    if args.info:
-        infoEvcx(evcx)
+    infoEvcx(evcx)
 
     return evcx
 # }}} def expandEvc

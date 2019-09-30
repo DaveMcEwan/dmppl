@@ -123,6 +123,7 @@ argparser_html.add_argument("-U", "--U",
 
 def main(args): # {{{
 
+    eva.infoFlag = args.info
     eva.initPaths(args)
 
     ret = {

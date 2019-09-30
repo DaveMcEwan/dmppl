@@ -1,6 +1,6 @@
 # This is a TOML comment.
-
-title = "Some Fancy Title"
+title = "This attribute is not used."
+anotherAttribute = 123 # Other attributes can be added without effect.
 
 [config]
 fxbits = 123

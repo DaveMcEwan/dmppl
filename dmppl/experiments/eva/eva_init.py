@@ -12,7 +12,8 @@ from dmppl.toml import loadToml, saveToml
 from dmppl.vcd import VcdReader
 
 # Project imports
-import eva_common as eva
+# NOTE: Roundabout import path for eva_common necessary for unittest.
+import dmppl.experiments.eva.eva_common as eva
 
 class EVCError(Exception): # {{{
     '''Generic format check error.

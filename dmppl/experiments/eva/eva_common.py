@@ -14,11 +14,11 @@ appPaths = Bunch()
 paths = Bunch()
 infoFlag = False
 
-def initPaths(args): # {{{
+def initPaths(argsEvcPath): # {{{
     '''Populate some convenient variables from args.
     '''
 
-    paths.fname_evc = fnameAppendExt(args.evc, "evc")
+    paths.fname_evc = fnameAppendExt(argsEvcPath, "evc")
 
     outdir = os.path.splitext(paths.fname_evc)[0] + ".eva" + os.sep
 

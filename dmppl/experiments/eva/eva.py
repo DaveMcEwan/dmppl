@@ -15,7 +15,8 @@ import argparse
 from dmppl.base import *
 
 # Project imports
-import eva_common as eva
+# NOTE: Roundabout import path for eva_common necessary for unittest.
+import dmppl.experiments.eva.eva_common as eva
 from eva_init import evaInit
 
 __version__ = eva.__version__
@@ -124,7 +125,7 @@ argparser_html.add_argument("-U", "--U",
 def main(args): # {{{
 
     eva.infoFlag = args.info
-    eva.initPaths(args)
+    eva.initPaths(args.evc)
 
     ret = {
         "init": evaInit,

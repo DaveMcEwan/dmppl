@@ -8,6 +8,7 @@ import toml
 
 # Local library imports
 from dmppl.base import *
+from dmppl.toml import loadToml, saveToml
 from dmppl.vcd import VcdReader
 
 # Project imports
@@ -88,7 +89,7 @@ which cannot be found in the VCD.
 
 # }}} EVCError
 
-def loadEvc(args): # {{{
+def loadEvc(): # {{{
     '''Read EVC file with only basic checking.
     '''
 
@@ -111,6 +112,7 @@ def loadEvc(args): # {{{
     verb("Loading EVC... ", end='')
 
     try:
+        # NOTE: loadToml() appends ".toml" to fname.
         evc = toml.load(eva.paths.fname_evc)
     except toml.decoder.TomlDecodeError as e:
         raise EVCError_TomlLoad(e)
@@ -122,7 +124,7 @@ def loadEvc(args): # {{{
     return evc
 # }}} def loadEvc
 
-def initCfg(args, evcCfg): # {{{
+def initCfg(evcConfig): # {{{
     '''Fill in and save CFG.
     '''
 
@@ -141,14 +143,11 @@ def initCfg(args, evcCfg): # {{{
     verb("Initializing CFG... ", end='')
 
     cfg = Bunch()
-    cfg.__dict__.update(toml.load(eva.appPaths.configDefault))
-    cfg.__dict__.update(evcCfg)
+    cfg.__dict__.update(loadToml(eva.appPaths.configDefault))
+    cfg.__dict__.update(evcConfig)
 
     verb("Saving... ", end='')
-
-    with open(eva.paths.fname_cfg, 'w') as fd:
-        toml.dump(cfg.__dict__, fd)
-
+    saveToml(cfg.__dict__, eva.paths.fname_cfg)
     verb("Done")
 
     infoCfg(cfg)
@@ -189,7 +188,7 @@ def checkEvc(evc): # {{{
     '''
 
     # All supported config keys have a default entry of the correct type.
-    defaultConfig = toml.load(eva.appPaths.configDefault)
+    defaultConfig = loadToml(eva.appPaths.configDefault)
     defaultConfigKeys = list(defaultConfig.keys())
     for k,v in evc.get("config", {}).items():
         evcCheckValue(k, defaultConfigKeys)
@@ -240,7 +239,7 @@ def checkEvc(evc): # {{{
     return
 # }}} def checkEvc
 
-def expandEvc(args, evc): # {{{
+def expandEvc(evc): # {{{
     '''Perform substitutions in EVC to create and save EVCX.
 
     Does not include config since that goes into a separate file.
@@ -340,10 +339,7 @@ def expandEvc(args, evc): # {{{
             }
 
     verb("Saving... ", end='')
-
-    with open(eva.paths.fname_evcx, 'w') as fd:
-        toml.dump(evcx, fd)
-
+    saveToml(evcx, eva.paths.fname_evcx)
     verb("Done")
 
     infoEvcx(evcx)
@@ -355,14 +351,14 @@ def evaInit(args): # {{{
     '''Read in EVC and VCD to create result directory like ./foo.eva/
     '''
 
-    evc = loadEvc(args)
+    evc = loadEvc()
     checkEvc(evc)
 
     mkDirP(eva.paths.outdir)
 
-    evcx = expandEvc(args, evc)
+    evcx = expandEvc(evc)
 
-    eva.cfg = initCfg(args, evc["config"])
+    eva.cfg = initCfg(evc["config"])
 
     # TODO: How to specify simple functions like reflection, derivatives, FFT?
     # event: 1 <==> non-Zero, 0 otherwise

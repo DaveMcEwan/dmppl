@@ -517,14 +517,14 @@ def _vcdVarDefs(self): # {{{
 
         # Calculate number of ascents ($upscope $end)
         for _ in range(nAscent):
-            print("$upscope $end", file=self.fd)
+            print(u"$upscope $end", file=self.fd)
 
         # Descend into module, from correct position in varScope
         # $scope <type> <name> $end
         relevantScope = varScope[cPL:cPL+nDescent]
         for sType,sName in relevantScope:
             thisScopeType = sType if sType is not None else prevScopeType
-            print("$scope %s %s $end" % (thisScopeType, sName), file=self.fd)
+            print(u"$scope %s %s $end" % (thisScopeType, sName), file=self.fd)
             prevScopeType = thisScopeType
 
         prevScope = varScope[:-1]
@@ -532,12 +532,12 @@ def _vcdVarDefs(self): # {{{
         varRange = "" if 2 > varSize else \
                    "[%d:0]" % (varSize-1)
         _, varLocalName = varScope[-1]
-        print("$var %s %d %s %s %s $end" % \
+        print(u"$var %s %d %s %s %s $end" % \
               (varType, varSize, varId, varLocalName, varRange), file=self.fd)
 
     # Calculate number of ascents ($upscope $end) after final var.
     for _ in range(vL):
-        print("$upscope $end", file=self.fd)
+        print(u"$upscope $end", file=self.fd)
 
     return
 # }}} def _vcdVarDefs
@@ -564,13 +564,14 @@ class VcdWriter(object): # {{{
         self.vcdVersion = version.strip()
 
         if 0 < len(self.vcdComment):
-            print("$comment %s $end" % self.vcdComment, file=self.fd)
+            print(u"$comment %s $end" % self.vcdComment, file=self.fd)
+            #self.fd.write(u"$comment %s $end\n" % self.vcdComment)
 
         if 0 < len(self.vcdDate):
-            print("$date %s $end" % self.vcdDate, file=self.fd)
+            print(u"$date %s $end" % self.vcdDate, file=self.fd)
 
         if 0 < len(self.vcdVersion):
-            print("$version %s $end" % self.vcdVersion, file=self.fd)
+            print(u"$version %s $end" % self.vcdVersion, file=self.fd)
 
         def _verifyTimescale(ts): # {{{
         #def _verifyTimescale(ts: str) -> Tuple[str, str]:
@@ -594,7 +595,7 @@ class VcdWriter(object): # {{{
         # }}} def _verifyTimescale
 
         self.vcdTimescale = _verifyTimescale(timescale)
-        print("$timescale %s %s $end" % self.vcdTimescale, file=self.fd)
+        print(u"$timescale %s %s $end" % self.vcdTimescale, file=self.fd)
 
         def _verifyVars(varlist, varaliases): # {{{
         #def _verifyVars(varlist: Varlist, varaliases):
@@ -670,7 +671,7 @@ class VcdWriter(object): # {{{
         self.mapVarIdToVarSize = {v: self.varSizes[i] for i,v in enumerate(self.varIdsUnique)}
         self.mapVarIdToVarType = {v: self.varTypes[i] for i,v in enumerate(self.varIdsUnique)}
 
-        print("$enddefinitions $end", file=self.fd)
+        print(u"$enddefinitions $end", file=self.fd)
 
         return
     # }}} def wrHeader
@@ -694,10 +695,10 @@ class VcdWriter(object): # {{{
         assert isinstance(self.separateTimechunks, bool), \
             (type(self.separateTimechunks), self.separateTimechunks)
         if self.separateTimechunks:
-            print("", file=self.fd)
+            print(u"", file=self.fd)
 
         assert isinstance(newTime, int), (type(newTime), newTime)
-        print("#%d" % newTime, file=self.fd)
+        print(u"#%d" % newTime, file=self.fd)
 
         for varId,newValue in zip(changedVarIds, newValues):
             assert varId is not None # TODO: More helpful assertion message.
@@ -707,11 +708,11 @@ class VcdWriter(object): # {{{
 
             if "event" == varType:
                 # Events are always value=0 since they have no value.
-                print("0%s" % varId, file=self.fd)
+                print(u"0%s" % varId, file=self.fd)
             elif varType in oneBitTypes and 1 == varSize:
                 # 1b format
                 assert str(newValue) in fourStates, newValue
-                print("%s%s" % (str(newValue), varId), file=self.fd)
+                print(u"%s%s" % (str(newValue), varId), file=self.fd)
             elif "real" == varType:
                 # real format
                 # Always printed with 6 decimal places.
@@ -719,7 +720,7 @@ class VcdWriter(object): # {{{
                     newValue_ = "%0.06f" % newValue
                 else:
                     newValue_ = str(newValue)
-                print("r%s %s" % (newValue_, varId), file=self.fd)
+                print(u"r%s %s" % (newValue_, varId), file=self.fd)
             else:
                 # bit vector format
                 if isinstance(newValue, int):
@@ -730,7 +731,7 @@ class VcdWriter(object): # {{{
                 if len(newValue_) < varSize:
                     newValue_ = '0'*(varSize-len(newValue_)) + newValue_
 
-                print("b%s %s" % (newValue_, varId), file=self.fd)
+                print(u"b%s %s" % (newValue_, varId), file=self.fd)
 
         return
     # }}} def wrTimechunk

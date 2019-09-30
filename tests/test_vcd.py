@@ -1,5 +1,6 @@
-from dmppl.vcd import *
 from dmppl.base import rdTxt
+from dmppl.vcd import *
+from dmppl.test import *
 import os
 import tempfile
 import shutil
@@ -18,7 +19,7 @@ class Test_VcdReader(unittest.TestCase): # {{{
 
         # NOTE: Forgiving parser accepts things obviously outside the spec such
         # as events with non-zero widths.
-        self.vcd0 = '''\
+        self.vcd0 = u'''\
 $version Handwritten basic0 $end
 $date Monday 12th August $end
 $comment hello world $end
@@ -311,9 +312,9 @@ b00000010 #
         self.assertEqual(goldenTxt, resultTxt)
 
     def test_NoSeparateTimechunks(self):
-        sysStdout = sys.stdout
-        sys.stdout = StringIO()
-        with VcdWriter() as vw:
+        stdout, stderr = StringIO(), StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr), \
+             VcdWriter() as vw:
 
             vw.separateTimechunks = False # The important line.
 
@@ -329,8 +330,7 @@ b00000010 #
                 tc = (newTime,changedVarIds,newValues)
                 vw.wrTimechunk(tc)
 
-        stdoutTxt = sys.stdout.getvalue()
-        sys.stdout = sysStdout
+        stdoutTxt, stderrTxt = stdout.getvalue(), stderr.getvalue()
 
         goldenTxt = rdTxt(os.path.join(self.tstDir, "golden1.vcd"))
         self.maxDiff = None

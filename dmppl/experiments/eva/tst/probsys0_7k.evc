@@ -1,0 +1,59 @@
+# EVent Configuration for probsys0.
+# EVC syntax is a TOML-based DSL.
+
+[config]
+vcdhierprefix = "module:TOP.probsys0." # Prepend to all VCD hooks.
+vcdtimestep = 10              # Number time ticks per clock cycle.
+windowsize = 3000             # Length of time window.
+windowoverlap = 0             # Overlap of windows.
+                              #   +ve overlaps windows
+                              #   0
+                              #   -ve leaves gaps between windows
+deltabk = 8                   # Delta cycles backward to search for E(X|Y<d>).
+zoomdelta = 10
+powsinealpha = 2              # Power-of-Sine Windowing function power.
+
+
+# Three events "slv.busy", "slv.idle", "slv.stall" defined by {} substitution.
+# VCD signal also using {} substitution.
+# The VCD file will be searched for signals with the hierarchical name
+# "module:TOP.probsys0.slv_o_busy" etc.
+[[measure]]
+type = "binary"
+name = "slv.{}"
+hook = "probsys0.slv_o_{}"
+subs = [
+  ["busy", "idle", "stall"]
+]
+
+# Four events all with the same badness.
+[[measure]]
+type = "event"
+name = "axi.{}"
+hook = "probsys0.mon_{}_tfr"
+subs = [
+  ["aw", "b", "ar", "r"]
+]
+
+# Six events specified with the cross product of two substitutions.
+[[measure]]
+type = "event"
+name = "axi.{}"
+hook = "probsys0.mon_{}_{}"
+subs = [
+  ["r", "b"],
+  ["decerr", "slverr", "okay"],
+]
+
+
+# Eight events specified using range shorthand which is similar to Python.
+# <start>..<stop>[..<step>]
+[[measure]]
+type = "event"
+name = "axi.{}.page{}"
+hook = "probsys0.mon_{}_pagenum[{}]"
+subs = [
+  ["aw", "ar"],
+  ["0..4"],
+]
+

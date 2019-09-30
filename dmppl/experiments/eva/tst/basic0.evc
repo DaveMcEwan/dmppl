@@ -19,13 +19,12 @@ name = "someState"
 [[measure]]
 hook = "some{}.block{}.signal[{}]"
 type = "event"
-name = "bar{}-{}-{}"
+name = "FOO{}-{}-{}"
 subs = [
-  ["blue", "blah"],
+  ["blue", "red"],
   [
     123,
     456,
-    789,
   ],
-  ["0..5"],
+  ["0..3"],
 ]

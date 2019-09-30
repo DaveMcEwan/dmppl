@@ -1,0 +1,8 @@
+
+[[measure]]
+type = "event"
+name = "eventNameOfThree{}"
+hook = "eventHookOfThree[{}]"
+subs = [
+  ["0..3"],
+]

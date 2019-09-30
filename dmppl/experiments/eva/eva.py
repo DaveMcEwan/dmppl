@@ -10,9 +10,10 @@
 
 # Standard library imports
 import argparse
+import sys
 
 # Local library imports
-from dmppl.base import *
+from dmppl.base import run, verb
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.

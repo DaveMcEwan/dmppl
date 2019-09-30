@@ -2,18 +2,22 @@
 # Standard library imports
 from itertools import product
 import re
+import sys
 
 # PyPI library imports
 import toml
 
 # Local library imports
-from dmppl.base import *
+from dmppl.base import Bunch, info, mkDirP, verb
 from dmppl.toml import loadToml, saveToml
 from dmppl.vcd import VcdReader
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
 import dmppl.experiments.eva.eva_common as eva
+
+if sys.version_info[0] == 3:
+    unicode = str # Compatability with Python2
 
 class EVCError(Exception): # {{{
     '''Generic format check error.
@@ -302,7 +306,7 @@ def expandEvc(evc): # {{{
             assert isinstance(sub, list)
             for s in sub:
                 # Unsure how practical other types are.
-                assert isinstance(s, (int, str))
+                assert isinstance(s, (int, str, unicode))
 
         # Build up new list of lists of usable strings.
         subs_ = []
@@ -310,7 +314,7 @@ def expandEvc(evc): # {{{
             sub_ = []
             for s in sub:
                 # Range <start>..<stop>..<step>
-                if isinstance(s, str) and reEvcRange.match(s):
+                if isinstance(s, (str, unicode)) and reEvcRange.match(s):
                     sub_ += [str(i) for i in range(*[int(x) \
                                                      for x in s.split("..")])]
                 else:
@@ -340,7 +344,8 @@ def expandEvc(evc): # {{{
             }
 
     verb("Saving... ", end='')
-    saveToml(evcx, eva.paths.fname_evcx)
+    if eva.initDone: # Unittests don't setup everything.
+        saveToml(evcx, eva.paths.fname_evcx)
     verb("Done")
 
     infoEvcx(evcx)
@@ -351,6 +356,7 @@ def expandEvc(evc): # {{{
 def evaInit(args): # {{{
     '''Read in EVC and VCD to create result directory like ./foo.eva/
     '''
+    assert eva.initDone
 
     evc = loadEvc()
     checkEvc(evc)

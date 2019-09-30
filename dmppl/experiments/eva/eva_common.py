@@ -1,15 +1,17 @@
 
 # Standard library imports
 import inspect
+import os
 
 # PyPI library imports
 import toml
 
 # Local library imports
-from dmppl.base import *
+from dmppl.base import Bunch, fnameAppendExt, verb
 
 __version__ = "0.1.0"
 
+initDone = False # Only expect paths.* etc to exist if this is True.
 appPaths = Bunch()
 paths = Bunch()
 infoFlag = False
@@ -42,6 +44,9 @@ def initPaths(argsEvcPath): # {{{
     appPaths.share = appPaths.directory + os.sep + "share" + os.sep
     appPaths.configDefault = appPaths.share + "configDefault.toml"
 
+    global initDone
+    initDone = True
+
     return
 # }}} def initPaths
 
@@ -50,6 +55,8 @@ def loadCfg(): # {{{
 
     CFG is assumed to be sane, written by initCfg().
     '''
+    assert initDone
+
     verb("Loading CFG... ", end='')
 
     cfg = Bunch()
@@ -63,6 +70,8 @@ def loadCfg(): # {{{
 def loadEvcx(): # {{{
     '''Return dict of measurement names to VCD hook names.
     '''
+    assert initDone
+
     verb("Loading EVCX... ", end='')
 
     evcx = toml.load(paths.fname_evcx)

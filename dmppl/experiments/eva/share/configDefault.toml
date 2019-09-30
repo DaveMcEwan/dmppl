@@ -11,6 +11,13 @@ vcdhierprefix = "module:TOP."
 # Divide every VCD time by this.
 vcdtimestep = 10
 
+# Non-negative integer.
+# EVS is stored in a series of array chunks, restricted to this number of
+# elements in length to bound/predict memory usage.
+# Too large may overrun RAM, too small may have terrible performance.
+# Rounded down to closest multiple of 64.
+#evschunksize = 4096 # 4KiB/measurement/chunk
+evschunksize = 1048576 # 1MiB/measurement/chunk
 
 # Non-negative integer.
 # 0 means use floats for correlation operations.

@@ -6,6 +6,7 @@ import sys
 
 # PyPI library imports
 import toml
+import numpy as np
 
 # Local library imports
 from dmppl.base import Bunch, info, mkDirP, verb
@@ -372,6 +373,8 @@ def checkEvcxWithVcd(evcx, vcd): # {{{
 
     # }}} def infoEvcxWithVcd
 
+    verb("Checking EVCX with VCD... ", end='')
+
     plainVarNames = [re.sub(r'\[.*$', '', x) for x in vcd.varNames]
 
     newEvcx_ = {}
@@ -400,7 +403,6 @@ def checkEvcxWithVcd(evcx, vcd): # {{{
         else:
             hkBit = None
 
-
         newEvcx_[nm] = {
             "type": tp,
             "hook": hk,
@@ -408,12 +410,59 @@ def checkEvcxWithVcd(evcx, vcd): # {{{
             "hookType": hkType,
             "hookBit": hkBit,
         }
+    verb("Done")
 
     infoEvcxWithVcd(newEvcx_)
 
     return newEvcx_
 
 # }}} def checkEvcxWithVcd
+
+def chunkConstants(evcx, cfg): # {{{
+    '''Calculate constants from EVCX and CFG
+    '''
+    ck = Bunch()
+
+    ck.eventNames  = [nm for nm,v in evcx.items() if v["type"] == "event"]
+    ck.binaryNames = [nm for nm,v in evcx.items() if v["type"] == "binary"]
+    ck.normalNames = [nm for nm,v in evcx.items() if v["type"] == "normal"]
+
+
+    # TODO: How to specify simple functions like reflection, derivatives, FFT?
+    # event: 1 <==> non-Zero, 0 otherwise
+    # binary_rise: 1 <==> posedge, 0 otherwise
+    # binary_fall: 1 <==> negedge, 0 otherwise
+    # normal_pos0: (f_i)
+    # normal_neg0: (1 - f_i)
+    # normal_pos1: (f_i)'
+    # normal_neg1: (1 - f_i)'
+    # normal_pos2: (f_i)''
+    # normal_neg2: (1 - f_i)''
+    # ...
+    ck.nEvent  = len(ck.eventNames)         # occur
+    ck.nBinary = len(ck.binaryNames) * 2    # rise, fall
+    ck.nNormal = len(ck.normalNames) * 4    # pos, neg, rise, fall
+
+    # NOTE: event and binary stored as bits in uint64 array.
+    ck.eventShape = (ck.nEvent, cfg.evschunksize // 64)
+    ck.binaryShape = (ck.nBinary, cfg.evschunksize // 64)
+    ck.normalShape = (ck.nNormal, cfg.evschunksize)
+
+    if eva.infoFlag:
+        eventMsg = "evsChunkEventShape = %s ==> %dKiB" % \
+            (str(ck.eventShape), ck.nEvent * cfg.evschunksize / 8192.0)
+        info(eventMsg, prefix="INFO:EVS: ")
+
+        binaryMsg = "evsChunkBinaryShape = %s ==> %dKiB" % \
+            (str(ck.binaryShape), ck.nBinary * cfg.evschunksize / 8192.0)
+        info(binaryMsg, prefix="INFO:EVS: ")
+
+        normalMsg = "evsChunkNormalShape = %s ==> %dKiB" % \
+            (str(ck.normalShape), ck.nNormal * cfg.evschunksize / 128.0)
+        info(normalMsg, prefix="INFO:EVS: ")
+
+    return ck
+# }}} def chunkConstants
 
 def evaInit(args): # {{{
     '''Read in EVC and VCD to create result directory like ./foo.eva/
@@ -429,28 +478,22 @@ def evaInit(args): # {{{
 
     eva.cfg = initCfg(evc["config"])
 
-    # TODO: How to specify simple functions like reflection, derivatives, FFT?
-    # event: 1 <==> non-Zero, 0 otherwise
-    # binary_rise: 1 <==> posedge, 0 otherwise
-    # binary_fall: 1 <==> negedge, 0 otherwise
-    # normal_pos0: (f_i)
-    # normal_neg0: (1 - f_i)
-    # normal_pos1: (f_i)'
-    # normal_neg1: (1 - f_i)'
-    # normal_pos2: (f_i)''
-    # normal_neg2: (1 - f_i)''
-    # ...
+    # Gather common measurement types.
+    ck = chunkConstants(evcx, eva.cfg)
 
-    # TODO: Gather common measurement types and initialize arrays.
-    # TODO: How long should arrays be? Set a max in config?
-    # evsEvent = np.zeros(shapeEvent, dtype=np.bool)
-    # evsBinary = np.zeros(shapeBinary, dtype=np.bool)
-    # evsNormal = np.ndarray(shapeNormal, dtype=np.float64)
-    # TODO: Work through timechunks updating ndarrays.
+    # NOTE: VCD input may come from STDIN --> only read once.
     with VcdReader(args.input) as vcd:
-        verb("Checking EVCX with VCD... ", end='')
         newEvcx = checkEvcxWithVcd(evcx, vcd)
-        verb("Done")
+
+        # Initialize arrays which will comprise a chunk of the EVS dataset.
+        chunkEvent = np.zeros(ck.eventShape, dtype=np.uint64)
+        chunkBinary = np.zeros(ck.binaryShape, dtype=np.uint64)
+        chunkNormal = np.zeros(ck.normalShape, dtype=np.float64)
+
+        # TODO: Work through timechunks updating ndarrays.
+        for tc in vcd.timechunks:
+            pass
+
 
 
 # }}} def evaInit

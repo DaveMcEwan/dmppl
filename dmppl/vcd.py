@@ -32,9 +32,10 @@ v2001Types = ["event", "integer", "parameter", "real", "reg", "supply0",
 # System Verilog (IEEE1800-2012) variable types supported despite not being in
 # standard VCD since they're so similar to wire/reg.
 # NOTE: string only supported by GtkWave
-extendedTypes = ["bit", "logic", "string"]
+svTypes = ["bit", "logic"]
+gtkwaveTypes = ["string"]
 
-supportedTypes = v2001Types + extendedTypes
+supportedTypes = v2001Types + svTypes + gtkwaveTypes
 
 twoStateTypes = ["bit"]
 
@@ -351,6 +352,11 @@ class VcdReader(object): # {{{
                 self.mapVarIdToNames[v] = [nm]
             else:
                 self.mapVarIdToNames[v] += [nm]
+
+        self.mapVarNameToVarId = \
+            {nm: v for v,nms in self.mapVarIdToNames.items() for nm in nms}
+        self.mapVarNameNovectorToVarId = \
+            {re.sub(r'\[.*$', '', nm): v for nm,v in self.mapVarNameToVarId.items()}
 
         self.timechunks = self.vcdTimechunks(lines)
 

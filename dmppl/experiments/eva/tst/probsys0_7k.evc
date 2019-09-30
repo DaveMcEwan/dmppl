@@ -21,7 +21,7 @@ powsinealpha = 2              # Power-of-Sine Windowing function power.
 [[measure]]
 type = "binary"
 name = "slv.{}"
-hook = "probsys0.slv_o_{}"
+hook = "slv_o_{}"
 subs = [
   ["busy", "idle", "stall"]
 ]
@@ -30,7 +30,7 @@ subs = [
 [[measure]]
 type = "event"
 name = "axi.{}"
-hook = "probsys0.mon_{}_tfr"
+hook = "mon_{}_tfr"
 subs = [
   ["aw", "b", "ar", "r"]
 ]
@@ -39,7 +39,7 @@ subs = [
 [[measure]]
 type = "event"
 name = "axi.{}"
-hook = "probsys0.mon_{}_{}"
+hook = "mon_{}_{}"
 subs = [
   ["r", "b"],
   ["decerr", "slverr", "okay"],
@@ -51,7 +51,7 @@ subs = [
 [[measure]]
 type = "event"
 name = "axi.{}.page{}"
-hook = "probsys0.mon_{}_pagenum[{}]"
+hook = "mon_{}_pagenum[{}]"
 subs = [
   ["aw", "ar"],
   ["0..4"],

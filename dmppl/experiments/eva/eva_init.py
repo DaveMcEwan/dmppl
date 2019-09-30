@@ -10,7 +10,7 @@ import toml
 # Local library imports
 from dmppl.base import Bunch, info, mkDirP, verb
 from dmppl.toml import loadToml, saveToml
-from dmppl.vcd import VcdReader
+from dmppl.vcd import VcdReader, oneBitTypes
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
@@ -334,7 +334,9 @@ def expandEvc(evc): # {{{
         subsProd = product(*subs_)
         for subsList in subsProd:
             fullName = evcSubstitute(measure["name"], subsList)
-            fullHook = evcSubstitute(measure["hook"], subsList)
+
+            fullHook = evc["config"]["vcdhierprefix"] + \
+                evcSubstitute(measure["hook"], subsList)
 
             evcx[fullName] = {
                 "hook": fullHook,
@@ -352,6 +354,66 @@ def expandEvc(evc): # {{{
 
     return evcx
 # }}} def expandEvc
+
+def checkEvcxWithVcd(evcx, vcd): # {{{
+    '''Check hooks exist in VCD.
+    '''
+
+    def infoEvcxWithVcd(evcx): # {{{
+        '''Print information about EVCX.
+        '''
+        if not eva.infoFlag:
+            return
+
+        for k,v in evcx.items():
+            msg = "%s %s <-- %s %s %s" % \
+                (v["type"], k, v["hookVarId"], v["hookType"], v["hookBit"])
+            info(msg, prefix="INFO:EVCX/VCD: ")
+
+    # }}} def infoEvcxWithVcd
+
+    plainVarNames = [re.sub(r'\[.*$', '', x) for x in vcd.varNames]
+
+    newEvcx_ = {}
+    for nm,data in evcx.items():
+        hk = data["hook"]
+        tp = data["type"]
+
+        # Plain hook in VCD, which doesn't have vector select.
+        # NOTE: Only limited support. No vectored modules, no multidim.
+        # hk -> hkPlain
+        # module:TOP.foo.bar[3] -> module:TOP.foo.bar
+        hkPlain = re.sub(r'\[.*$', '', hk)
+
+        if hkPlain not in plainVarNames:
+            raise EVCError_SignalName(hk, hkPlain)
+
+        hkVarId = vcd.mapVarNameNovectorToVarId[hkPlain]
+        hkType = vcd.mapVarIdToType[hkVarId]
+        hkSize = vcd.mapVarIdToSize[hkVarId]
+
+        # Check width of VCD signal contains numbered bit.
+        if hkType in oneBitTypes and hk.endswith(']'):
+            hkBit = int(hk[hk.rfind('['):].strip('[]'), 10)
+            if hkBit >= hkSize:
+                raise EVCError_SignalName(hk, hkBit)
+        else:
+            hkBit = None
+
+
+        newEvcx_[nm] = {
+            "type": tp,
+            "hook": hk,
+            "hookVarId": hkVarId,
+            "hookType": hkType,
+            "hookBit": hkBit,
+        }
+
+    infoEvcxWithVcd(newEvcx_)
+
+    return newEvcx_
+
+# }}} def checkEvcxWithVcd
 
 def evaInit(args): # {{{
     '''Read in EVC and VCD to create result directory like ./foo.eva/
@@ -385,8 +447,10 @@ def evaInit(args): # {{{
     # evsBinary = np.zeros(shapeBinary, dtype=np.bool)
     # evsNormal = np.ndarray(shapeNormal, dtype=np.float64)
     # TODO: Work through timechunks updating ndarrays.
-    #with VcdReader(args.input) as vcd:
-    #    checkEvcxWithVcd(evcx, vcd) # TODO: Some vcd paths must exist.
+    with VcdReader(args.input) as vcd:
+        verb("Checking EVCX with VCD... ", end='')
+        newEvcx = checkEvcxWithVcd(evcx, vcd)
+        verb("Done")
 
 
 # }}} def evaInit

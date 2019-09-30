@@ -6,6 +6,7 @@ from .test_math import *
 from .test_nd import *
 from .test_prng import *
 from .test_stats import *
+from .test_toml import *
 from .test_vcd import *
 from .test_yaml import *
 

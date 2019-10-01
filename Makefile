@@ -23,17 +23,17 @@ VENV3.7 = source venv3.7/bin/activate &&
 venv2.7:
 	python2.7 -m pip install --user virtualenv
 	python2.7 -m virtualenv --no-wheel venv2.7
-	$(VENV2.7) pip install coverage pyyaml numpy
+	$(VENV2.7) pip install coverage pyyaml numpy toml
 venv3.5:
 	python3.5 -m pip install --user virtualenv
 	python3.5 -m virtualenv --no-wheel venv3.5
-	$(VENV3.5) pip install coverage pyyaml numpy
+	$(VENV3.5) pip install coverage pyyaml numpy toml
 venv3.6:
 	python3.6 -m venv venv3.6
-	$(VENV3.6) pip install coverage mypy pyyaml numpy
+	$(VENV3.6) pip install coverage mypy pyyaml numpy toml
 venv3.7:
 	python3.7 -m venv venv3.7
-	$(VENV3.7) pip install coverage mypy pyyaml numpy
+	$(VENV3.7) pip install coverage mypy pyyaml numpy toml
 
 venv: venv2.7
 venv: venv3.5

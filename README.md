@@ -12,6 +12,7 @@ Library is split into several modules:
   - prng - Pseudo-Random Number Generators. Currently just xoroshiro128+.
   - stats - Statistics. Currently just for binary classifiers.
   - test - Helpers for unit testing.
+  - toml - Save/load TOML files with optional compression.
   - vcd - Value Change Dump (from Verilog) reader and writer.
   - yaml - Extended YAML parser, useful for implementing DSLs on top of YAML.
 

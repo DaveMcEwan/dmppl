@@ -1,6 +1,7 @@
 
 # Standard library imports
 from itertools import product
+import os
 import re
 import sys
 
@@ -9,7 +10,8 @@ import toml
 import numpy as np
 
 # Local library imports
-from dmppl.base import Bunch, info, mkDirP, verb
+from dmppl.base import dbg, Bunch, info, mkDirP, verb
+from dmppl.math import saveNpy
 from dmppl.toml import loadToml, saveToml
 from dmppl.vcd import VcdReader, oneBitTypes
 
@@ -433,14 +435,14 @@ def checkEvcxWithVcd(evcx, vcd): # {{{
 
 # }}} def checkEvcxWithVcd
 
-def chunkConstants(evcx, cfg): # {{{
+def blockConstants(evcx, cfg): # {{{
     '''Calculate constants from EVCX and CFG
     '''
-    ck = Bunch()
+    bc = Bunch()
 
-    ck.eventNames  = [nm for nm,v in evcx.items() if v["type"] == "event"]
-    ck.binaryNames = [nm for nm,v in evcx.items() if v["type"] == "binary"]
-    ck.normalNames = [nm for nm,v in evcx.items() if v["type"] == "normal"]
+    bc.eventNames  = [nm for nm,v in evcx.items() if v["type"] == "event"]
+    bc.binaryNames = [nm for nm,v in evcx.items() if v["type"] == "binary"]
+    bc.normalNames = [nm for nm,v in evcx.items() if v["type"] == "normal"]
 
 
     # TODO: How to specify simple functions like reflection, derivatives, FFT?
@@ -454,34 +456,46 @@ def chunkConstants(evcx, cfg): # {{{
     # normal_pos2: (f_i)''
     # normal_neg2: (1 - f_i)''
     # ...
-    ck.nEvent  = len(ck.eventNames)         # occur
-    ck.nBinary = len(ck.binaryNames) * 2    # rise, fall
-    ck.nNormal = len(ck.normalNames) * 4    # pos, neg, rise, fall
+    bc.nEvent  = len(bc.eventNames)         # occur
+    bc.nBinary = len(bc.binaryNames) * 2    # rise, fall
+    bc.nNormal = len(bc.normalNames) * 4    # pos, neg, rise, fall
 
-    ck.eventShape = (ck.nEvent, cfg.evschunksize)
-    ck.binaryShape = (ck.nBinary, cfg.evschunksize)
-    ck.normalShape = (ck.nNormal, cfg.evschunksize)
+    bc.eventShape = (bc.nEvent, cfg.evsblocksize)
+    bc.binaryShape = (bc.nBinary, cfg.evsblocksize)
+    bc.normalShape = (bc.nNormal, cfg.evsblocksize)
 
     if eva.infoFlag:
-        eventMsg = "evsChunkEventShape = %s ==> %dKiB" % \
-            (str(ck.eventShape), ck.nEvent * cfg.evschunksize / 1024.0)
+        eventMsg = "evsBlockEventShape = %s ==> %dKiB" % \
+            (str(bc.eventShape), bc.nEvent * cfg.evsblocksize / 1024.0)
         info(eventMsg, prefix="INFO:EVS: ")
 
-        binaryMsg = "evsChunkBinaryShape = %s ==> %dKiB" % \
-            (str(ck.binaryShape), ck.nBinary * cfg.evschunksize / 1024.0)
+        binaryMsg = "evsBlockBinaryShape = %s ==> %dKiB" % \
+            (str(bc.binaryShape), bc.nBinary * cfg.evsblocksize / 1024.0)
         info(binaryMsg, prefix="INFO:EVS: ")
 
-        normalMsg = "evsChunkNormalShape = %s ==> %dKiB" % \
-            (str(ck.normalShape), ck.nNormal * cfg.evschunksize / 128.0)
+        normalMsg = "evsBlockNormalShape = %s ==> %dKiB" % \
+            (str(bc.normalShape), bc.nNormal * cfg.evsblocksize / 128.0)
         info(normalMsg, prefix="INFO:EVS: ")
 
-    return ck
-# }}} def chunkConstants
+    return bc
+# }}} def blockConstants
 
 def evaInit(args): # {{{
     '''Read in EVC and VCD to create result directory like ./foo.eva/
     '''
     assert eva.initDone
+
+    def twoStateBool(v, hookbit): # {{{
+        if isinstance(v, int):
+            return (0 != v)
+        else:
+          assert isinstance(v, str), (type(v), v)
+          intValue = int(v, 2)
+          if hookBit is None:
+              return (intValue != 0)
+          else:
+              return ((intValue & 1<<hookBit) != 0)
+    # }}} def twoStateBool
 
     evc = loadEvc()
     checkEvc(evc)
@@ -490,28 +504,40 @@ def evaInit(args): # {{{
 
     eva.cfg = initCfg(evc["config"])
 
-    evcx = expandEvc(evc, eva.cfg)
+    evcx_ = expandEvc(evc, eva.cfg)
 
     # Gather common measurement types.
-    ck = chunkConstants(evcx, eva.cfg)
+    bc = blockConstants(evcx_, eva.cfg)
 
     # NOTE: VCD input may come from STDIN ==> only read once.
     with VcdReader(args.input) as vcd:
-        newEvcx = checkEvcxWithVcd(evcx, vcd)
+        evcx = checkEvcxWithVcd(evcx_, vcd)
 
-        # Initialize arrays which will comprise a chunk of the EVS dataset.
-        chunkEvent = np.zeros(ck.eventShape, dtype=np.bool)
-        chunkBinary = np.zeros(ck.binaryShape, dtype=np.bool)
-        chunkNormal = np.zeros(ck.normalShape, dtype=np.float64)
+        evcxVarIds = set(v["hookVarId"] for nm,v in evcx.items())
+        mapVarIdToEvsIndices = \
+            {varid: [(v["type"], v["idx"], v["hookType"], v["hookBit"]) \
+                     for nm,v in evcx.items() \
+                     if varid == v["hookVarId"]] for varid in evcxVarIds}
 
-        # TODO: Work through timechunks updating ndarrays.
+
+        # Initialize arrays which will comprise a block of the EVS dataset.
+        blkEvent = np.zeros(bc.eventShape, dtype=np.bool)
+        blkBinary = np.zeros(bc.binaryShape, dtype=np.bool)
+        blkNormal = np.zeros(bc.normalShape, dtype=np.float64)
+        evsFnameFmt = os.path.join(eva.paths.fname_evs, "evs.%s.%d")
+        mkDirP(os.path.dirname(evsFnameFmt))
+
+        # Work through timechunks updating ndarrays.
+        mapVarIdToPrev_ = {varid: (0,0) for varid in evcxVarIds}
+
+        blkNumPrev_ = 0
         for tc in vcd.timechunks:
             newTime, changedVarIds, newValues = tc
 
             if newTime < eva.cfg.timestart:
                 continue
 
-            if newTime > eva.cfg.timestop:
+            if eva.cfg.timestop != 0 and newTime > eva.cfg.timestop:
                 break
 
             tQuotient, tRemainder = divmod(newTime, eva.cfg.timestep)
@@ -523,8 +549,69 @@ def evaInit(args): # {{{
             assert isinstance(timeIdx, int), type(timeIdx)
             assert 0 <= timeIdx, (timeIdx, newTime, eva.cfg.timestart, eva.cfg.timestep)
 
+            # EVS time is split into blocks.
+            blkNum, blkIdx = divmod(timeIdx, eva.cfg.evsblocksize)
 
+            # Write current blocks to disk, reinitialize.
+            if blkNum != blkNumPrev_:
+                saveNpy(blkEvent,  evsFnameFmt % ("event", blkNum))
+                saveNpy(blkBinary, evsFnameFmt % ("binary", blkNum))
+                saveNpy(blkNormal, evsFnameFmt % ("normal", blkNum))
 
+                blkEvent = np.zeros(bc.eventShape, dtype=np.bool)
+                blkBinary = np.zeros(bc.binaryShape, dtype=np.bool)
+                blkNormal = np.zeros(bc.normalShape, dtype=np.float64)
+
+                # Reset previous block indices to 0.
+                mapVarIdToPrev_ = \
+                    {varid: (v,0) for varid,(v,i) in mapVarIdToPrev_.items()}
+
+            for varId,newValue in zip(changedVarIds, newValues):
+                if not varId in evcxVarIds:
+                    continue
+
+                assert isinstance(newValue, str)
+                newValueClean = newValue.replace('x', '0').replace('z', '1')
+
+                prevValue, prevBlkIdx = mapVarIdToPrev_[varId] # Always clean.
+
+                # Fill arrays
+                # TODO: Needs more testing.
+                # TODO: rise/fall etc?
+                for tp,evsIdx,hookType,hookBit in mapVarIdToEvsIndices[varId]:
+
+                    if "event" == tp:
+                        if "event" == hookType:
+                            blkEvent[evsIdx][blkIdx] = True
+                        elif hookType in oneBitTypes:
+                            blkEvent[evsIdx][blkIdx] = \
+                                twoStateBool(newValueClean, hookBit)
+                        else:
+                            assert False, hookType
+
+                    elif "binary" == tp:
+                        if hookType in oneBitTypes:
+                            blkBinary[evsIdx][prevBlkIdx+1:blkIdx] = \
+                                twoStateBool(prevValue, hookBit)
+                            blkBinary[evsIdx][blkIdx] = \
+                                twoStateBool(newValueClean, hookBit)
+                        else:
+                            assert False, hookType
+
+                    elif "normal" == tp:
+                        if "real" == hookType:
+                            blkNormal[evsIdx][blkIdx] = float(newValueClean)
+                        else:
+                            assert False, hookType
+                    else:
+                        assert False, tp
+
+                mapVarIdToPrev_[varId] = newValueClean, blkIdx
+
+        # End of file, save last block.
+        saveNpy(blkEvent,  evsFnameFmt % ("event", blkNum))
+        saveNpy(blkBinary, evsFnameFmt % ("binary", blkNum))
+        saveNpy(blkNormal, evsFnameFmt % ("normal", blkNum))
 
 # }}} def evaInit
 

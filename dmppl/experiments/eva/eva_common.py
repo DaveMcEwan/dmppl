@@ -27,10 +27,7 @@ def initPaths(argsEvcPath): # {{{
     paths.outdir = outdir
     paths.fname_evcx = outdir + "evcx.toml"
     paths.fname_cfg = outdir + "config.toml"
-    paths.fname_evs = outdir + "evs"
-    paths.fname_evs_vcd = outdir + "evs.vcd"
-    #paths.fname_bad = outdir + "bad"
-    #paths.fname_bad_vcd = outdir + "bad.vcd"
+    paths.fname_evs = outdir + "evs" + os.sep
     #paths.fname_ex = outdir + "ex"
     #paths.fname_ex_vcd = outdir + "ex.vcd"
     #paths.fname_cex_base = outdir + "cex.X="

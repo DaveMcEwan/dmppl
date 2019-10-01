@@ -8,8 +8,17 @@
 vcdhierprefix = "module:TOP."
 
 # Non-negative integer.
-# Divide every VCD time by this.
-vcdtimestep = 10
+# Only sample when time is at least this.
+timestart = 0
+
+# Non-negative integer.
+# Only sample when time is at most this.
+# Zero means ignore, keep sampling until end of dataset.
+timestop = 0
+
+# Non-negative integer.
+# Only sample when time is an integer multiple of this.
+timestep = 1
 
 # Non-negative integer.
 # EVS is stored in a series of array chunks, restricted to this number of
@@ -28,7 +37,7 @@ fxbits = 0
 # Float
 # Alpha value for power-of-sine window function.
 # Usually a non-negative integer: 0=Rectangular, 1=Sine, 2=Hann
-powsinealpha = 0
+windowalpha = 0
 
 # Non-negative integer.
 # Number of cycles in a time window.
@@ -49,5 +58,5 @@ deltafw = 1
 # Non-negative integer.
 # 0 is synonymous with max(deltabk, deltafw), I.E. no zooming.
 # When time-shifting by this many, apply downsampling.
-zoomdelta = 0
+deltazoom = 0
 

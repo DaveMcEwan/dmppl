@@ -4,7 +4,7 @@ anotherAttribute = 123 # Other attributes can be added without effect.
 
 [config]
 fxbits = 123
-vcdhierprefix = "module:TOP.blk0."
+vcdhierprefix = "somepath.prefix."
 
 [[measure]]
 hook = "normalHook"

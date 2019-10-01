@@ -245,7 +245,7 @@ def checkEvc(evc): # {{{
     return
 # }}} def checkEvc
 
-def expandEvc(evc): # {{{
+def expandEvc(evc, cfg): # {{{
     '''Perform substitutions in EVC to create and save EVCX.
 
     Does not include config since that goes into a separate file.
@@ -257,8 +257,8 @@ def expandEvc(evc): # {{{
         if not eva.infoFlag:
             return
 
-        for k,v in evcx.items():
-            msg = "%s %s <-- %s" % (v["type"], k, v["hook"])
+        for nm,v in evcx.items():
+            msg = "%s %d %s <-- %s" % (v["type"], v["idx"], nm, v["hook"])
             info(msg, prefix="INFO:EVCX: ")
 
     # }}} def infoEvcx
@@ -295,9 +295,11 @@ def expandEvc(evc): # {{{
 
     verb("Expanding EVC to EVCX... ", end='')
 
+    evsIdxEvent_, evsIdxBinary_, evsIdxNormal_ = 0, 0, 0
     evcx = {}
     for measure in evc.get("measure", []):
         subs = measure["subs"] if "subs" in measure else []
+        tp = measure["type"]
 
         # `subs` guaranteed to be list of lists
         # Each `sub` guaranteed to be homogenous list.
@@ -336,12 +338,26 @@ def expandEvc(evc): # {{{
         for subsList in subsProd:
             fullName = evcSubstitute(measure["name"], subsList)
 
-            fullHook = evc["config"]["vcdhierprefix"] + \
+            fullHook = cfg.vcdhierprefix + \
                 evcSubstitute(measure["hook"], subsList)
+
+            if "event" == tp:
+                evsIdx = evsIdxEvent_
+                evsIdxEvent_ += 1
+            elif "binary" == tp:
+                evsIdx = evsIdxBinary_
+                evsIdxBinary_ += 1
+            elif "normal" == tp:
+                evsIdx = evsIdxNormal_
+                evsIdxNormal_ += 1
+            else:
+                evsIdx = evsIdxEvent_
+                assert False, tp
 
             evcx[fullName] = {
                 "hook": fullHook,
-                "type": measure["type"],
+                "type": tp,
+                "idx": evsIdx,
                 #"geq": geq,
                 #"leq": leq,
             }
@@ -366,9 +382,10 @@ def checkEvcxWithVcd(evcx, vcd): # {{{
         if not eva.infoFlag:
             return
 
-        for k,v in evcx.items():
-            msg = "%s %s <-- %s %s %s" % \
-                (v["type"], k, v["hookVarId"], v["hookType"], v["hookBit"])
+        for nm,v in evcx.items():
+            msg = "%s %d %s <-- %s %s %s" % \
+                (v["type"], v["idx"], nm,
+                 v["hookVarId"], v["hookType"], v["hookBit"])
             info(msg, prefix="INFO:EVCX/VCD: ")
 
     # }}} def infoEvcxWithVcd
@@ -378,9 +395,8 @@ def checkEvcxWithVcd(evcx, vcd): # {{{
     plainVarNames = [re.sub(r'\[.*$', '', x) for x in vcd.varNames]
 
     newEvcx_ = {}
-    for nm,data in evcx.items():
-        hk = data["hook"]
-        tp = data["type"]
+    for nm,v in evcx.items():
+        hk = v["hook"]
 
         # Plain hook in VCD, which doesn't have vector select.
         # NOTE: Only limited support. No vectored modules, no multidim.
@@ -403,13 +419,12 @@ def checkEvcxWithVcd(evcx, vcd): # {{{
         else:
             hkBit = None
 
-        newEvcx_[nm] = {
-            "type": tp,
-            "hook": hk,
+        newEvcx_[nm] = v
+        newEvcx_[nm].update({
             "hookVarId": hkVarId,
             "hookType": hkType,
             "hookBit": hkBit,
-        }
+        })
     verb("Done")
 
     infoEvcxWithVcd(newEvcx_)
@@ -443,18 +458,17 @@ def chunkConstants(evcx, cfg): # {{{
     ck.nBinary = len(ck.binaryNames) * 2    # rise, fall
     ck.nNormal = len(ck.normalNames) * 4    # pos, neg, rise, fall
 
-    # NOTE: event and binary stored as bits in uint64 array.
-    ck.eventShape = (ck.nEvent, cfg.evschunksize // 64)
-    ck.binaryShape = (ck.nBinary, cfg.evschunksize // 64)
+    ck.eventShape = (ck.nEvent, cfg.evschunksize)
+    ck.binaryShape = (ck.nBinary, cfg.evschunksize)
     ck.normalShape = (ck.nNormal, cfg.evschunksize)
 
     if eva.infoFlag:
         eventMsg = "evsChunkEventShape = %s ==> %dKiB" % \
-            (str(ck.eventShape), ck.nEvent * cfg.evschunksize / 8192.0)
+            (str(ck.eventShape), ck.nEvent * cfg.evschunksize / 1024.0)
         info(eventMsg, prefix="INFO:EVS: ")
 
         binaryMsg = "evsChunkBinaryShape = %s ==> %dKiB" % \
-            (str(ck.binaryShape), ck.nBinary * cfg.evschunksize / 8192.0)
+            (str(ck.binaryShape), ck.nBinary * cfg.evschunksize / 1024.0)
         info(binaryMsg, prefix="INFO:EVS: ")
 
         normalMsg = "evsChunkNormalShape = %s ==> %dKiB" % \
@@ -474,25 +488,41 @@ def evaInit(args): # {{{
 
     mkDirP(eva.paths.outdir)
 
-    evcx = expandEvc(evc)
-
     eva.cfg = initCfg(evc["config"])
+
+    evcx = expandEvc(evc, eva.cfg)
 
     # Gather common measurement types.
     ck = chunkConstants(evcx, eva.cfg)
 
-    # NOTE: VCD input may come from STDIN --> only read once.
+    # NOTE: VCD input may come from STDIN ==> only read once.
     with VcdReader(args.input) as vcd:
         newEvcx = checkEvcxWithVcd(evcx, vcd)
 
         # Initialize arrays which will comprise a chunk of the EVS dataset.
-        chunkEvent = np.zeros(ck.eventShape, dtype=np.uint64)
-        chunkBinary = np.zeros(ck.binaryShape, dtype=np.uint64)
+        chunkEvent = np.zeros(ck.eventShape, dtype=np.bool)
+        chunkBinary = np.zeros(ck.binaryShape, dtype=np.bool)
         chunkNormal = np.zeros(ck.normalShape, dtype=np.float64)
 
         # TODO: Work through timechunks updating ndarrays.
         for tc in vcd.timechunks:
-            pass
+            newTime, changedVarIds, newValues = tc
+
+            if newTime < eva.cfg.timestart:
+                continue
+
+            if newTime > eva.cfg.timestop:
+                break
+
+            tQuotient, tRemainder = divmod(newTime, eva.cfg.timestep)
+            if 0 != tRemainder:
+                continue
+
+            # Index in EVent Sample (EVS) array of this time.
+            timeIdx = (newTime - eva.cfg.timestart) // eva.cfg.timestep
+            assert isinstance(timeIdx, int), type(timeIdx)
+            assert 0 <= timeIdx, (timeIdx, newTime, eva.cfg.timestart, eva.cfg.timestep)
+
 
 
 

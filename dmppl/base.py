@@ -72,9 +72,9 @@ def appendNonDuplicate(xs, x, key=None, replace=False, overwrite=False): # {{{
 
     `key` must be either None or a callable returning the index of existing
     duplicate or None if there isn't an existing duplicate.
-    E.g. If each x is a tuple and you find duplicates by comparing the first
+    E.g. If each x is a tuple and you find duplicates by comparing the 2nd
     element:
-        key = (lambda xs, x: indexDefault([y[0] for y in xs], x[0]))
+        key = (lambda xs, x: indexDefault([y[1] for y in xs], x[1]))
 
     If `replace` is True then existing is removed and new is either appended or
     overwritten, depending on `replace`.
@@ -86,7 +86,16 @@ def appendNonDuplicate(xs, x, key=None, replace=False, overwrite=False): # {{{
     duplicate, replace=False -> no change
     no duplicate -> new appended
     '''
-    k = (lambda xs,x: indexDefault(xs, x)) if key is None else key
+    if key is None:
+        if isinstance(x, (list, tuple)):
+            # Compare first element if x is a tuple.
+            k = (lambda xs, x: indexDefault([y[0] for y in xs], x[0]))
+        else:
+            # Compare directly.
+            k = (lambda xs,x: indexDefault(xs, x))
+    else:
+        # Use a different key.
+        k = key
 
     foundIndex = k(xs, x)
 

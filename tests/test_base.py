@@ -118,15 +118,12 @@ class Test_appendNonDuplicate(unittest.TestCase): # {{{
         result = appendNonDuplicate(xs, x, replace=True)
         self.assertListEqual(result, ["foo", "baz", "bar"])
 
-    def test_Key(self):
+    def test_ListOfTuples(self):
         # Old removed and new appended.
         xs = [("foo", 1), ("bar", 2), ("baz", 3)]
         x = ("bar", 5)
 
-        # Example from docstring, compare by first element.
-        k = (lambda xs, x: indexDefault([y[0] for y in xs], x[0]))
-
-        result = appendNonDuplicate(xs, x, key=k, replace=True)
+        result = appendNonDuplicate(xs, x, replace=True)
         self.assertListEqual(result, [("foo", 1), ("baz", 3), ("bar", 5)])
 
     def test_Overwrite(self):
@@ -134,11 +131,19 @@ class Test_appendNonDuplicate(unittest.TestCase): # {{{
         xs = [("foo", 1), ("bar", 2), ("baz", 3)]
         x = ("bar", 5)
 
-        # Example from docstring, compare by first element.
-        k = (lambda xs, x: indexDefault([y[0] for y in xs], x[0]))
-
-        result = appendNonDuplicate(xs, x, key=k, replace=True, overwrite=True)
+        result = appendNonDuplicate(xs, x, replace=True, overwrite=True)
         self.assertListEqual(result, [("foo", 1), ("bar", 5), ("baz", 3)])
+
+    def test_Key(self):
+        # Old removed and new appended.
+        xs = [("foo", 1), ("bar", 2), ("baz", 3)]
+        x = ("bar", 1)
+
+        # Example from docstring, compare by 2nd element.
+        k = (lambda xs, x: indexDefault([y[1] for y in xs], x[1]))
+
+        result = appendNonDuplicate(xs, x, key=k, replace=True)
+        self.assertListEqual(result, [("bar", 2), ("baz", 3), ("bar", 1)])
 
 # }}} class Test_appendNonDuplicate
 

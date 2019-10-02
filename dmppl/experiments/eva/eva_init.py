@@ -1,6 +1,6 @@
 
 # Standard library imports
-from itertools import product
+from itertools import groupby, product
 import os
 import re
 import sys
@@ -10,10 +10,10 @@ import toml
 import numpy as np
 
 # Local library imports
-from dmppl.base import dbg, Bunch, info, mkDirP, verb
+from dmppl.base import dbg, Bunch, appendNonDuplicate, indexDefault, info, mkDirP, verb
 from dmppl.math import saveNpy
 from dmppl.toml import loadToml, saveToml
-from dmppl.vcd import VcdReader, oneBitTypes
+from dmppl.vcd import VcdReader, VcdWriter, oneBitTypes
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
@@ -435,67 +435,226 @@ def checkEvcxWithVcd(evcx, vcd): # {{{
 
 # }}} def checkEvcxWithVcd
 
-def blockConstants(evcx, cfg): # {{{
-    '''Calculate constants from EVCX and CFG
-    '''
-    bc = Bunch()
+def evsStage0(instream, evcx, cfg): # {{{
+    '''Filter input VCD to output stage0 VCD.
 
-    bc.eventNames  = [nm for nm,v in evcx.items() if v["type"] == "event"]
-    bc.binaryNames = [nm for nm,v in evcx.items() if v["type"] == "binary"]
-    bc.normalNames = [nm for nm,v in evcx.items() if v["type"] == "normal"]
+    Extract measurements of interest, at times of interest.
+    In stage0 time is a straightforward EVS index.
+    In stage0 hierarchy shows raw measures and reflection/rise/fall.
 
-
-    # TODO: How to specify simple functions like reflection, derivatives, FFT?
-    # event: 1 <==> non-Zero, 0 otherwise
-    # binary_rise: 1 <==> posedge, 0 otherwise
-    # binary_fall: 1 <==> negedge, 0 otherwise
-    # normal_pos0: (f_i)
-    # normal_neg0: (1 - f_i)
-    # normal_pos1: (f_i)'
-    # normal_neg1: (1 - f_i)'
-    # normal_pos2: (f_i)''
-    # normal_neg2: (1 - f_i)''
-    # ...
-    bc.nEvent  = len(bc.eventNames)         # occur
-    bc.nBinary = len(bc.binaryNames) * 2    # rise, fall
-    bc.nNormal = len(bc.normalNames) * 4    # pos, neg, rise, fall
-
-    bc.eventShape = (bc.nEvent, cfg.evsblocksize)
-    bc.binaryShape = (bc.nBinary, cfg.evsblocksize)
-    bc.normalShape = (bc.nNormal, cfg.evsblocksize)
-
-    if eva.infoFlag:
-        eventMsg = "evsBlockEventShape = %s ==> %dKiB" % \
-            (str(bc.eventShape), bc.nEvent * cfg.evsblocksize / 1024.0)
-        info(eventMsg, prefix="INFO:EVS: ")
-
-        binaryMsg = "evsBlockBinaryShape = %s ==> %dKiB" % \
-            (str(bc.binaryShape), bc.nBinary * cfg.evsblocksize / 1024.0)
-        info(binaryMsg, prefix="INFO:EVS: ")
-
-        normalMsg = "evsBlockNormalShape = %s ==> %dKiB" % \
-            (str(bc.normalShape), bc.nNormal * cfg.evsblocksize / 128.0)
-        info(normalMsg, prefix="INFO:EVS: ")
-
-    return bc
-# }}} def blockConstants
-
-def evaInit(args): # {{{
-    '''Read in EVC and VCD to create result directory like ./foo.eva/
+    NOTE: This initial extraction to filter/clean the dataset is probably the
+    most complex part of eva!
     '''
     assert eva.initDone
 
     def twoStateBool(v, hookbit): # {{{
         if isinstance(v, int):
-            return (0 != v)
+            ret = (0 != v)
         else:
           assert isinstance(v, str), (type(v), v)
           intValue = int(v, 2)
           if hookBit is None:
-              return (intValue != 0)
+              ret = (intValue != 0)
           else:
-              return ((intValue & 1<<hookBit) != 0)
+              ret = ((intValue & 1<<hookBit) != 0)
+
+        assert isinstance(ret, bool), type(ret)
+
+        return ret
     # }}} def twoStateBool
+
+    def vcdoVarlist(evcx): # {{{
+        '''Create varlist for vcdo.wrHeader from EVCX.
+
+        structure:  [ (<name:str>, <width:int>,  <type:str>), ... ]
+        example:    [ ("aName", 1,  "bit"), ... ]
+
+        All signals are of either "bit" or "real" VCD type.
+        '''
+        measuresEvent =  (nm for nm,v in evcx.items() if "event"  == v["type"])
+        measuresBinary = (nm for nm,v in evcx.items() if "binary" == v["type"])
+        measuresNormal = (nm for nm,v in evcx.items() if "normal" == v["type"])
+
+        prefixesEvent =  ("measure",)
+        prefixesBinary = ("measure", "reflection", "rise", "fall",)
+        prefixesNormal = ("measure", "reflection",
+                          "rise", "fall",
+                          "riserise", "fallfall",)
+
+        namesEvent = \
+            ('.'.join(("event", pfx, nm)) \
+             for nm in measuresEvent for pfx in prefixesEvent)
+        namesBinary = \
+            ('.'.join(("binary", pfx, nm)) \
+             for nm in measuresBinary for pfx in prefixesBinary)
+        namesNormal = \
+            ('.'.join(("normal", pfx, nm)) \
+             for nm in measuresNormal for pfx in prefixesNormal)
+
+        varlist = [(nm, 1, "bit") \
+                   for nms in (namesEvent, namesBinary,) \
+                   for nm in nms] + \
+                  [(nm, 64, "real") \
+                   for nms in (namesNormal,) \
+                   for nm in nms]
+
+        return varlist
+    # }}} def vcdoVarlist
+
+    # NOTE: VCD input may come from STDIN ==> only read once.
+    with VcdReader(instream) as vcdi, VcdWriter(eva.paths.fname_mea) as vcdo:
+        evcxx = checkEvcxWithVcd(evcx, vcdi)
+
+        evcxVarIds = set(v["hookVarId"] for nm,v in evcxx.items())
+        mapVarIdToMeasures = \
+            {varid: [(nm, v["type"], v["hookType"], v["hookBit"]) \
+                     for nm,v in evcxx.items() \
+                     if varid == v["hookVarId"]] for varid in evcxVarIds}
+
+        # Initialize previous values to 0.
+        # {varid: (time, value), ...}
+        mapVarIdToPrev_ = {varid: (0,0) for varid in evcxVarIds}
+
+        vcdo.wrHeader(vcdoVarlist(evcx),
+                      comment="<<< Extracted by evaInit >>>" + vcdi.vcdComment,
+                      date=vcdi.vcdDate,
+                      version=vcdi.vcdVersion,
+                      timescale=' '.join(vcdi.vcdTimescale))
+
+        # Future queuq of timechunks which may need to be interleaved with
+        # timechunks from vcdi, such as event->bit conversion inferring 1 then
+        # 0 in consecutive times.
+        # Or rise/fall on binary.
+        # [ (time, name, value) ... ]
+        fq = []
+
+        # Work through vcdi timechunks putting values into vcdo.
+        for iTc in vcdi.timechunks:
+            iTime, iChangedVarIds, iNewValues = iTc
+
+            if iTime < cfg.timestart:
+                continue
+
+            if cfg.timestop != 0 and iTime > cfg.timestop:
+                break
+
+            tQuotient, tRemainder = divmod(iTime, cfg.timestep)
+            if 0 != tRemainder:
+                continue
+
+            # Index in EVent Sample (EVS) array of this time.
+            oTime = (iTime - cfg.timestart) // cfg.timestep
+            assert isinstance(oTime, int), type(oTime)
+            assert 0 <= oTime, (oTime, iTime, cfg.timestart, cfg.timestep)
+
+            oChangedVars, oNewValues = [], []
+
+            # Append timechunks from queue before looking at new values.
+            # Always keep sorted by time (1st element)
+            fq.sort()
+
+            # TODO: BUG with non-sequential times.
+
+            # Extract changes to be written now, fq may contain changes for
+            # after oTime.
+            # Expect fq to be short so popping from beginning shouldn't be
+            # too much of a performance problem.
+            fqUseNow = []
+            for t,nm,v in fq:
+                if t < oTime:
+                    fqUseNow.append(fq.pop())
+                elif t == oTime:
+                    appendNonDuplicate(oChangedVars, nm)
+                    oNewValues.append(v)
+
+            for fqTime, fqGroup in groupby(fqUseNow, key=(lambda x: x[0])):
+                fqChangedVars, fqNewValues = \
+                    list(zip(*[(nm,v) for _,nm,v in fqGroup]))
+
+                vcdo.wrTimechunk((fqTime, fqChangedVars, fqNewValues))
+
+
+            for iVarId,iNewValue in zip(iChangedVarIds, iNewValues):
+                if not iVarId in evcxVarIds:
+                    continue
+
+                assert isinstance(iNewValue, str) # VcdReader only gives str.
+                newValueClean = iNewValue.replace('x', '0').replace('z', '1')
+
+                prevTime, prevValue = mapVarIdToPrev_[iVarId] # Always clean.
+
+                # Each iVarId may refer to multiple measurements, such as
+                # vectored wires or wires used in multiple ways.
+                for nm,tp,hookType,hookBit in mapVarIdToMeasures[iVarId]:
+
+                    if "event" == tp:
+                        oName = "event.measure." + nm
+                        oChangedVars.append(oName)
+                        if "event" == hookType:
+                            # vcdi implies event only occurring at this time.
+                            oNewValues.append(1)
+
+                            # Speculatively reset to 0 in next time.
+                            fq.append((oTime+1, oName, 0))
+                        elif hookType in oneBitTypes:
+                            oNewValues.append(int(twoStateBool(newValueClean, hookBit)))
+                        else:
+                            # Event measure only made from VCD event or wire,
+                            # reg, bit, logic, etc
+                            assert False, hookType
+
+                    elif "binary" == tp:
+                        if hookType in oneBitTypes:
+                            newValue = twoStateBool(newValueClean, hookBit)
+
+                            if prevValue != newValue:
+                                oChangedVars.append("binary.measure." + nm)
+                                oChangedVars.append("binary.reflection." + nm)
+                                oNewValues.append(int(newValue))
+                                oNewValues.append(int(not newValue))
+
+                                if newValue:
+                                    oChangedVars.append("binary.rise." + nm)
+                                    oNewValues.append(1)
+                                    fq.append((oTime+1, "binary.rise." + nm, 0))
+                                else:
+                                    oChangedVars.append("binary.fall." + nm)
+                                    oNewValues.append(1)
+                                    fq.append((oTime+1, "binary.fall." + nm, 0))
+                            else:
+                                pass # No change
+
+                        else:
+                            assert False, hookType
+
+                    # TODO: normal must go through low-pass filter.
+                    # Currently just ignored.
+
+                # Track previous value in vcdi
+                try:
+                    mapVarIdToPrev_[iVarId] = oTime, newValue
+                except UnboundLocalError:
+                    pass
+
+            # Resolve conflicts from fq.
+            # Future queue is speculative so if a proper value from the current
+            # timechunk will take precedence.
+            if len(oChangedVars):
+                dedupVars = []
+                for nm,v in zip(oChangedVars, oNewValues):
+                    dedupVars = appendNonDuplicate(dedupVars, (nm,v), replace=True)
+                oChangedVars, oNewValues = zip(*dedupVars)
+
+
+                oTc = (oTime, oChangedVars, oNewValues)
+                vcdo.wrTimechunk(oTc)
+
+# }}} def evsStage0
+
+def evaInit(args): # {{{
+    '''Read in EVC and VCD to create result directory like ./foo.eva/
+    '''
+    assert eva.initDone
 
     evc = loadEvc()
     checkEvc(evc)
@@ -504,114 +663,9 @@ def evaInit(args): # {{{
 
     eva.cfg = initCfg(evc["config"])
 
-    evcx_ = expandEvc(evc, eva.cfg)
+    evcx = expandEvc(evc, eva.cfg)
 
-    # Gather common measurement types.
-    bc = blockConstants(evcx_, eva.cfg)
-
-    # NOTE: VCD input may come from STDIN ==> only read once.
-    with VcdReader(args.input) as vcd:
-        evcx = checkEvcxWithVcd(evcx_, vcd)
-
-        evcxVarIds = set(v["hookVarId"] for nm,v in evcx.items())
-        mapVarIdToEvsIndices = \
-            {varid: [(v["type"], v["idx"], v["hookType"], v["hookBit"]) \
-                     for nm,v in evcx.items() \
-                     if varid == v["hookVarId"]] for varid in evcxVarIds}
-
-
-        # Initialize arrays which will comprise a block of the EVS dataset.
-        blkEvent = np.zeros(bc.eventShape, dtype=np.bool)
-        blkBinary = np.zeros(bc.binaryShape, dtype=np.bool)
-        blkNormal = np.zeros(bc.normalShape, dtype=np.float64)
-        evsFnameFmt = os.path.join(eva.paths.fname_evs, "evs.%s.%d")
-        mkDirP(os.path.dirname(evsFnameFmt))
-
-        # Work through timechunks updating ndarrays.
-        mapVarIdToPrev_ = {varid: (0,0) for varid in evcxVarIds}
-
-        blkNumPrev_ = 0
-        for tc in vcd.timechunks:
-            newTime, changedVarIds, newValues = tc
-
-            if newTime < eva.cfg.timestart:
-                continue
-
-            if eva.cfg.timestop != 0 and newTime > eva.cfg.timestop:
-                break
-
-            tQuotient, tRemainder = divmod(newTime, eva.cfg.timestep)
-            if 0 != tRemainder:
-                continue
-
-            # Index in EVent Sample (EVS) array of this time.
-            timeIdx = (newTime - eva.cfg.timestart) // eva.cfg.timestep
-            assert isinstance(timeIdx, int), type(timeIdx)
-            assert 0 <= timeIdx, (timeIdx, newTime, eva.cfg.timestart, eva.cfg.timestep)
-
-            # EVS time is split into blocks.
-            blkNum, blkIdx = divmod(timeIdx, eva.cfg.evsblocksize)
-
-            # Write current blocks to disk, reinitialize.
-            if blkNum != blkNumPrev_:
-                saveNpy(blkEvent,  evsFnameFmt % ("event", blkNum))
-                saveNpy(blkBinary, evsFnameFmt % ("binary", blkNum))
-                saveNpy(blkNormal, evsFnameFmt % ("normal", blkNum))
-
-                blkEvent = np.zeros(bc.eventShape, dtype=np.bool)
-                blkBinary = np.zeros(bc.binaryShape, dtype=np.bool)
-                blkNormal = np.zeros(bc.normalShape, dtype=np.float64)
-
-                # Reset previous block indices to 0.
-                mapVarIdToPrev_ = \
-                    {varid: (v,0) for varid,(v,i) in mapVarIdToPrev_.items()}
-
-            for varId,newValue in zip(changedVarIds, newValues):
-                if not varId in evcxVarIds:
-                    continue
-
-                assert isinstance(newValue, str)
-                newValueClean = newValue.replace('x', '0').replace('z', '1')
-
-                prevValue, prevBlkIdx = mapVarIdToPrev_[varId] # Always clean.
-
-                # Fill arrays
-                # TODO: Needs more testing.
-                # TODO: rise/fall etc?
-                for tp,evsIdx,hookType,hookBit in mapVarIdToEvsIndices[varId]:
-
-                    if "event" == tp:
-                        if "event" == hookType:
-                            blkEvent[evsIdx][blkIdx] = True
-                        elif hookType in oneBitTypes:
-                            blkEvent[evsIdx][blkIdx] = \
-                                twoStateBool(newValueClean, hookBit)
-                        else:
-                            assert False, hookType
-
-                    elif "binary" == tp:
-                        if hookType in oneBitTypes:
-                            blkBinary[evsIdx][prevBlkIdx+1:blkIdx] = \
-                                twoStateBool(prevValue, hookBit)
-                            blkBinary[evsIdx][blkIdx] = \
-                                twoStateBool(newValueClean, hookBit)
-                        else:
-                            assert False, hookType
-
-                    elif "normal" == tp:
-                        if "real" == hookType:
-                            blkNormal[evsIdx][blkIdx] = float(newValueClean)
-                        else:
-                            assert False, hookType
-                    else:
-                        assert False, tp
-
-                mapVarIdToPrev_[varId] = newValueClean, blkIdx
-
-        # End of file, save last block.
-        saveNpy(blkEvent,  evsFnameFmt % ("event", blkNum))
-        saveNpy(blkBinary, evsFnameFmt % ("binary", blkNum))
-        saveNpy(blkNormal, evsFnameFmt % ("normal", blkNum))
+    evsStage0(args.input, evcx, eva.cfg)
 
 # }}} def evaInit
 

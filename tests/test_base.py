@@ -74,26 +74,73 @@ class Test_Borg(unittest.TestCase): # {{{
 class Test_indexDefault(unittest.TestCase): # {{{
 
     def test_Basic0(self):
-        mylist = ["foo", "bar", "baz"]
-        result = indexDefault(mylist, "bar")
+        xs = ["foo", "bar", "baz"]
+        result = indexDefault(xs, "bar")
         self.assertEqual(result, 1)
 
     def test_Basic1(self):
-        mylist = ["foo", "bar", "baz"]
-        result = indexDefault(mylist, "zoo")
+        xs = ["foo", "bar", "baz"]
+        result = indexDefault(xs, "zoo")
         self.assertEqual(result, None)
 
     def test_Default0(self):
-        mylist = ["foo", "bar", "baz"]
-        result = indexDefault(mylist, "bar", default=False)
+        xs = ["foo", "bar", "baz"]
+        result = indexDefault(xs, "bar", default=False)
         self.assertEqual(result, 1)
 
     def test_Default1(self):
-        mylist = ["foo", "bar", "baz"]
-        result = indexDefault(mylist, "zoo", default=False)
+        xs = ["foo", "bar", "baz"]
+        result = indexDefault(xs, "zoo", default=False)
         self.assertEqual(result, False)
 
 # }}} class Test_indexDefault
+
+class Test_appendNonDuplicate(unittest.TestCase): # {{{
+
+    def test_NonDup(self):
+        # Straighforward append of new item.
+        xs = ["foo", "bar", "baz"]
+        x = "blue"
+        result = appendNonDuplicate(xs, x)
+        self.assertListEqual(result, ["foo", "bar", "baz", "blue"])
+
+    def test_NoReplace(self):
+        # No change since duplicate exists.
+        xs = ["foo", "bar", "baz"]
+        x = "bar"
+        result = appendNonDuplicate(xs, x)
+        self.assertListEqual(result, ["foo", "bar", "baz"])
+
+    def test_Replace(self):
+        # Old removed and new appended.
+        xs = ["foo", "bar", "baz"]
+        x = "bar"
+        result = appendNonDuplicate(xs, x, replace=True)
+        self.assertListEqual(result, ["foo", "baz", "bar"])
+
+    def test_Key(self):
+        # Old removed and new appended.
+        xs = [("foo", 1), ("bar", 2), ("baz", 3)]
+        x = ("bar", 5)
+
+        # Example from docstring, compare by first element.
+        k = (lambda xs, x: indexDefault([y[0] for y in xs], x[0]))
+
+        result = appendNonDuplicate(xs, x, key=k, replace=True)
+        self.assertListEqual(result, [("foo", 1), ("baz", 3), ("bar", 5)])
+
+    def test_Overwrite(self):
+        # Old removed and new appended.
+        xs = [("foo", 1), ("bar", 2), ("baz", 3)]
+        x = ("bar", 5)
+
+        # Example from docstring, compare by first element.
+        k = (lambda xs, x: indexDefault([y[0] for y in xs], x[0]))
+
+        result = appendNonDuplicate(xs, x, key=k, replace=True, overwrite=True)
+        self.assertListEqual(result, [("foo", 1), ("bar", 5), ("baz", 3)])
+
+# }}} class Test_appendNonDuplicate
 
 class Test_stripSuffix(unittest.TestCase): # {{{
 

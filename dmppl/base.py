@@ -55,17 +55,65 @@ class Borg: # {{{
         self.__dict__ = self._shared_state
 # }}} class Borg
 
-def indexDefault(l, i, default=None): # {{{
+def indexDefault(xs, x, default=None): # {{{
     '''Return the first index of an item in a list, or a default value.
 
     Allows list comprehension without try/except.
     '''
     try:
-        ret = l.index(i)
+        ret = xs.index(x)
     except ValueError:
         ret = default
     return ret
 # }}} def indexDefault
+
+def appendNonDuplicate(xs, x, key=None, replace=False, overwrite=False): # {{{
+    '''Append x to xs, using key to find existing duplicate, replace or ignore.
+
+    `key` must be either None or a callable returning the index of existing
+    duplicate or None if there isn't an existing duplicate.
+    E.g. If each x is a tuple and you find duplicates by comparing the first
+    element:
+        key = (lambda xs, x: indexDefault([y[0] for y in xs], x[0]))
+
+    If `replace` is True then existing is removed and new is either appended or
+    overwritten, depending on `replace`.
+    If replace is False then no append or overwrite operation occurs for
+    duplicates.
+
+    duplicate, replace=True, overwrite=True -> old overwritten by new in-place
+    duplicate, replace=True, overwrite=False -> old removed, new appended
+    duplicate, replace=False -> no change
+    no duplicate -> new appended
+    '''
+    k = (lambda xs,x: indexDefault(xs, x)) if key is None else key
+
+    foundIndex = k(xs, x)
+
+    if foundIndex is not None:
+        assert isinstance(foundIndex, int), (type(foundIndex), foundIndex)
+        assert foundIndex < len(xs)
+        if replace:
+            if overwrite:
+                # duplicate, replace=True, overwrite=True ->
+                #   old overwritten by new in-place
+                xs[foundIndex] = x
+            else:
+                # duplicate, replace=True, overwrite=False ->
+                #   old removed, new appended
+                xs.pop(foundIndex)
+                xs.append(x)
+        else:
+            # duplicate, replace=False ->
+            #   no change
+            pass
+    else:
+        # no duplicate ->
+        #   new appended
+        xs.append(x)
+
+    return xs
+# }}} def appendNonDuplicate
 
 def stripSuffix(t, s): # {{{
     '''Remove an optional suffix from a string.

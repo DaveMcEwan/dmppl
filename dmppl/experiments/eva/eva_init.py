@@ -233,8 +233,10 @@ def checkEvc(evc): # {{{
     )
 
     measures = evc.get("measure", [])
-    # TODO: Check required hook, name, type.
     for measure in measures:
+        assert "hook" in measure.keys()
+        assert "name" in measure.keys()
+        assert "type" in measure.keys()
         for k,v in measure.items():
             evcCheckValue(k, measureKeys)
 

@@ -562,14 +562,19 @@ def evsStage0(instream, evcx, cfg): # {{{
                       version=vcdi.vcdVersion,
                       timescale=' '.join(vcdi.vcdTimescale))
 
-        # Future queue of timechunks which may need to be interleaved with
-        # timechunks from vcdi, such as event->bit conversion inferring 1 then
-        # 0 in consecutive times.
+        # Forward (future) queue of speculative changes which may need to be
+        # interleaved with timechunks from vcdi.
+        # E.g. event->bit conversion inferring 1 then 0 in consecutive times.
         # Or rise/fall on bstate.
         # [ (time, name, value) ... ]
         # Initialise all measurements to 0, except reflections to 1.
         fq = [(0, nm, int(re.match(r"^[^\.]*\.reflection\.", nm) is not None)) \
               for nm in vcdo.varNames]
+
+        # Backward (past) queue of non-speculative (proper) changes which have
+        # been interpolated between the previous timechunk and the current.
+        # [ (time, name, value) ... ]
+        bq = []
 
         # Work through vcdi timechunks putting values into vcdo.
         for iTc in vcdi.timechunks:
@@ -590,15 +595,18 @@ def evsStage0(instream, evcx, cfg): # {{{
             assert isinstance(oTime, int), type(oTime)
             assert 0 <= oTime, (oTime, iTime, cfg.timestart, cfg.timestep)
 
-            oChangedVars, oNewValues = [], []
+            # Current (now) queue of changes which may contain duplicate
+            # varnames with different values.
+            # Only the last appended will be used.
+            # No time field is necessary, all use current timechunk (oTime).
+            #oChangedVars, oNewValues = [], []
+            # [ (name, value) ... ]
+            nq = [(nm, v) for t,nm,v in fq if t == oTime]
 
-            # Extract changes to be written now, fq may contain changes for
-            # after oTime.
+            # Extract proper changes from fq and put into current queue.
+            # Changes are proper if they are for time before this timechunk.
+            # fq may still contain future speculative changes.
             beforeNow = [(t,nm,v) for t,nm,v in fq if t < oTime]
-            for t,nm,v in fq:
-                if t == oTime:
-                    appendNonDuplicate(oChangedVars, nm)
-                    oNewValues.append(v)
             fq = [(t,nm,v) for t,nm,v in fq if t > oTime]
 
             for fqTime, fqGroup in groupby(beforeNow, key=(lambda x: x[0])):
@@ -607,8 +615,7 @@ def evsStage0(instream, evcx, cfg): # {{{
 
                 vcdo.wrTimechunk((fqTime, fqChangedVars, fqNewValues))
 
-
-            for iVarId,iNewValue in zip(iChangedVarIds, iNewValues):
+            for iVarId,iNewValue in zip(iChangedVarIds, iNewValues): # {{{
                 if not iVarId in evcxVarIds:
                     continue
 
@@ -623,16 +630,15 @@ def evsStage0(instream, evcx, cfg): # {{{
                 for nm,tp,hookType,hookBit,geq,leq in mapVarIdToMeasures[iVarId]:
 
                     if "event" == tp:
-                        oName = "event.measure." + nm
-                        oChangedVars.append(oName)
                         if "event" == hookType:
                             # vcdi implies event only occurring at this time.
-                            oNewValues.append(1)
+                            nq.append(("event.measure." + nm, 1))
 
                             # Speculatively reset to 0 in next time.
-                            fq.append((oTime+1, oName, 0))
+                            fq.append((oTime+1, "event.measure." + nm, 0))
                         elif hookType in oneBitTypes:
-                            oNewValues.append(int(twoStateBool(newValueClean, hookBit)))
+                            newValue = int(twoStateBool(newValueClean, hookBit))
+                            nq.append(("event.measure." + nm, newValue))
                         else:
                             # Event measure only made from VCD event, or
                             # 2-state (bit), 4-state types (wire, reg, logic)
@@ -643,18 +649,14 @@ def evsStage0(instream, evcx, cfg): # {{{
                             newValue = twoStateBool(newValueClean, hookBit)
 
                             if prevValue != newValue:
-                                oChangedVars.append("bstate.measure." + nm)
-                                oChangedVars.append("bstate.reflection." + nm)
-                                oNewValues.append(int(newValue))
-                                oNewValues.append(int(not newValue))
+                                nq.append(("bstate.measure." + nm, int(newValue)))
+                                nq.append(("bstate.reflection." + nm, int(not newValue)))
 
                                 if newValue:
-                                    oChangedVars.append("bstate.rise." + nm)
-                                    oNewValues.append(1)
+                                    nq.append(("bstate.rise." + nm, 1))
                                     fq.append((oTime+1, "bstate.rise." + nm, 0))
                                 else:
-                                    oChangedVars.append("bstate.fall." + nm)
-                                    oNewValues.append(1)
+                                    nq.append(("bstate.fall." + nm, 1))
                                     fq.append((oTime+1, "bstate.fall." + nm, 0))
                             else:
                                 pass # No change
@@ -689,18 +691,14 @@ def evsStage0(instream, evcx, cfg): # {{{
                                      geq <= newValueFloat)
 
                             if prevValue != newValue:
-                                oChangedVars.append("threshold.measure." + nm)
-                                oChangedVars.append("threshold.reflection." + nm)
-                                oNewValues.append(int(newValue))
-                                oNewValues.append(int(not newValue))
+                                nq.append(("threshold.measure." + nm, int(newValue)))
+                                nq.append(("threshold.reflection." + nm, int(not newValue)))
 
                                 if newValue:
-                                    oChangedVars.append("threshold.rise." + nm)
-                                    oNewValues.append(1)
+                                    nq.append(("threshold.rise." + nm, 1))
                                     fq.append((oTime+1, "threshold.rise." + nm, 0))
                                 else:
-                                    oChangedVars.append("threshold.fall." + nm)
-                                    oNewValues.append(1)
+                                    nq.append(("threshold.fall." + nm, 1))
                                     fq.append((oTime+1, "threshold.fall." + nm, 0))
                             else:
                                 pass # No change
@@ -713,6 +711,11 @@ def evsStage0(instream, evcx, cfg): # {{{
 
                     # TODO: normal must go through low-pass filter.
                     # Currently just ignored.
+                    elif "normal" == tp:
+                        pass
+
+                    else:
+                        assert False, tp
 
                 # Track previous value in vcdi
                 try:
@@ -720,15 +723,26 @@ def evsStage0(instream, evcx, cfg): # {{{
                 except UnboundLocalError:
                     pass
 
-            # Resolve conflicts from fq.
-            # Future queue is speculative so if a proper value from the current
-            # timechunk will take precedence.
-            if len(oChangedVars):
-                dedupVars = []
-                for nm,v in zip(oChangedVars, oNewValues):
-                    dedupVars = appendNonDuplicate(dedupVars, (nm,v), replace=True)
-                oChangedVars, oNewValues = zip(*dedupVars)
+            # }}} for iVarId,iNewValue in zip(iChangedVarIds, iNewValues)
 
+            bq.sort()
+            for bqTime, bqGroup in groupby(bq, key=(lambda x: x[0])):
+                bqChangedVars, bqNewValues = \
+                    list(zip(*[(nm,v) for _,nm,v in bqGroup]))
+
+                vcdo.wrTimechunk((bqTime, bqChangedVars, bqNewValues))
+            bq = []
+
+            # Resolve conflicts from fq.
+            # Forward queue is speculative so a proper value from the current
+            # timechunk will take precedence.
+            # I.e. Always use the last appended change.
+            dedupVars = []
+            for nm,v in nq:
+                dedupVars = appendNonDuplicate(dedupVars, (nm,v), replace=True)
+            oChangedVars, oNewValues = zip(*dedupVars)
+
+            if len(oChangedVars):
                 oTc = (oTime, oChangedVars, oNewValues)
                 vcdo.wrTimechunk(oTc)
 

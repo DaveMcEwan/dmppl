@@ -616,6 +616,7 @@ def evsStage0(instream, evcx, cfg): # {{{
                 newValueClean = iNewValue.replace('x', '0').replace('z', '1')
 
                 prevTime, prevValue = mapVarIdToPrev_[iVarId] # Always clean.
+                assert prevTime <= oTime, (prevTime, oTime)
 
                 # Each iVarId may refer to multiple measurements, such as
                 # vectored wires or wires used in multiple ways.

@@ -549,25 +549,16 @@ def evsStage0(instream, evcx, cfg): # {{{
 
             oChangedVars, oNewValues = [], []
 
-            # Append timechunks from queue before looking at new values.
-            # Always keep sorted by time (1st element)
-            fq.sort()
-
-            # TODO: BUG with non-sequential times.
-
             # Extract changes to be written now, fq may contain changes for
             # after oTime.
-            # Expect fq to be short so popping from beginning shouldn't be
-            # too much of a performance problem.
-            fqUseNow = []
+            beforeNow = [(t,nm,v) for t,nm,v in fq if t < oTime]
             for t,nm,v in fq:
-                if t < oTime:
-                    fqUseNow.append(fq.pop())
-                elif t == oTime:
+                if t == oTime:
                     appendNonDuplicate(oChangedVars, nm)
                     oNewValues.append(v)
+            fq = [(t,nm,v) for t,nm,v in fq if t > oTime]
 
-            for fqTime, fqGroup in groupby(fqUseNow, key=(lambda x: x[0])):
+            for fqTime, fqGroup in groupby(beforeNow, key=(lambda x: x[0])):
                 fqChangedVars, fqNewValues = \
                     list(zip(*[(nm,v) for _,nm,v in fqGroup]))
 
@@ -644,7 +635,6 @@ def evsStage0(instream, evcx, cfg): # {{{
                 for nm,v in zip(oChangedVars, oNewValues):
                     dedupVars = appendNonDuplicate(dedupVars, (nm,v), replace=True)
                 oChangedVars, oNewValues = zip(*dedupVars)
-
 
                 oTc = (oTime, oChangedVars, oNewValues)
                 vcdo.wrTimechunk(oTc)

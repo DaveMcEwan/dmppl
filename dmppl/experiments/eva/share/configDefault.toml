@@ -20,6 +20,27 @@ timestop = 0
 # Only sample when time is an integer multiple of this.
 timestep = 1
 
+# List of Floats.
+# Normal measurements must be run through an interpolator in order to work with
+# derived functions like the gradient.
+# A digital filter of Finite Impulse Response (FIR) is used to interpolate,
+# where these are the coefficients.
+# # 5-tap Raised Cosine FIR.
+# fir = [
+#   0.107,
+#   0.241,
+#   0.303,
+#   0.241,
+#   0.107,
+# ]
+# 4-tap FIR, groupDelay=0.25.
+fir = [
+  0.25,
+  0.25,
+  0.25,
+  0.25,
+]
+
 # Non-negative integer.
 # EVS is stored in a series of array blocks, restricted to this number of
 # elements in length to bound/predict memory usage.

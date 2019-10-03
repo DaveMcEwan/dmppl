@@ -596,8 +596,8 @@ def evsStage0(instream, evcx, cfg): # {{{
                         elif hookType in oneBitTypes:
                             oNewValues.append(int(twoStateBool(newValueClean, hookBit)))
                         else:
-                            # Event measure only made from VCD event or wire,
-                            # reg, bit, logic, etc
+                            # Event measure only made from VCD event, or
+                            # 2-state (bit), 4-state types (wire, reg, logic)
                             assert False, hookType
 
                     elif "bstate" == tp:
@@ -620,10 +620,14 @@ def evsStage0(instream, evcx, cfg): # {{{
                                     fq.append((oTime+1, "bstate.fall." + nm, 0))
                             else:
                                 pass # No change
+                        else:
+                            # Bstate measure only made from VCD 2-state (bit) or
+                            # 4-state types (wire, reg, logic, etc)
+                            assert False, hookType
 
                     elif "threshold" == tp:
                         if (hookType in oneBitTypes and hookBit is None) or \
-                           ("real" == hookType):
+                           (hookType in ["real", "integer"]):
 
                             newValueFloat = float(newValueClean) \
                                 if "real" == hookType else \
@@ -651,6 +655,9 @@ def evsStage0(instream, evcx, cfg): # {{{
                                 pass # No change
 
                         else:
+                            # Threshold (number to bstate) measure only made
+                            # from VCD 2-state (bit) vector, 4-state (wire, reg,
+                            # logic) vector, integer, or real.
                             assert False, (hookType, hookBit)
 
                     # TODO: normal must go through low-pass filter.

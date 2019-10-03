@@ -11,7 +11,7 @@ import numpy as np
 
 # Local library imports
 from dmppl.base import dbg, Bunch, appendNonDuplicate, indexDefault, info, mkDirP, verb
-from dmppl.math import saveNpy
+from dmppl.math import saveNpy, clipNorm
 from dmppl.toml import loadToml, saveToml
 from dmppl.vcd import VcdReader, VcdWriter, oneBitTypes
 
@@ -206,7 +206,7 @@ def checkEvc(evc): # {{{
 
     measureKeys = (
         "hook", # String: VCD path of measurement data. Required.
-        "type", # String: in {event, bstate, normal}.
+        "type", # String: in {event, bstate, threshold, normal}.
         "name", # String: Measurement name.
         "subs", # [String]: Substitution values for name/hook.
         #"geq",  # Real: Threshold/interval limit.
@@ -220,16 +220,14 @@ def checkEvc(evc): # {{{
         # Binary may be dense.
         "bstate",
 
-        # Real in [0, 1].
-        "normal",
-
-        # Clip and normalise within interval `GEQ <= x <= LEQ` -> normal.
-        #"interval", # Require both {geq, leq}.
-
         # True when `GEQ <= x AND x <= LEQ` -> bstate.
         # Can be used to define true when either above or below a value.
         # Can be used to define true when either inside or outside an interval.
-        #"threshold", # Require at least one of {geq, leq}.
+        "threshold", # Require at least one of {geq, leq}.
+
+        # Clip and normalise within interval `GEQ <= x <= LEQ` -> normal.
+        # Real in [0, 1].
+        "normal", # Optional {geq, leq}, defaulting to {0, 1}.
     )
 
     measures = evc.get("measure", [])
@@ -242,6 +240,7 @@ def checkEvc(evc): # {{{
                 evcCheckValue(v, measureTypes)
 
             # TODO: Check subs
+            # TODO: Check geq, leq
 
     # TODO: More checking?
     return
@@ -297,7 +296,7 @@ def expandEvc(evc, cfg): # {{{
 
     verb("Expanding EVC to EVCX... ", end='')
 
-    evsIdxEvent_, evsIdxBstate_, evsIdxNormal_ = 0, 0, 0
+    evsIdxEvent_, evsIdxBstate_, evsIdxNormal_, evsIdxThreshold_ = 0, 0, 0, 0
     evcx = {}
     for measure in evc.get("measure", []):
         subs = measure["subs"] if "subs" in measure else []
@@ -349,6 +348,9 @@ def expandEvc(evc, cfg): # {{{
             elif "bstate" == tp:
                 evsIdx = evsIdxBstate_
                 evsIdxBstate_ += 1
+            elif "threshold" == tp:
+                evsIdx = evsIdxThreshold_
+                evsIdxThreshold_ += 1
             elif "normal" == tp:
                 evsIdx = evsIdxNormal_
                 evsIdxNormal_ += 1
@@ -473,13 +475,13 @@ def evsStage0(instream, evcx, cfg): # {{{
         '''
         measuresEvent =  (nm for nm,v in evcx.items() if "event"  == v["type"])
         measuresBstate = (nm for nm,v in evcx.items() if "bstate" == v["type"])
+        measuresThreshold = (nm for nm,v in evcx.items() if "threshold" == v["type"])
         measuresNormal = (nm for nm,v in evcx.items() if "normal" == v["type"])
 
         prefixesEvent =  ("measure",)
         prefixesBstate = ("measure", "reflection", "rise", "fall",)
-        prefixesNormal = ("measure", "reflection",
-                          "rise", "fall",
-                          "riserise", "fallfall",)
+        prefixesNormal = ("measure",)
+        prefixesThreshold = ("measure", "reflection", "rise", "fall",)
 
         namesEvent = \
             ('.'.join(("event", pfx, nm)) \
@@ -487,12 +489,15 @@ def evsStage0(instream, evcx, cfg): # {{{
         namesBstate = \
             ('.'.join(("bstate", pfx, nm)) \
              for nm in measuresBstate for pfx in prefixesBstate)
+        namesThreshold = \
+            ('.'.join(("threshold", pfx, nm)) \
+             for nm in measuresThreshold for pfx in prefixesThreshold)
         namesNormal = \
             ('.'.join(("normal", pfx, nm)) \
              for nm in measuresNormal for pfx in prefixesNormal)
 
         varlist = [(nm, 1, "bit") \
-                   for nms in (namesEvent, namesBstate,) \
+                   for nms in (namesEvent, namesBstate, namesThreshold,) \
                    for nm in nms] + \
                   [(nm, 64, "real") \
                    for nms in (namesNormal,) \
@@ -615,8 +620,37 @@ def evsStage0(instream, evcx, cfg): # {{{
                             else:
                                 pass # No change
 
+                    elif "threshold" == tp:
+                        if (hookType in oneBitTypes and hookBit is None) or \
+                           ("real" == hookType):
+
+                            newValueFloat = float(newValueClean) \
+                                if "real" == hookType else \
+                                float(int(newValueClean, 2))
+
+                            leq, geq = 0, 1 # TODO
+                            newValue = int((newValueFloat <= leq) and \
+                                           (newValueFloat >= geq))
+
+                            if prevValue != newValue:
+                                oChangedVars.append("threshold.measure." + nm)
+                                oChangedVars.append("threshold.reflection." + nm)
+                                oNewValues.append(int(newValue))
+                                oNewValues.append(int(not newValue))
+
+                                if newValue:
+                                    oChangedVars.append("threshold.rise." + nm)
+                                    oNewValues.append(1)
+                                    fq.append((oTime+1, "threshold.rise." + nm, 0))
+                                else:
+                                    oChangedVars.append("threshold.fall." + nm)
+                                    oNewValues.append(1)
+                                    fq.append((oTime+1, "threshold.fall." + nm, 0))
+                            else:
+                                pass # No change
+
                         else:
-                            assert False, hookType
+                            assert False, (hookType, hookBit)
 
                     # TODO: normal must go through low-pass filter.
                     # Currently just ignored.

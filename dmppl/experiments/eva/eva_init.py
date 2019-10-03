@@ -544,7 +544,9 @@ def evsStage0(instream, evcx, cfg): # {{{
 
         evcxVarIds = set(v["hookVarId"] for nm,v in evcxx.items())
         mapVarIdToMeasures = \
-            {varid: [(nm, v["type"], v["hookType"], v["hookBit"]) \
+            {varid: [(nm, v["type"],
+                      v["hookType"], v["hookBit"],
+                      v.get("geq"), v.get("leq")) \
                      for nm,v in evcxx.items() \
                      if varid == v["hookVarId"]] for varid in evcxVarIds}
 
@@ -614,7 +616,7 @@ def evsStage0(instream, evcx, cfg): # {{{
 
                 # Each iVarId may refer to multiple measurements, such as
                 # vectored wires or wires used in multiple ways.
-                for nm,tp,hookType,hookBit in mapVarIdToMeasures[iVarId]:
+                for nm,tp,hookType,hookBit,geq,leq in mapVarIdToMeasures[iVarId]:
 
                     if "event" == tp:
                         oName = "event.measure." + nm
@@ -665,9 +667,22 @@ def evsStage0(instream, evcx, cfg): # {{{
                                 if "real" == hookType else \
                                 float(int(newValueClean, 2))
 
-                            leq, geq = 0, 1 # TODO
-                            newValue = int((newValueFloat <= leq) and \
-                                           (newValueFloat >= geq))
+                            if geq is None:
+                                # Is measurement under threshold?
+                                newValue = int(newValueFloat <= leq)
+                            elif leq is None:
+                                # Is measurement over threshold?
+                                newValue = int(geq <= newValueFloat)
+                            elif geq < leq:
+                                # Is measurement inside interval?
+                                newValue = \
+                                    int(newValueFloat <= leq and \
+                                        geq <= newValueFloat)
+                            else:
+                                # Is measurement outside interval?
+                                newValue = \
+                                    int(newValueFloat <= leq or \
+                                        geq <= newValueFloat)
 
                             if prevValue != newValue:
                                 oChangedVars.append("threshold.measure." + nm)

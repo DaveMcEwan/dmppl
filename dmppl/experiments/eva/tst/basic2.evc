@@ -131,7 +131,7 @@ subs = [
 type = "threshold"
 name = "threshGeqFromReal{}"
 hook = "real{}"
-geq = 3
+geq = 9
 subs = [
   ["A", "B"],
 ]
@@ -140,7 +140,7 @@ subs = [
 type = "threshold"
 name = "threshLeqFromInteger{}"
 hook = "integer{}"
-leq = 3
+leq = 9
 subs = [
   ["A", "B"],
 ]

@@ -32,8 +32,8 @@ class Test_LoadEvc(unittest.TestCase): # {{{
                 },
                 {
                     u"name": u"someState",
-                    u"hook": u"binaryHook",
-                    u"type": u"binary",
+                    u"hook": u"bstateHook",
+                    u"type": u"bstate",
                 },
                 {
                     u"name": u"FOO{}-{}-{}",
@@ -68,8 +68,8 @@ class Test_ExpandEvc(unittest.TestCase): # {{{
                 u"idx": 0,
             },
             u"someState": {
-                u"hook": u"somepath.prefix.binaryHook",
-                u"type": u"binary",
+                u"hook": u"somepath.prefix.bstateHook",
+                u"type": u"bstate",
                 u"idx": 0,
             },
             u"FOOblue-123-0": {

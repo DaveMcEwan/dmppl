@@ -1,0 +1,126 @@
+
+# Use with basic2.vcd
+
+[config]
+vcdhierprefix = "module:TOP."
+
+# {{{ event
+
+[[measure]]
+type = "event"
+name = "occurrerFromEvent{}"
+hook = "event{}"
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "event"
+name = "occurrerFromBit{}"
+hook = "bit{}"
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "event"
+name = "occurrerFromWire{}"
+hook = "wire{}"
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "event"
+name = "occurrerFromReg{}"
+hook = "reg{}"
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "event"
+name = "occurrerFromBitVec{}"
+hook = "bitVec{}[0]"
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "event"
+name = "occurrerFromWireVec{}"
+hook = "wireVec{}[1]"
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "event"
+name = "occurrerFromRegVec{}"
+hook = "regVec{}[2]"
+subs = [
+  ["A", "B"],
+]
+
+# }}} event
+
+# {{{ bstate
+
+# Bstate hooks must be of VCD 2-state or 4-state type.
+#[[measure]]
+#type = "bstate"
+#name = "twovalFromEvent{}"
+#hook = "event{}"
+#subs = [
+#  ["A", "B"],
+#]
+
+[[measure]]
+type = "bstate"
+name = "twovalFromBit{}"
+hook = "bit{}"
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "bstate"
+name = "twovalFromWire{}"
+hook = "wire{}"
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "bstate"
+name = "twovalFromReg{}"
+hook = "reg{}"
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "bstate"
+name = "twovalFromBitVec{}"
+hook = "bitVec{}[0]"
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "bstate"
+name = "twovalFromWireVec{}"
+hook = "wireVec{}[1]"
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "bstate"
+name = "twovalFromRegVec{}"
+hook = "regVec{}[2]"
+subs = [
+  ["A", "B"],
+]
+
+# }}} bstate

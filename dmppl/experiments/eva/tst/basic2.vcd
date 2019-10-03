@@ -1,0 +1,136 @@
+
+$version handcoded $end
+$comment Use with basic2.evc $end
+$timescale 1ns $end
+
+ $scope module TOP $end
+  $var integer  32  IA    integerA  $end
+  $var integer  32  IB    integerB  $end
+  $var real     64  FA    realA     $end
+  $var real     64  FB    realB     $end
+  $var event    1   EA    eventA    $end
+  $var event    1   EB    eventB    $end
+  $var bit      1   BA    bitA      $end
+  $var bit      1   BB    bitB      $end
+  $var wire     1   WA    wireA     $end
+  $var wire     1   WB    wireB     $end
+  $var reg      1   RA    regA      $end
+  $var reg      1   RB    regB      $end
+  $var bit      8   BVA   bitVecA  [7:0] $end
+  $var bit      8   BVB   bitVecB  [7:0] $end
+  $var wire     9   WVA   wireVecA [8:0] $end
+  $var wire     9   WVB   wireVecB [8:0] $end
+  $var reg      10  RVA   regVecA  [9:0] $end
+  $var reg      10  RVB   regVecB  [9:0] $end
+ $upscope $end
+
+$enddefinitions $end
+
+$comment Time=0 Initialise only As to 0 $end
+$comment Time=0 eventA=0 $end
+#0
+b00000000000000000000000000000000 IA
+r0.0 FA
+0EA
+0BA
+0WA
+0RA
+b00000000 BVA
+b000000000 WVA
+b0000000000 RVA
+
+$comment Time=1 Initialise only B $end
+$comment Time=1 eventB=0 $end
+#1
+b00000000000000000000000000000000 IB
+r0.0 FB
+0EB
+0BB
+0WB
+0RB
+b00000000 BVB
+b000000000 WVB
+b0000000000 RVB
+
+$comment Time=2 Set As to 1 $end
+$comment Time=2 eventA=1 $end
+#2
+b00000000000000000000000000000001 IA
+r0.1 FA
+1BA
+1WA
+1RA
+b00000001 BVA
+b000000001 WVA
+b0000000001 RVA
+
+$comment Time=3 Toggle/increment As $end
+#3
+b00000000000000000000000000000010 IA
+r0.2 FA
+0BA
+0WA
+0RA
+b00000010 BVA
+b000000010 WVA
+b0000000010 RVA
+
+$comment Time=4 No timechunk here. $end
+
+$comment Time=5 Set everything to 5 or 1 $end
+#5
+b00000000000000000000000000000101 IA
+r0.5 FA
+1EA
+1BA
+1WA
+1RA
+b00000101 BVA
+b000000101 WVA
+b0000000101 RVA
+b00000000000000000000000000000101 IB
+r0.5 FB
+1EB
+1BB
+1WB
+1RB
+b00000101 BVB
+b000000101 WVB
+b0000000101 RVB
+
+$comment Time=10 Big increase for A numbers to 16 $end
+#10
+b00000000000000000000000000001111 IA
+r16.0 FA
+b00001111 BVA
+b000001111 WVA
+b0000001111 RVA
+
+$comment Time=11 Medium decrease for A numbers to 8 $end
+#11
+b00000000000000000000000000001000 IA
+r8.0 FA
+b00001000 BVA
+b000001000 WVA
+b0000001000 RVA
+
+$comment Time=20 Finish with everything at 0 $end
+#20
+b00000000000000000000000000000000 IA
+r0.1 FA
+1BA
+1WA
+1RA
+b00000001 BVA
+b000000001 WVA
+b0000000001 RVA
+#1
+b00000000000000000000000000000000 IB
+r0.0 FB
+0EB
+0BB
+0WB
+0RB
+b00000000 BVB
+b000000000 WVB
+b0000000000 RVB

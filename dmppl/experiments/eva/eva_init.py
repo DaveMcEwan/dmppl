@@ -565,8 +565,9 @@ def evsStage0(instream, evcx, cfg): # {{{
         # 0 in consecutive times.
         # Or rise/fall on bstate.
         # [ (time, name, value) ... ]
-        # Initialise all measurements to 0.
-        fq = [(0, nm, 0) for nm in vcdo.varNames]
+        # Initialise all measurements to 0, except reflections to 1.
+        fq = [(0, nm, int(re.match(r"^[^\.]*\.reflection\.", nm) is not None)) \
+              for nm in vcdo.varNames]
 
         # Work through vcdi timechunks putting values into vcdo.
         for iTc in vcdi.timechunks:
@@ -669,20 +670,20 @@ def evsStage0(instream, evcx, cfg): # {{{
 
                             if geq is None:
                                 # Is measurement under threshold?
-                                newValue = int(newValueFloat <= leq)
+                                newValue = (newValueFloat <= leq)
                             elif leq is None:
                                 # Is measurement over threshold?
-                                newValue = int(geq <= newValueFloat)
+                                newValue = (geq <= newValueFloat)
                             elif geq < leq:
                                 # Is measurement inside interval?
                                 newValue = \
-                                    int(newValueFloat <= leq and \
-                                        geq <= newValueFloat)
+                                    (newValueFloat <= leq and \
+                                     geq <= newValueFloat)
                             else:
                                 # Is measurement outside interval?
                                 newValue = \
-                                    int(newValueFloat <= leq or \
-                                        geq <= newValueFloat)
+                                    (newValueFloat <= leq or \
+                                     geq <= newValueFloat)
 
                             if prevValue != newValue:
                                 oChangedVars.append("threshold.measure." + nm)

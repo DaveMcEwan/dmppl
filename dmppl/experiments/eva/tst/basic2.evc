@@ -124,3 +124,45 @@ subs = [
 ]
 
 # }}} bstate
+
+# {{{ threshold
+
+[[measure]]
+type = "threshold"
+name = "threshGeqFromReal{}"
+hook = "real{}"
+geq = 3
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "threshold"
+name = "threshLeqFromInteger{}"
+hook = "integer{}"
+leq = 3
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "threshold"
+name = "threshInsideFromBitVec{}"
+hook = "bitVec{}"
+leq = 7
+geq = 2
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "threshold"
+name = "threshOutsideFromWireVec{}"
+hook = "wireVec{}"
+leq = 2
+geq = 7
+subs = [
+  ["A", "B"],
+]
+
+# }}} threshold

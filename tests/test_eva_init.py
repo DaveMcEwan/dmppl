@@ -17,6 +17,7 @@ class Test_LoadEvc(unittest.TestCase): # {{{
         self.maxDiff = None
         eva.initPaths(path.join(_tstd, "basic0"))
 
+        # TODO: threshold and geq,leq
         obj0 = {
             u"anotherAttribute": 123,
             u"title": u"This attribute is not used.",
@@ -61,11 +62,14 @@ class Test_ExpandEvc(unittest.TestCase): # {{{
         cfg0 = Bunch()
         cfg0.vcdhierprefix = "somepath.prefix."
 
+        # TODO: threshold and geq,leq
         obj0 = {
             u"someNormal": {
                 u"hook": u"somepath.prefix.normalHook",
                 u"type": u"normal",
                 u"idx": 0,
+                u"geq": 0,
+                u"leq": 1,
             },
             u"someState": {
                 u"hook": u"somepath.prefix.bstateHook",
@@ -165,5 +169,7 @@ class Test_ExpandEvc(unittest.TestCase): # {{{
         evcx1 = expandEvc(evc1, cfg1)
 
         self.assertDictEqual(obj1, evcx1)
+
+    # TODO: basic2
 
 # }}} class Test_ExpandEvc

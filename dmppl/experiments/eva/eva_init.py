@@ -209,8 +209,8 @@ def checkEvc(evc): # {{{
         "type", # String: in {event, bstate, threshold, normal}.
         "name", # String: Measurement name.
         "subs", # [String]: Substitution values for name/hook.
-        #"geq",  # Real: Threshold/interval limit.
-        #"leq",  # Real: Threshold/interval limit.
+        "geq",  # Real/Int: Threshold limit.
+        "leq",  # Real/Int: Threshold limit.
     )
 
     measureTypes = (
@@ -221,6 +221,8 @@ def checkEvc(evc): # {{{
         "bstate",
 
         # True when `GEQ <= x AND x <= LEQ` -> bstate.
+        # Or when `LEQ <= x OR x <= GEQ` -> bstate.
+        # The logic only makes sense these two ways.
         # Can be used to define true when either above or below a value.
         # Can be used to define true when either inside or outside an interval.
         "threshold", # Require at least one of {geq, leq}.
@@ -239,8 +241,12 @@ def checkEvc(evc): # {{{
             if "type" == k:
                 evcCheckValue(v, measureTypes)
 
+                if "threshold" == v:
+                    leqExists = ("leq" in measure.keys())
+                    geqExists = ("geq" in measure.keys())
+                    assert leqExists or geqExists
+
             # TODO: Check subs
-            # TODO: Check geq, leq
 
     # TODO: More checking?
     return
@@ -259,7 +265,14 @@ def expandEvc(evc, cfg): # {{{
             return
 
         for nm,v in evcx.items():
-            msg = "%s %d %s <-- %s" % (v["type"], v["idx"], nm, v["hook"])
+            h = v["hook"]
+            geq = v.get("geq")
+            leq = v.get("leq")
+            if "threshold" == v["type"]:
+                h = h if geq is None else ("%s <= " % geq + h)
+                h = h if leq is None else (h + " <= %s" % leq)
+
+            msg = "%s %d %s <-- %s" % (v["type"], v["idx"], nm, h)
             info(msg, prefix="INFO:EVCX: ")
 
     # }}} def infoEvcx
@@ -301,6 +314,24 @@ def expandEvc(evc, cfg): # {{{
     for measure in evc.get("measure", []):
         subs = measure["subs"] if "subs" in measure else []
         tp = measure["type"]
+
+        if "normal" == tp:
+            # Values of geq,leq define clipNorm interval.
+            geq = measure.get("geq", 0)
+            leq = measure.get("leq", 1)
+            assert isinstance(geq, (int, float)), (type(geq), geq)
+            assert isinstance(leq, (int, float)), (type(leq), leq)
+        elif "threshold" == tp:
+            # At least one of geq, leq must be a number.
+            # Values of geq,leq used for boundary checks.
+            geq = measure.get("geq", None)
+            leq = measure.get("leq", None)
+            assert (geq is not None) or (leq is not None), (geq, leq)
+            assert isinstance(geq, (int, float)) or geq is None, (type(geq), geq)
+            assert isinstance(leq, (int, float)) or leq is None, (type(leq), leq)
+        else:
+            # Event and bstate don't use geq or leq.
+            pass
 
         # `subs` guaranteed to be list of lists
         # Each `sub` guaranteed to be homogenous list.
@@ -362,9 +393,10 @@ def expandEvc(evc, cfg): # {{{
                 "hook": fullHook,
                 "type": tp,
                 "idx": evsIdx,
-                #"geq": geq,
-                #"leq": leq,
             }
+            if tp in ["threshold", "normal"]:
+                evcx[fullName]["geq"] = geq
+                evcx[fullName]["leq"] = leq
 
     verb("Saving... ", end='')
     if eva.initDone: # Unittests don't setup everything.

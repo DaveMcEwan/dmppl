@@ -531,7 +531,8 @@ def evsStage0(instream, evcx, cfg): # {{{
         # 0 in consecutive times.
         # Or rise/fall on bstate.
         # [ (time, name, value) ... ]
-        fq = []
+        # Initialise all measurements to 0.
+        fq = [(0, nm, 0) for nm in vcdo.varNames]
 
         # Work through vcdi timechunks putting values into vcdo.
         for iTc in vcdi.timechunks:

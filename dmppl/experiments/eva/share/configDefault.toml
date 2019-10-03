@@ -25,21 +25,8 @@ timestep = 1
 # derived functions like the gradient.
 # A digital filter of Finite Impulse Response (FIR) is used to interpolate,
 # where these are the coefficients.
-# # 5-tap Raised Cosine FIR.
-# fir = [
-#   0.107,
-#   0.241,
-#   0.303,
-#   0.241,
-#   0.107,
-# ]
-# 4-tap FIR, groupDelay=0.25.
-fir = [
-  0.25,
-  0.25,
-  0.25,
-  0.25,
-]
+#fir = [0.107, 0.241, 0.303, 0.241, 0.107] # 5-tap Raised Cosine FIR.
+fir = [0.25, 0.25, 0.25, 0.25] # 4-tap FIR, groupDelay=0.25.
 
 # Non-negative integer.
 # EVS is stored in a series of array blocks, restricted to this number of

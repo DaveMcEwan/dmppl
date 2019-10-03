@@ -12,8 +12,8 @@ type = "normal"
 name = "someNormal"
 
 [[measure]]
-hook = "binaryHook" # module:TOP.blk0.binaryHook
-type = "binary"
+hook = "bstateHook" # module:TOP.blk0.bstateHook
+type = "bstate"
 name = "someState"
 
 [[measure]]

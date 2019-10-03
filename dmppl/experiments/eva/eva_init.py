@@ -206,7 +206,7 @@ def checkEvc(evc): # {{{
 
     measureKeys = (
         "hook", # String: VCD path of measurement data. Required.
-        "type", # String: in {event, binary, normal}.
+        "type", # String: in {event, bstate, normal}.
         "name", # String: Measurement name.
         "subs", # [String]: Substitution values for name/hook.
         #"geq",  # Real: Threshold/interval limit.
@@ -218,7 +218,7 @@ def checkEvc(evc): # {{{
         "event",
 
         # Binary may be dense.
-        "binary",
+        "bstate",
 
         # Real in [0, 1].
         "normal",
@@ -226,7 +226,7 @@ def checkEvc(evc): # {{{
         # Clip and normalise within interval `GEQ <= x <= LEQ` -> normal.
         #"interval", # Require both {geq, leq}.
 
-        # True when `GEQ <= x AND x <= LEQ` -> binary.
+        # True when `GEQ <= x AND x <= LEQ` -> bstate.
         # Can be used to define true when either above or below a value.
         # Can be used to define true when either inside or outside an interval.
         #"threshold", # Require at least one of {geq, leq}.
@@ -297,7 +297,7 @@ def expandEvc(evc, cfg): # {{{
 
     verb("Expanding EVC to EVCX... ", end='')
 
-    evsIdxEvent_, evsIdxBinary_, evsIdxNormal_ = 0, 0, 0
+    evsIdxEvent_, evsIdxBstate_, evsIdxNormal_ = 0, 0, 0
     evcx = {}
     for measure in evc.get("measure", []):
         subs = measure["subs"] if "subs" in measure else []
@@ -346,9 +346,9 @@ def expandEvc(evc, cfg): # {{{
             if "event" == tp:
                 evsIdx = evsIdxEvent_
                 evsIdxEvent_ += 1
-            elif "binary" == tp:
-                evsIdx = evsIdxBinary_
-                evsIdxBinary_ += 1
+            elif "bstate" == tp:
+                evsIdx = evsIdxBstate_
+                evsIdxBstate_ += 1
             elif "normal" == tp:
                 evsIdx = evsIdxNormal_
                 evsIdxNormal_ += 1
@@ -472,11 +472,11 @@ def evsStage0(instream, evcx, cfg): # {{{
         All signals are of either "bit" or "real" VCD type.
         '''
         measuresEvent =  (nm for nm,v in evcx.items() if "event"  == v["type"])
-        measuresBinary = (nm for nm,v in evcx.items() if "binary" == v["type"])
+        measuresBstate = (nm for nm,v in evcx.items() if "bstate" == v["type"])
         measuresNormal = (nm for nm,v in evcx.items() if "normal" == v["type"])
 
         prefixesEvent =  ("measure",)
-        prefixesBinary = ("measure", "reflection", "rise", "fall",)
+        prefixesBstate = ("measure", "reflection", "rise", "fall",)
         prefixesNormal = ("measure", "reflection",
                           "rise", "fall",
                           "riserise", "fallfall",)
@@ -484,15 +484,15 @@ def evsStage0(instream, evcx, cfg): # {{{
         namesEvent = \
             ('.'.join(("event", pfx, nm)) \
              for nm in measuresEvent for pfx in prefixesEvent)
-        namesBinary = \
-            ('.'.join(("binary", pfx, nm)) \
-             for nm in measuresBinary for pfx in prefixesBinary)
+        namesBstate = \
+            ('.'.join(("bstate", pfx, nm)) \
+             for nm in measuresBstate for pfx in prefixesBstate)
         namesNormal = \
             ('.'.join(("normal", pfx, nm)) \
              for nm in measuresNormal for pfx in prefixesNormal)
 
         varlist = [(nm, 1, "bit") \
-                   for nms in (namesEvent, namesBinary,) \
+                   for nms in (namesEvent, namesBstate,) \
                    for nm in nms] + \
                   [(nm, 64, "real") \
                    for nms in (namesNormal,) \
@@ -521,10 +521,10 @@ def evsStage0(instream, evcx, cfg): # {{{
                       version=vcdi.vcdVersion,
                       timescale=' '.join(vcdi.vcdTimescale))
 
-        # Future queuq of timechunks which may need to be interleaved with
+        # Future queue of timechunks which may need to be interleaved with
         # timechunks from vcdi, such as event->bit conversion inferring 1 then
         # 0 in consecutive times.
-        # Or rise/fall on binary.
+        # Or rise/fall on bstate.
         # [ (time, name, value) ... ]
         fq = []
 
@@ -594,24 +594,24 @@ def evsStage0(instream, evcx, cfg): # {{{
                             # reg, bit, logic, etc
                             assert False, hookType
 
-                    elif "binary" == tp:
+                    elif "bstate" == tp:
                         if hookType in oneBitTypes:
                             newValue = twoStateBool(newValueClean, hookBit)
 
                             if prevValue != newValue:
-                                oChangedVars.append("binary.measure." + nm)
-                                oChangedVars.append("binary.reflection." + nm)
+                                oChangedVars.append("bstate.measure." + nm)
+                                oChangedVars.append("bstate.reflection." + nm)
                                 oNewValues.append(int(newValue))
                                 oNewValues.append(int(not newValue))
 
                                 if newValue:
-                                    oChangedVars.append("binary.rise." + nm)
+                                    oChangedVars.append("bstate.rise." + nm)
                                     oNewValues.append(1)
-                                    fq.append((oTime+1, "binary.rise." + nm, 0))
+                                    fq.append((oTime+1, "bstate.rise." + nm, 0))
                                 else:
-                                    oChangedVars.append("binary.fall." + nm)
+                                    oChangedVars.append("bstate.fall." + nm)
                                     oNewValues.append(1)
-                                    fq.append((oTime+1, "binary.fall." + nm, 0))
+                                    fq.append((oTime+1, "bstate.fall." + nm, 0))
                             else:
                                 pass # No change
 

@@ -19,7 +19,7 @@ deltazoom = 10
 # The VCD file will be searched for signals with the hierarchical name
 # "module:TOP.probsys0.slv_o_busy" etc.
 [[measure]]
-type = "binary"
+type = "bstate"
 name = "slv.{}"
 hook = "slv_o_{}"
 subs = [

@@ -46,7 +46,7 @@ class Test_rgb2D(unittest.TestCase): # {{{
 
 # }}} class Test_rgb2D
 
-class Test_identiconSquareBool(unittest.TestCase): # {{{
+class Test_identiconSprite(unittest.TestCase): # {{{
 
     def test_ZeroDefault(self):
         golden = [
@@ -56,17 +56,17 @@ class Test_identiconSquareBool(unittest.TestCase): # {{{
             [True,  True,  False, True,  True, ],
             [False, False, True,  False, False,],
         ]
-        result = identiconSquareBool(0)
+        result = identiconSprite(0)
         self.assertEqual(golden, result)
 
     def test_ZeroFour(self):
         golden = [
-            [True,  False, True,  True, ],
+            [True,  False, False, True, ],
             [True,  False, False, True, ],
             [True,  True,  True,  True, ],
             [True,  True,  True,  True, ],
         ]
-        result = identiconSquareBool(0, 4)
+        result = identiconSprite(0, 4, 4)
         self.assertEqual(golden, result)
 
     def test_String(self):
@@ -77,7 +77,30 @@ class Test_identiconSquareBool(unittest.TestCase): # {{{
             [True,  True,  False, True,  True, ],
             [False, True,  False, True,  False,],
         ]
-        result = identiconSquareBool("Hello World!")
+        result = identiconSprite("Hello World!")
+        self.assertEqual(golden, result)
+
+    def test_7x6(self):
+        golden = [
+            [True,  True,  False, False, True,  True, ],
+            [False, True,  False, False, True,  False,],
+            [True,  True,  False, False, True,  True, ],
+            [True,  True,  True,  True,  True,  True, ],
+            [False, False, False, False, False, False,],
+            [True,  False, False, False, False, True, ],
+            [True,  False, False, False, False, True,],
+        ]
+        result = identiconSprite("Hello World!", 7, 6)
+        self.assertEqual(golden, result)
+
+    def test_4x3(self):
+        golden = [
+            [True,  False, True, ],
+            [False, True,  False,],
+            [True,  True,  True, ],
+            [True,  True,  True, ],
+        ]
+        result = identiconSprite("Hello World!", 4, 3)
         self.assertEqual(golden, result)
 
     def test_Int(self):
@@ -88,12 +111,12 @@ class Test_identiconSquareBool(unittest.TestCase): # {{{
             [False, False, True,  False, False,],
             [False, False, False, False, False,],
         ]
-        resultInt = identiconSquareBool(123)
-        resultStr = identiconSquareBool("123")
+        resultInt = identiconSprite(123)
+        resultStr = identiconSprite("123")
         self.assertEqual(golden, resultInt)
         self.assertEqual(golden, resultStr)
 
-# }}} class Test_identiconSquareBool
+# }}} class Test_identiconSprite
 
 class Test_asciiart2dBool(unittest.TestCase): # {{{
 

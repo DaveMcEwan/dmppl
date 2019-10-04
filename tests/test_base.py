@@ -195,6 +195,18 @@ class Test_fnameAppendExt(unittest.TestCase): # {{{
 
 # }}} class Test_fnameAppendExt
 
+class Test_product(unittest.TestCase): # {{{
+
+    def test_Int0(self):
+        result = product((1, 2, 3))
+        self.assertEqual(result, 6)
+
+    def test_Float0(self):
+        result = product([1.1, 2.2, 3.3])
+        self.assertEqual(result, 1.1*2.2*3.3)
+
+# }}} class Test_product
+
 class Test_compose(unittest.TestCase): # {{{
 
     def test_Basic0(self):

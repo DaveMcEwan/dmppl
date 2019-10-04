@@ -4,6 +4,7 @@ from __future__ import print_function
 import errno
 import fileinput
 import functools
+import operator
 import os
 import re
 import sys
@@ -146,6 +147,12 @@ def fnameAppendExt(fname, ext): # {{{
     return (fname) if fname.lower().endswith('.' + ext.lower()) else \
            (fname + '.' + ext)
 # }}} def fnameAppendExt
+
+def product(xs): # {{{
+    '''Return the product of a list/tuple of numbers.
+    '''
+    return functools.reduce(operator.mul, xs, 1)
+# }}} def product
 
 def compose(f, g, unpack=False): # {{{
     '''Compose 2 functions together.

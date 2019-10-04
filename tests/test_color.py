@@ -46,3 +46,88 @@ class Test_rgb2D(unittest.TestCase): # {{{
 
 # }}} class Test_rgb2D
 
+class Test_identiconSquareBool(unittest.TestCase): # {{{
+
+    def test_ZeroDefault(self):
+        golden = [
+            [True,  False, True,  False, True, ],
+            [True,  True,  True,  True,  True, ],
+            [True,  True,  False, True,  True, ],
+            [True,  True,  False, True,  True, ],
+            [False, False, True,  False, False,],
+        ]
+        result = identiconSquareBool(0)
+        self.assertEqual(golden, result)
+
+    def test_ZeroFour(self):
+        golden = [
+            [True,  False, True,  True, ],
+            [True,  False, False, True, ],
+            [True,  True,  True,  True, ],
+            [True,  True,  True,  True, ],
+        ]
+        result = identiconSquareBool(0, 4)
+        self.assertEqual(golden, result)
+
+    def test_String(self):
+        golden = [
+            [True,  True,  True,  True,  True, ],
+            [False, True,  False, True,  False,],
+            [True,  True,  False, True,  True, ],
+            [True,  True,  False, True,  True, ],
+            [False, True,  False, True,  False,],
+        ]
+        result = identiconSquareBool("Hello World!")
+        self.assertEqual(golden, result)
+
+    def test_Int(self):
+        golden = [
+            [False, True,  True,  True,  False,],
+            [False, False, True,  False, False,],
+            [False, False, False, False, False,],
+            [False, False, True,  False, False,],
+            [False, False, False, False, False,],
+        ]
+        resultInt = identiconSquareBool(123)
+        resultStr = identiconSquareBool("123")
+        self.assertEqual(golden, resultInt)
+        self.assertEqual(golden, resultStr)
+
+# }}} class Test_identiconSquareBool
+
+class Test_asciiart2dBool(unittest.TestCase): # {{{
+
+    def test_Basic0(self):
+        a = [
+            [False, True,  True,  True,  False,],
+            [False, False, True,  False, False,],
+            [False, False, False, False, False,],
+            [False, False, True,  False, False,],
+            [False, False, False, False, False,],
+        ]
+        result = asciiart2dBool(a)
+        golden = '\n'.join([" ### ",
+                            "  #  ",
+                            "     ",
+                            "  #  ",
+                            "     "])
+        self.assertEqual(golden, result)
+
+    def test_AltChars(self):
+        a = [
+            [False, True,  True,  True,  False,],
+            [False, False, True,  False, False,],
+            [False, False, False, False, False,],
+            [False, False, True,  False, False,],
+            [False, False, False, False, False,],
+        ]
+        result = asciiart2dBool(a, 'Y', 'n')
+        golden = '\n'.join(["nYYYn",
+                            "nnYnn",
+                            "nnnnn",
+                            "nnYnn",
+                            "nnnnn"])
+        self.assertEqual(golden, result)
+
+# }}} class Test_asciiart2dBool
+

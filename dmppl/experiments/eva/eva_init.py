@@ -780,6 +780,7 @@ def evsStage0(instream, evcx, cfg): # {{{
 
             bq_.sort()
             for bqTime, bqGroup in groupby(bq_, key=(lambda x: x[0])):
+                assert bqTime < oTime, (bqTime, oTime)
                 bqChangedVars, bqNewValues = \
                     list(zip(*[(nm,v) for _,nm,v in bqGroup]))
 

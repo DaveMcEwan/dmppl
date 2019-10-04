@@ -712,7 +712,22 @@ def evsStage0(instream, evcx, cfg): # {{{
                     # TODO: normal must go through low-pass filter.
                     # Currently just ignored.
                     elif "normal" == tp:
-                        pass
+                        if (hookType in oneBitTypes and hookBit is None) or \
+                           (hookType in ["real", "integer"]):
+
+                            newValue = float(newValueClean) \
+                                if "real" == hookType else \
+                                float(int(newValueClean, 2))
+
+                            # NOTE: normal.measure values are not necessarily
+                            # normal.
+                            # I.e. In (-inf, +inf) rather than [0, 1].
+                            nq_.append(("normal.measure." + nm, newValue))
+                        else:
+                            # Normal (real number) measure only made
+                            # from VCD 2-state (bit) vector, 4-state (wire, reg,
+                            # logic) vector, integer, or real.
+                            assert False, (hookType, hookBit)
 
                     else:
                         assert False, tp

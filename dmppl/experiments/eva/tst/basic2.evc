@@ -166,3 +166,45 @@ subs = [
 ]
 
 # }}} threshold
+
+# {{{ normal
+
+[[measure]]
+type = "normal"
+name = "normFromReal{}"
+hook = "real{}"
+geq = 0.9
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "normal"
+name = "normFromInteger{}"
+hook = "integer{}"
+leq = 9
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "normal"
+name = "normBitVec{}"
+hook = "bitVec{}"
+leq = 7
+geq = 2
+subs = [
+  ["A", "B"],
+]
+
+[[measure]]
+type = "normal"
+name = "normWireVec{}"
+hook = "wireVec{}"
+leq = -2
+geq = -7
+subs = [
+  ["A", "B"],
+]
+
+# }}} normal

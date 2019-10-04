@@ -267,14 +267,14 @@ def expandEvc(evc, cfg): # {{{
             return
 
         for nm,v in evcx.items():
-            h = v["hook"]
+            hk = v["hook"]
             geq = v.get("geq")
             leq = v.get("leq")
-            if "threshold" == v["type"]:
-                h = h if geq is None else ("%s <= " % geq + h)
-                h = h if leq is None else (h + " <= %s" % leq)
+            if v["type"] in ["threshold", "normal"]:
+                hk = hk if geq is None else ("%s <= " % geq + hk)
+                hk = hk if leq is None else (hk + " <= %s" % leq)
 
-            msg = "%s %d %s <-- %s" % (v["type"], v["idx"], nm, h)
+            msg = "%s %d %s <-- %s" % (v["type"], v["idx"], nm, hk)
             info(msg, prefix="INFO:EVCX: ")
 
     # }}} def infoEvcx
@@ -323,6 +323,7 @@ def expandEvc(evc, cfg): # {{{
             leq = measure.get("leq", 1)
             assert isinstance(geq, (int, float)), (type(geq), geq)
             assert isinstance(leq, (int, float)), (type(leq), leq)
+            assert geq < leq, (geq, leq)
         elif "threshold" == tp:
             # At least one of geq, leq must be a number.
             # Values of geq,leq used for boundary checks.
@@ -514,7 +515,7 @@ def evsStage0(instream, evcx, cfg): # {{{
 
         prefixesEvent =  ("measure",)
         prefixesBstate = ("measure", "reflection", "rise", "fall",)
-        prefixesNormal = ("measure",)
+        prefixesNormal = ("measure", "smooth",)
         prefixesThreshold = ("measure", "reflection", "rise", "fall",)
 
         namesEvent = \
@@ -558,6 +559,12 @@ def evsStage0(instream, evcx, cfg): # {{{
         # Initialize previous values to 0.
         # {varId: (time, value), ...}
         mapVarIdToPrev_ = {varId: (0,0) for varId in evcxVarIds}
+
+        # Initialise previous values for normals to 0 for filter history.
+        mapVarIdToHistory_ = \
+            {varId: [0.0 for _ in cfg.fir[1:]] \
+             for varId in evcxVarIds \
+             if "normal" in [mea["type"] for mea in mapVarIdToMeasures[varId]]}
 
         vcdo.wrHeader(vcdoVarlist(evcx),
                       comment="<<< Extracted by evaInit >>>" + vcdi.vcdComment,
@@ -636,7 +643,7 @@ def evsStage0(instream, evcx, cfg): # {{{
                     hookType = mea["hookType"]
                     hookBit = mea["hookBit"]
 
-                    if "event" == tp:
+                    if "event" == tp: # {{{
                         if "event" == hookType:
                             # vcdi implies event only occurring at this time.
                             nq_.append(("event.measure." + nm, 1))
@@ -650,8 +657,9 @@ def evsStage0(instream, evcx, cfg): # {{{
                             # Event measure only made from VCD event, or
                             # 2-state (bit), 4-state types (wire, reg, logic)
                             assert False, hookType
+                    # }}} event
 
-                    elif "bstate" == tp:
+                    elif "bstate" == tp: # {{{
                         if hookType in oneBitTypes:
                             newValue = twoStateBool(newValueClean, hookBit)
 
@@ -671,8 +679,9 @@ def evsStage0(instream, evcx, cfg): # {{{
                             # Bstate measure only made from VCD 2-state (bit) or
                             # 4-state types (wire, reg, logic, etc)
                             assert False, hookType
+                    # }}} bstate
 
-                    elif "threshold" == tp:
+                    elif "threshold" == tp: # {{{
                         if (hookType in oneBitTypes and hookBit is None) or \
                            (hookType in ["real", "integer"]):
 
@@ -718,6 +727,7 @@ def evsStage0(instream, evcx, cfg): # {{{
                             # from VCD 2-state (bit) vector, 4-state (wire, reg,
                             # logic) vector, integer, or real.
                             assert False, (hookType, hookBit)
+                    # }}} threshold
 
                     # TODO: normal must go through low-pass filter.
                     # Currently just ignored.
@@ -733,9 +743,24 @@ def evsStage0(instream, evcx, cfg): # {{{
                                 float(int(newValueClean, 2))
 
                             # NOTE: normal.measure values are not necessarily
-                            # normal.
-                            # I.e. In (-inf, +inf) rather than [0, 1].
+                            # in [0, 1]; rather than (-inf, +inf).
                             nq_.append(("normal.measure." + nm, newValue))
+
+                            # Interpolate values up to, but not including the
+                            # current timechunk.
+                            for t in range(prevTime+1, oTime):
+                                zs = [prevValue] + mapVarIdToHistory_[iVarId]
+                                assert len(zs) == len(cfg.fir), zs
+                                smoothValue = sum(coeff*z for coeff,z in zip(cfg.fir, zs))
+                                mapVarIdToHistory_[iVarId] = zs[:-1]
+                                bq_.append((t, "normal.smooth." + nm, smoothValue))
+
+                            # Interpolate value for current timechunk.
+                            zs = [prevValue] + mapVarIdToHistory_[iVarId]
+                            assert len(zs) == len(cfg.fir), zs
+                            smoothValue = sum(coeff*z for coeff,z in zip(cfg.fir, zs))
+                            mapVarIdToHistory_[iVarId] = zs[:-1]
+                            nq_.append(("normal.smooth." + nm, smoothValue))
                         else:
                             # Normal (real number) measure only made
                             # from VCD 2-state (bit) vector, 4-state (wire, reg,

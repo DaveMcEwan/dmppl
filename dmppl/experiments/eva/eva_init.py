@@ -546,15 +546,18 @@ def evsStage0(instream, evcx, cfg): # {{{
 
         evcxVarIds = set(v["hookVarId"] for nm,v in evcxx.items())
         mapVarIdToMeasures = \
-            {varid: [(nm, v["type"],
-                      v["hookType"], v["hookBit"],
-                      v.get("geq"), v.get("leq")) \
+            {varId: [{"name": nm,
+                      "type": v["type"],
+                      "hookType": v["hookType"],
+                      "hookBit": v["hookBit"],
+                      "geq": v.get("geq"),
+                      "leq": v.get("leq")} \
                      for nm,v in evcxx.items() \
-                     if varid == v["hookVarId"]] for varid in evcxVarIds}
+                     if varId == v["hookVarId"]] for varId in evcxVarIds}
 
         # Initialize previous values to 0.
-        # {varid: (time, value), ...}
-        mapVarIdToPrev_ = {varid: (0,0) for varid in evcxVarIds}
+        # {varId: (time, value), ...}
+        mapVarIdToPrev_ = {varId: (0,0) for varId in evcxVarIds}
 
         vcdo.wrHeader(vcdoVarlist(evcx),
                       comment="<<< Extracted by evaInit >>>" + vcdi.vcdComment,
@@ -627,7 +630,11 @@ def evsStage0(instream, evcx, cfg): # {{{
 
                 # Each iVarId may refer to multiple measurements, such as
                 # vectored wires or wires used in multiple ways.
-                for nm,tp,hookType,hookBit,geq,leq in mapVarIdToMeasures[iVarId]:
+                for mea in mapVarIdToMeasures[iVarId]:
+                    nm = mea["name"]
+                    tp = mea["type"]
+                    hookType = mea["hookType"]
+                    hookBit = mea["hookBit"]
 
                     if "event" == tp:
                         if "event" == hookType:
@@ -668,6 +675,9 @@ def evsStage0(instream, evcx, cfg): # {{{
                     elif "threshold" == tp:
                         if (hookType in oneBitTypes and hookBit is None) or \
                            (hookType in ["real", "integer"]):
+
+                            geq = mea["geq"]
+                            leq = mea["leq"]
 
                             newValueFloat = float(newValueClean) \
                                 if "real" == hookType else \
@@ -714,6 +724,9 @@ def evsStage0(instream, evcx, cfg): # {{{
                     elif "normal" == tp:
                         if (hookType in oneBitTypes and hookBit is None) or \
                            (hookType in ["real", "integer"]):
+
+                            geq = mea["geq"]
+                            leq = mea["leq"]
 
                             newValue = float(newValueClean) \
                                 if "real" == hookType else \

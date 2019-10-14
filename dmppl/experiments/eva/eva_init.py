@@ -472,6 +472,12 @@ def checkEvcxWithVcd(evcx, vcd): # {{{
 
 # }}} def checkEvcxWithVcd
 
+def firFilter(zs): # {{{
+    coeffs = eva.cfg.fir
+    assert len(zs) == len(coeffs), zs
+    return sum(coeff*z for coeff,z in zip(coeffs, zs))
+# }}} def firFilter
+
 def evsStage0(instream, evcx, cfg): # {{{
     '''Filter input VCD to output stage0 VCD.
 
@@ -567,7 +573,8 @@ def evsStage0(instream, evcx, cfg): # {{{
              if "normal" in [mea["type"] for mea in mapVarIdToMeasures[varId]]}
 
         vcdo.wrHeader(vcdoVarlist(evcx),
-                      comment="<<< Extracted by evaInit >>>" + vcdi.vcdComment,
+                      comment=' '.join(("<<< Extracted by evaInit >>>",
+                                        vcdi.vcdComment)),
                       date=vcdi.vcdDate,
                       version=vcdi.vcdVersion,
                       timescale=' '.join(vcdi.vcdTimescale))
@@ -609,7 +616,6 @@ def evsStage0(instream, evcx, cfg): # {{{
             # varnames with different values.
             # Only the last appended will be used.
             # No time field is necessary, all use current timechunk (oTime).
-            #oChangedVars, oNewValues = [], []
             # [ (name, value) ... ]
             nq_ = [(nm, v) for t,nm,v in fq_ if t == oTime]
 
@@ -729,14 +735,12 @@ def evsStage0(instream, evcx, cfg): # {{{
                             assert False, (hookType, hookBit)
                     # }}} threshold
 
-                    # TODO: normal must go through low-pass filter.
-                    # Currently just ignored.
                     elif "normal" == tp:
                         if (hookType in oneBitTypes and hookBit is None) or \
                            (hookType in ["real", "integer"]):
 
-                            geq = mea["geq"]
-                            leq = mea["leq"]
+                            geq = mea["geq"] # TODO
+                            leq = mea["leq"] # TODO
 
                             newValue = float(newValueClean) \
                                 if "real" == hookType else \
@@ -794,11 +798,9 @@ def evsStage0(instream, evcx, cfg): # {{{
             dedupVars = []
             for nm,v in nq_:
                 dedupVars = appendNonDuplicate(dedupVars, (nm,v), replace=True)
-            oChangedVars, oNewValues = zip(*dedupVars)
-
-            if len(oChangedVars):
-                oTc = (oTime, oChangedVars, oNewValues)
-                vcdo.wrTimechunk(oTc)
+            nqChangedVars, nqNewValues = zip(*dedupVars)
+            dbg(oTime)
+            vcdo.wrTimechunk((oTime, nqChangedVars, nqNewValues))
 
 # }}} def evsStage0
 

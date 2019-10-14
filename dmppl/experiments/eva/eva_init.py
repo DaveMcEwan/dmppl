@@ -726,7 +726,7 @@ def evsStage0(instream, evcx, cfg): # {{{
                             assert False, (hookType, hookBit)
                     # }}} threshold
 
-                    elif "normal" == tp:
+                    elif "normal" == tp: # {{{
                         if (hookType in oneBitTypes and hookBit is None) or \
                            (hookType in ["real", "integer"]):
 
@@ -754,6 +754,7 @@ def evsStage0(instream, evcx, cfg): # {{{
                             # from VCD 2-state (bit) vector, 4-state (wire, reg,
                             # logic) vector, integer, or real.
                             assert False, (hookType, hookBit)
+                    # }}} normal
 
                     else:
                         assert False, tp

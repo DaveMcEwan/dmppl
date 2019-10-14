@@ -95,7 +95,7 @@ def appendNonDuplicate(xs, x, key=None, replace=False, overwrite=False): # {{{
             # Compare directly.
             k = (lambda xs,x: indexDefault(xs, x))
     else:
-        # Use a different key.
+        # Use a caller-specified key.
         k = key
 
     foundIndex = k(xs, x)

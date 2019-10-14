@@ -567,8 +567,9 @@ def evsStage0(instream, evcx, cfg): # {{{
         mapVarIdToPrev_ = {varId: (0,0) for varId in evcxVarIds}
 
         # Initialise previous values for normals to 0 for filter history.
+        # {varId: (time, values), ...}
         mapVarIdToHistory_ = \
-            {varId: [0.0 for _ in cfg.fir[1:]] \
+            {varId: (0, [0.0 for _ in cfg.fir[1:]]) \
              for varId in evcxVarIds \
              if "normal" in [mea["type"] for mea in mapVarIdToMeasures[varId]]}
 
@@ -619,7 +620,6 @@ def evsStage0(instream, evcx, cfg): # {{{
             # fq_ may still contain future speculative changes.
             beforeNow = [(t,nm,v) for t,nm,v in fq_ if t < oTime]
             fq_ = [(t,nm,v) for t,nm,v in fq_ if t > oTime]
-
 
 
             for iVarId,iNewValue in zip(iChangedVarIds, iNewValues): # {{{
@@ -741,14 +741,17 @@ def evsStage0(instream, evcx, cfg): # {{{
                             # in [0, 1]; rather than (-inf, +inf).
                             nq_.append(("normal.measure." + nm, newValue))
 
+                            # Interpolate previous values, then current timechunk.
+                            prevIpolTime, prevIpolValues = mapVarIdToHistory_[iVarId]
+                            for t in range(prevIpolTime+1, oTime):
+                                zs = [prevIpolValues[0]] + prevIpolValues
+                                prevIpolValues = zs[:-1]
+                                assert t < oTime, (t, oTime)
+                                beforeNow.append((t, "normal.smooth." + nm, firFilter(zs)))
+                            zs = [newValue] + prevIpolValues
+                            nq_.append(("normal.smooth." + nm, firFilter(zs)))
+                            mapVarIdToHistory_[iVarId] = (oTime, zs[:-1])
 
-
-                            # Interpolate value for current timechunk.
-                            zs = [prevValue] + mapVarIdToHistory_[iVarId]
-                            assert len(zs) == len(cfg.fir), zs
-                            smoothValue = sum(coeff*z for coeff,z in zip(cfg.fir, zs))
-                            mapVarIdToHistory_[iVarId] = zs[:-1]
-                            nq_.append(("normal.smooth." + nm, smoothValue))
                         else:
                             # Normal (real number) measure only made
                             # from VCD 2-state (bit) vector, 4-state (wire, reg,
@@ -767,6 +770,23 @@ def evsStage0(instream, evcx, cfg): # {{{
 
             # }}} for iVarId,iNewValue in zip(iChangedVarIds, iNewValues)
 
+            # Interpolate normal/smooth values up to, current timechunk for
+            # measures which aren't sampled in this timechunk.
+            for iVarId,(prevIpolTime, prevIpolValues_) in mapVarIdToHistory_.items():
+                for mea in mapVarIdToMeasures[iVarId]:
+                    if "normal" != mea["type"] or 0 >= oTime:
+                        continue
+                    nm = mea["name"]
+
+                    for t in range(prevIpolTime+1, oTime):
+                        zs = [prevIpolValues_[0]] + prevIpolValues_
+                        prevIpolValues_ = zs[:-1]
+                        assert t < oTime, (t, oTime)
+                        beforeNow.append((t, "normal.smooth." + nm, firFilter(zs)))
+                    zs = [prevIpolValues_[0]] + prevIpolValues_
+                    nq_.append(("normal.smooth." + nm, firFilter(zs)))
+                    mapVarIdToHistory_[iVarId] = (oTime, zs[:-1])
+
 
 
             beforeNow.sort()
@@ -784,7 +804,6 @@ def evsStage0(instream, evcx, cfg): # {{{
             for nm,v in nq_:
                 dedupVars = appendNonDuplicate(dedupVars, (nm,v), replace=True)
             nqChangedVars, nqNewValues = zip(*dedupVars)
-            dbg(oTime)
             vcdo.wrTimechunk((oTime, nqChangedVars, nqNewValues))
 
 # }}} def evsStage0

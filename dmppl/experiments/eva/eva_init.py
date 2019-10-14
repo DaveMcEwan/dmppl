@@ -588,11 +588,6 @@ def evsStage0(instream, evcx, cfg): # {{{
         fq_ = [(0, nm, int(re.match(r"^[^\.]*\.reflection\.", nm) is not None)) \
                for nm in vcdo.varNames]
 
-        # Backward (past) queue of non-speculative (proper) changes which have
-        # been interpolated between the previous timechunk and the current.
-        # [ (time, name, value) ... ]
-        bq_ = []
-
         # Work through vcdi timechunks putting values into vcdo.
         for iTc in vcdi.timechunks:
             iTime, iChangedVarIds, iNewValues = iTc
@@ -750,14 +745,7 @@ def evsStage0(instream, evcx, cfg): # {{{
                             # in [0, 1]; rather than (-inf, +inf).
                             nq_.append(("normal.measure." + nm, newValue))
 
-                            # Interpolate values up to, but not including the
-                            # current timechunk.
-                            for t in range(prevTime+1, oTime):
-                                zs = [prevValue] + mapVarIdToHistory_[iVarId]
-                                assert len(zs) == len(cfg.fir), zs
-                                smoothValue = sum(coeff*z for coeff,z in zip(cfg.fir, zs))
-                                mapVarIdToHistory_[iVarId] = zs[:-1]
-                                bq_.append((t, "normal.smooth." + nm, smoothValue))
+
 
                             # Interpolate value for current timechunk.
                             zs = [prevValue] + mapVarIdToHistory_[iVarId]
@@ -782,14 +770,7 @@ def evsStage0(instream, evcx, cfg): # {{{
 
             # }}} for iVarId,iNewValue in zip(iChangedVarIds, iNewValues)
 
-            bq_.sort()
-            for bqTime, bqGroup in groupby(bq_, key=(lambda x: x[0])):
-                assert bqTime < oTime, (bqTime, oTime)
-                bqChangedVars, bqNewValues = \
-                    list(zip(*[(nm,v) for _,nm,v in bqGroup]))
 
-                vcdo.wrTimechunk((bqTime, bqChangedVars, bqNewValues))
-            bq_ = []
 
             # Resolve conflicts from fq_/beforeNow.
             # Forward queue is speculative so a proper value from the current

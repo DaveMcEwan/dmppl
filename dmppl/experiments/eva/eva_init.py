@@ -620,11 +620,7 @@ def evsStage0(instream, evcx, cfg): # {{{
             beforeNow = [(t,nm,v) for t,nm,v in fq_ if t < oTime]
             fq_ = [(t,nm,v) for t,nm,v in fq_ if t > oTime]
 
-            for fqTime, fqGroup in groupby(beforeNow, key=(lambda x: x[0])):
-                fqChangedVars, fqNewValues = \
-                    list(zip(*[(nm,v) for _,nm,v in fqGroup]))
 
-                vcdo.wrTimechunk((fqTime, fqChangedVars, fqNewValues))
 
             for iVarId,iNewValue in zip(iChangedVarIds, iNewValues): # {{{
                 if not iVarId in evcxVarIds:
@@ -771,6 +767,13 @@ def evsStage0(instream, evcx, cfg): # {{{
             # }}} for iVarId,iNewValue in zip(iChangedVarIds, iNewValues)
 
 
+
+            beforeNow.sort()
+            for fqTime, fqGroup in groupby(beforeNow, key=(lambda x: x[0])):
+                fqChangedVars, fqNewValues = \
+                    list(zip(*[(nm,v) for _,nm,v in fqGroup]))
+                assert fqTime < oTime, (fqTime, oTime)
+                vcdo.wrTimechunk((fqTime, fqChangedVars, fqNewValues))
 
             # Resolve conflicts from fq_/beforeNow.
             # Forward queue is speculative so a proper value from the current

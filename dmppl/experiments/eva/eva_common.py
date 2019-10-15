@@ -11,6 +11,12 @@ from dmppl.base import Bunch, fnameAppendExt, verb
 
 __version__ = "0.1.0"
 
+# Don't write .pyc or .pyo files unless it's a release.
+# This doesn't affect eva_common.
+# Only affects eva-exo, eva-exc, ...
+if int(__version__.split('.')[-1]) != 0:
+    sys.dont_write_bytecode = True
+
 initDone = False # Only expect paths.* etc to exist if this is True.
 appPaths = Bunch()
 paths = Bunch()

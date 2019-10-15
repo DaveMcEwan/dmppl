@@ -706,7 +706,7 @@ class VcdWriter(object): # {{{
         assert isinstance(newTime, int), (type(newTime), newTime)
         print(u"#%d" % newTime, file=self.fd)
 
-        for varId,newValue in zip(changedVarIds, newValues):
+        for varId,newValue in sorted(list(zip(changedVarIds, newValues))):
             assert varId is not None # TODO: More helpful assertion message.
 
             varType = self.mapVarIdToVarType[varId]

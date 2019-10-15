@@ -840,14 +840,13 @@ class Test_fxDependency(unittest.TestCase): # {{{
             W = fxOnes(X.shape, nBits=i)
             self.assertEqual(fxDependency(W, X, Y, nBits=i), fxZero(nBits=i))
 
+    @unittest.skip("long runtime")
     def test_UpperLimit(self):
         # Randomized testing since full space of 2**nBits is not feasible.
         # NOTE: This test takes a lot longer than the others.
         for i in range(2, 31+1):
             for arrlen in [2, 4, 8, 16]:
-                # NOTE: Arbitrary large number.
-                # TODO: Should be increased to >1000 single test run.
-                for _ in range(50):
+                for _ in range(2000): # NOTE: Arbitrary large number.
                     W = fxOnes(arrlen, nBits=i)
                     dtype1 = fxDtype(nBits=i)
                     X = np.random.randint(0, 2**i, arrlen).astype(dtype1)

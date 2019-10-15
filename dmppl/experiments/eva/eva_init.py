@@ -773,6 +773,9 @@ def evsStage0(instream, evcx, cfg): # {{{
             # Interpolate normal/smooth values up to, current timechunk for
             # measures which aren't sampled in this timechunk.
             for iVarId,(prevIpolTime, prevIpolValues_) in mapVarIdToHistory_.items():
+                if prevIpolTime == oTime:
+                    continue
+
                 for mea in mapVarIdToMeasures[iVarId]:
                     if "normal" != mea["type"] or 0 >= oTime:
                         continue

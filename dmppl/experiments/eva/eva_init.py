@@ -7,7 +7,6 @@ import sys
 
 # PyPI library imports
 import toml
-import numpy as np
 
 # Local library imports
 from dmppl.base import dbg, Bunch, appendNonDuplicate, indexDefault, info, mkDirP, verb

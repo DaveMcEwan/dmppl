@@ -19,6 +19,7 @@ from dmppl.base import run, verb
 # NOTE: Roundabout import path for eva_common necessary for unittest.
 import dmppl.experiments.eva.eva_common as eva
 from eva_init import evaInit
+from eva_html import evaHtml
 
 __version__ = eva.__version__
 
@@ -132,7 +133,7 @@ def main(args): # {{{
         "init": evaInit,
         #"cov":  evaCov,
         #"dep":  evaDep,
-        #"html": evaHtml,
+        "html": evaHtml,
         #"net":  evaNet,
     }[args.command](args)
 

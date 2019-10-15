@@ -547,6 +547,36 @@ def evsStage0(instream, evcx, cfg): # {{{
         return varlist
     # }}} def vcdoVarlist
 
+    def interpolateNormal(iVarId, oTime, mea, mapVarIdToHistory_, nq_, bq_, newValue=None): # {{{
+        nm = mea["name"]
+        geq = mea["geq"]
+        leq = mea["leq"]
+
+        prevIpolTime, prevIpolValues_ = mapVarIdToHistory_[iVarId]
+
+        for t in range(prevIpolTime+1, oTime):
+            assert t < oTime, (t, oTime)
+
+            zs = [prevIpolValues_[0]] + prevIpolValues_
+            prevIpolValues_ = zs[:-1]
+
+            smoothValue = firFilter(zs)
+            clipnormValue = clipNorm(smoothValue, geq, leq)
+
+            bq_.append((t, "normal.smooth." + nm, smoothValue))
+            bq_.append((t, "normal.clipnorm." + nm, clipnormValue))
+
+        zs = [prevIpolValues_[0] if newValue is None else newValue] + prevIpolValues_
+        mapVarIdToHistory_[iVarId] = (oTime, zs[:-1])
+
+        smoothValue = firFilter(zs)
+        clipnormValue = clipNorm(smoothValue, geq, leq)
+
+        nq_.append(("normal.smooth." + nm, smoothValue))
+        nq_.append(("normal.clipnorm." + nm, clipnormValue))
+
+    # }}} def interpolateNormal
+
     # NOTE: VCD input may come from STDIN ==> only read once.
     with VcdReader(instream) as vcdi, VcdWriter(eva.paths.fname_mea) as vcdo:
         evcxx = checkEvcxWithVcd(evcx, vcdi)
@@ -618,7 +648,7 @@ def evsStage0(instream, evcx, cfg): # {{{
             # Extract proper changes from fq_ and put into current queue.
             # Changes are proper if they are for time before this timechunk.
             # fq_ may still contain future speculative changes.
-            beforeNow = [(t,nm,v) for t,nm,v in fq_ if t < oTime]
+            bq_ = [(t,nm,v) for t,nm,v in fq_ if t < oTime]
             fq_ = [(t,nm,v) for t,nm,v in fq_ if t > oTime]
 
 
@@ -738,25 +768,9 @@ def evsStage0(instream, evcx, cfg): # {{{
                             # in [0, 1]; rather than (-inf, +inf).
                             nq_.append(("normal.measure." + nm, newValue))
 
-                            geq = mea["geq"]
-                            leq = mea["leq"]
-
-                            # Interpolate previous values, then current timechunk.
-                            prevIpolTime, prevIpolValues = mapVarIdToHistory_[iVarId]
-                            for t in range(prevIpolTime+1, oTime):
-                                zs = [prevIpolValues[0]] + prevIpolValues
-                                prevIpolValues = zs[:-1]
-                                assert t < oTime, (t, oTime)
-                                smoothValue = firFilter(zs)
-                                clipnormValue = clipNorm(smoothValue, geq, leq)
-                                beforeNow.append((t, "normal.smooth." + nm, smoothValue))
-                                beforeNow.append((t, "normal.clipnorm." + nm, clipnormValue))
-                            zs = [newValue] + prevIpolValues
-                            smoothValue = firFilter(zs)
-                            clipnormValue = clipNorm(smoothValue, geq, leq)
-                            nq_.append(("normal.smooth." + nm, smoothValue))
-                            nq_.append(("normal.clipnorm." + nm, clipnormValue))
-                            mapVarIdToHistory_[iVarId] = (oTime, zs[:-1])
+                            interpolateNormal(iVarId, oTime, mea,
+                                              mapVarIdToHistory_, nq_, bq_,
+                                              newValue=newValue)
 
                         else:
                             # Normal (real number) measure only made
@@ -785,35 +799,21 @@ def evsStage0(instream, evcx, cfg): # {{{
                 for mea in mapVarIdToMeasures[iVarId]:
                     if "normal" != mea["type"] or 0 >= oTime:
                         continue
-                    nm = mea["name"]
-                    geq = mea["geq"]
-                    leq = mea["leq"]
 
-                    for t in range(prevIpolTime+1, oTime):
-                        zs = [prevIpolValues_[0]] + prevIpolValues_
-                        prevIpolValues_ = zs[:-1]
-                        assert t < oTime, (t, oTime)
-                        smoothValue = firFilter(zs)
-                        clipnormValue = clipNorm(smoothValue, geq, leq)
-                        beforeNow.append((t, "normal.smooth." + nm, smoothValue))
-                        beforeNow.append((t, "normal.clipnorm." + nm, clipnormValue))
-                    zs = [prevIpolValues_[0]] + prevIpolValues_
-                    smoothValue = firFilter(zs)
-                    clipnormValue = clipNorm(smoothValue, geq, leq)
-                    nq_.append(("normal.smooth." + nm, smoothValue))
-                    nq_.append(("normal.clipnorm." + nm, clipnormValue))
-                    mapVarIdToHistory_[iVarId] = (oTime, zs[:-1])
+                    interpolateNormal(iVarId, oTime, mea,
+                                      mapVarIdToHistory_, nq_, bq_,
+                                      newValue=None)
 
 
 
-            beforeNow.sort()
-            for fqTime, fqGroup in groupby(beforeNow, key=(lambda x: x[0])):
+            bq_.sort()
+            for fqTime, fqGroup in groupby(bq_, key=(lambda x: x[0])):
                 fqChangedVars, fqNewValues = \
                     list(zip(*[(nm,v) for _,nm,v in fqGroup]))
                 assert fqTime < oTime, (fqTime, oTime)
                 vcdo.wrTimechunk((fqTime, fqChangedVars, fqNewValues))
 
-            # Resolve conflicts from fq_/beforeNow.
+            # Resolve conflicts from fq_/bq_.
             # Forward queue is speculative so a proper value from the current
             # timechunk will take precedence.
             # I.e. Always use the last appended change.

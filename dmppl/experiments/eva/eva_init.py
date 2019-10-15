@@ -521,7 +521,7 @@ def evsStage0(instream, evcx, cfg): # {{{
 
         prefixesEvent =  ("measure",)
         prefixesBstate = ("measure", "reflection", "rise", "fall",)
-        prefixesNormal = ("measure", "smooth",)
+        prefixesNormal = ("measure", "smooth", "clipnorm",)
         prefixesThreshold = ("measure", "reflection", "rise", "fall",)
 
         namesEvent = \
@@ -730,9 +730,6 @@ def evsStage0(instream, evcx, cfg): # {{{
                         if (hookType in oneBitTypes and hookBit is None) or \
                            (hookType in ["real", "integer"]):
 
-                            geq = mea["geq"] # TODO
-                            leq = mea["leq"] # TODO
-
                             newValue = float(newValueClean) \
                                 if "real" == hookType else \
                                 float(int(newValueClean, 2))
@@ -741,15 +738,24 @@ def evsStage0(instream, evcx, cfg): # {{{
                             # in [0, 1]; rather than (-inf, +inf).
                             nq_.append(("normal.measure." + nm, newValue))
 
+                            geq = mea["geq"]
+                            leq = mea["leq"]
+
                             # Interpolate previous values, then current timechunk.
                             prevIpolTime, prevIpolValues = mapVarIdToHistory_[iVarId]
                             for t in range(prevIpolTime+1, oTime):
                                 zs = [prevIpolValues[0]] + prevIpolValues
                                 prevIpolValues = zs[:-1]
                                 assert t < oTime, (t, oTime)
-                                beforeNow.append((t, "normal.smooth." + nm, firFilter(zs)))
+                                smoothValue = firFilter(zs)
+                                clipnormValue = clipNorm(smoothValue, geq, leq)
+                                beforeNow.append((t, "normal.smooth." + nm, smoothValue))
+                                beforeNow.append((t, "normal.clipnorm." + nm, clipnormValue))
                             zs = [newValue] + prevIpolValues
-                            nq_.append(("normal.smooth." + nm, firFilter(zs)))
+                            smoothValue = firFilter(zs)
+                            clipnormValue = clipNorm(smoothValue, geq, leq)
+                            nq_.append(("normal.smooth." + nm, smoothValue))
+                            nq_.append(("normal.clipnorm." + nm, clipnormValue))
                             mapVarIdToHistory_[iVarId] = (oTime, zs[:-1])
 
                         else:
@@ -780,14 +786,22 @@ def evsStage0(instream, evcx, cfg): # {{{
                     if "normal" != mea["type"] or 0 >= oTime:
                         continue
                     nm = mea["name"]
+                    geq = mea["geq"]
+                    leq = mea["leq"]
 
                     for t in range(prevIpolTime+1, oTime):
                         zs = [prevIpolValues_[0]] + prevIpolValues_
                         prevIpolValues_ = zs[:-1]
                         assert t < oTime, (t, oTime)
-                        beforeNow.append((t, "normal.smooth." + nm, firFilter(zs)))
+                        smoothValue = firFilter(zs)
+                        clipnormValue = clipNorm(smoothValue, geq, leq)
+                        beforeNow.append((t, "normal.smooth." + nm, smoothValue))
+                        beforeNow.append((t, "normal.clipnorm." + nm, clipnormValue))
                     zs = [prevIpolValues_[0]] + prevIpolValues_
-                    nq_.append(("normal.smooth." + nm, firFilter(zs)))
+                    smoothValue = firFilter(zs)
+                    clipnormValue = clipNorm(smoothValue, geq, leq)
+                    nq_.append(("normal.smooth." + nm, smoothValue))
+                    nq_.append(("normal.clipnorm." + nm, clipnormValue))
                     mapVarIdToHistory_[iVarId] = (oTime, zs[:-1])
 
 

@@ -401,7 +401,7 @@ def expandEvc(evc, cfg): # {{{
                 evcx[fullName]["leq"] = leq
 
     verb("Saving... ", end='')
-    if eva.initDone: # Unittests don't setup everything.
+    if eva.initPathsDone: # Unittests don't setup everything.
         saveToml(evcx, eva.paths.fname_evcx)
     verb("Done")
 
@@ -487,7 +487,7 @@ def evsStage0(instream, evcx, cfg): # {{{
     NOTE: This initial extraction to filter/clean the dataset is probably the
     most complex part of eva!
     '''
-    assert eva.initDone
+    assert eva.initPathsDone
 
     def twoStateBool(v, hookbit): # {{{
         if isinstance(v, int):
@@ -831,7 +831,7 @@ def evsStage0(instream, evcx, cfg): # {{{
 def evaInit(args): # {{{
     '''Read in EVC and VCD to create result directory like ./foo.eva/
     '''
-    assert eva.initDone
+    assert eva.initPathsDone
 
     evc = loadEvc()
     checkEvc(evc)
@@ -844,6 +844,7 @@ def evaInit(args): # {{{
 
     evsStage0(args.input, evcx, eva.cfg)
 
+    return 0
 # }}} def evaInit
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ __version__ = "0.1.0"
 if int(__version__.split('.')[-1]) != 0:
     sys.dont_write_bytecode = True
 
-initDone = False # Only expect paths.* etc to exist if this is True.
+initPathsDone = False # Only expect paths.* etc to exist if this is True.
 appPaths = Bunch()
 paths = Bunch()
 infoFlag = False
@@ -48,8 +48,8 @@ def initPaths(argsEvcPath): # {{{
     appPaths.share = appPaths.directory + os.sep + "share" + os.sep
     appPaths.configDefault = appPaths.share + "configDefault.toml"
 
-    global initDone
-    initDone = True
+    global initPathsDone
+    initPathsDone = True
 
     return
 # }}} def initPaths
@@ -59,7 +59,7 @@ def loadCfg(): # {{{
 
     CFG is assumed to be sane, written by initCfg().
     '''
-    assert initDone
+    assert initPathsDone
 
     verb("Loading CFG... ", end='')
 
@@ -74,7 +74,7 @@ def loadCfg(): # {{{
 def loadEvcx(): # {{{
     '''Return dict of measurement names to VCD hook names.
     '''
-    assert initDone
+    assert initPathsDone
 
     verb("Loading EVCX... ", end='')
 

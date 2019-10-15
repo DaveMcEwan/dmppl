@@ -1,0 +1,905 @@
+$comment <<< Extracted by evaInit >>> Use with basic2.evc $end
+$version handcoded $end
+$timescale 1 ns $end
+$scope module bstate $end
+$scope module fall $end
+$var bit 1 2 twovalFromBitA  $end
+$var bit 1 6 twovalFromBitB  $end
+$var bit 1 : twovalFromBitVecA  $end
+$var bit 1 > twovalFromBitVecB  $end
+$var bit 1 B twovalFromRegA  $end
+$var bit 1 F twovalFromRegB  $end
+$var bit 1 J twovalFromRegVecA  $end
+$var bit 1 N twovalFromRegVecB  $end
+$var bit 1 R twovalFromWireA  $end
+$var bit 1 V twovalFromWireB  $end
+$var bit 1 Z twovalFromWireVecA  $end
+$var bit 1 ^ twovalFromWireVecB  $end
+$upscope $end
+$scope module measure $end
+$var bit 1 / twovalFromBitA  $end
+$var bit 1 3 twovalFromBitB  $end
+$var bit 1 7 twovalFromBitVecA  $end
+$var bit 1 ; twovalFromBitVecB  $end
+$var bit 1 ? twovalFromRegA  $end
+$var bit 1 C twovalFromRegB  $end
+$var bit 1 G twovalFromRegVecA  $end
+$var bit 1 K twovalFromRegVecB  $end
+$var bit 1 O twovalFromWireA  $end
+$var bit 1 S twovalFromWireB  $end
+$var bit 1 W twovalFromWireVecA  $end
+$var bit 1 [ twovalFromWireVecB  $end
+$upscope $end
+$scope module reflection $end
+$var bit 1 0 twovalFromBitA  $end
+$var bit 1 4 twovalFromBitB  $end
+$var bit 1 8 twovalFromBitVecA  $end
+$var bit 1 < twovalFromBitVecB  $end
+$var bit 1 @ twovalFromRegA  $end
+$var bit 1 D twovalFromRegB  $end
+$var bit 1 H twovalFromRegVecA  $end
+$var bit 1 L twovalFromRegVecB  $end
+$var bit 1 P twovalFromWireA  $end
+$var bit 1 T twovalFromWireB  $end
+$var bit 1 X twovalFromWireVecA  $end
+$var bit 1 \ twovalFromWireVecB  $end
+$upscope $end
+$scope module rise $end
+$var bit 1 1 twovalFromBitA  $end
+$var bit 1 5 twovalFromBitB  $end
+$var bit 1 9 twovalFromBitVecA  $end
+$var bit 1 = twovalFromBitVecB  $end
+$var bit 1 A twovalFromRegA  $end
+$var bit 1 E twovalFromRegB  $end
+$var bit 1 I twovalFromRegVecA  $end
+$var bit 1 M twovalFromRegVecB  $end
+$var bit 1 Q twovalFromWireA  $end
+$var bit 1 U twovalFromWireB  $end
+$var bit 1 Y twovalFromWireVecA  $end
+$var bit 1 ] twovalFromWireVecB  $end
+$upscope $end
+$upscope $end
+$scope module event $end
+$scope module measure $end
+$var bit 1 ! occurrerFromBitA  $end
+$var bit 1 " occurrerFromBitB  $end
+$var bit 1 # occurrerFromBitVecA  $end
+$var bit 1 $ occurrerFromBitVecB  $end
+$var bit 1 % occurrerFromEventA  $end
+$var bit 1 & occurrerFromEventB  $end
+$var bit 1 ' occurrerFromRegA  $end
+$var bit 1 ( occurrerFromRegB  $end
+$var bit 1 ) occurrerFromRegVecA  $end
+$var bit 1 * occurrerFromRegVecB  $end
+$var bit 1 + occurrerFromWireA  $end
+$var bit 1 , occurrerFromWireB  $end
+$var bit 1 - occurrerFromWireVecA  $end
+$var bit 1 . occurrerFromWireVecB  $end
+$upscope $end
+$upscope $end
+$scope module normal $end
+$scope module clipnorm $end
+$var real 64 "# normBitVecA [63:0] $end
+$var real 64 "& normBitVecB [63:0] $end
+$var real 64 ") normFromIntegerA [63:0] $end
+$var real 64 ", normFromIntegerB [63:0] $end
+$var real 64 "/ normFromRealA [63:0] $end
+$var real 64 "2 normFromRealB [63:0] $end
+$var real 64 "5 normWireVecA [63:0] $end
+$var real 64 "8 normWireVecB [63:0] $end
+$upscope $end
+$scope module measure $end
+$var real 64 "! normBitVecA [63:0] $end
+$var real 64 "$ normBitVecB [63:0] $end
+$var real 64 "' normFromIntegerA [63:0] $end
+$var real 64 "* normFromIntegerB [63:0] $end
+$var real 64 "- normFromRealA [63:0] $end
+$var real 64 "0 normFromRealB [63:0] $end
+$var real 64 "3 normWireVecA [63:0] $end
+$var real 64 "6 normWireVecB [63:0] $end
+$upscope $end
+$scope module smooth $end
+$var real 64 "" normBitVecA [63:0] $end
+$var real 64 "% normBitVecB [63:0] $end
+$var real 64 "( normFromIntegerA [63:0] $end
+$var real 64 "+ normFromIntegerB [63:0] $end
+$var real 64 ". normFromRealA [63:0] $end
+$var real 64 "1 normFromRealB [63:0] $end
+$var real 64 "4 normWireVecA [63:0] $end
+$var real 64 "7 normWireVecB [63:0] $end
+$upscope $end
+$upscope $end
+$scope module threshold $end
+$scope module fall $end
+$var bit 1 b threshGeqFromRealA  $end
+$var bit 1 f threshGeqFromRealB  $end
+$var bit 1 j threshInsideFromBitVecA  $end
+$var bit 1 n threshInsideFromBitVecB  $end
+$var bit 1 r threshLeqFromIntegerA  $end
+$var bit 1 v threshLeqFromIntegerB  $end
+$var bit 1 z threshOutsideFromWireVecA  $end
+$var bit 1 ~ threshOutsideFromWireVecB  $end
+$upscope $end
+$scope module measure $end
+$var bit 1 _ threshGeqFromRealA  $end
+$var bit 1 c threshGeqFromRealB  $end
+$var bit 1 g threshInsideFromBitVecA  $end
+$var bit 1 k threshInsideFromBitVecB  $end
+$var bit 1 o threshLeqFromIntegerA  $end
+$var bit 1 s threshLeqFromIntegerB  $end
+$var bit 1 w threshOutsideFromWireVecA  $end
+$var bit 1 { threshOutsideFromWireVecB  $end
+$upscope $end
+$scope module reflection $end
+$var bit 1 ` threshGeqFromRealA  $end
+$var bit 1 d threshGeqFromRealB  $end
+$var bit 1 h threshInsideFromBitVecA  $end
+$var bit 1 l threshInsideFromBitVecB  $end
+$var bit 1 p threshLeqFromIntegerA  $end
+$var bit 1 t threshLeqFromIntegerB  $end
+$var bit 1 x threshOutsideFromWireVecA  $end
+$var bit 1 | threshOutsideFromWireVecB  $end
+$upscope $end
+$scope module rise $end
+$var bit 1 a threshGeqFromRealA  $end
+$var bit 1 e threshGeqFromRealB  $end
+$var bit 1 i threshInsideFromBitVecA  $end
+$var bit 1 m threshInsideFromBitVecB  $end
+$var bit 1 q threshLeqFromIntegerA  $end
+$var bit 1 u threshLeqFromIntegerB  $end
+$var bit 1 y threshOutsideFromWireVecA  $end
+$var bit 1 } threshOutsideFromWireVecB  $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+
+#0
+0!
+0"
+r0.000000 "!
+r0.000000 ""
+r0.000000 "#
+r0 "$
+r0 "%
+r0 "&
+r0.000000 "'
+r0.000000 "(
+r0.000000 ")
+r0 "*
+r0 "+
+r0 ",
+r0.000000 "-
+r0.000000 ".
+r0.000000 "/
+r0 "0
+r0 "1
+r0 "2
+r0.000000 "3
+r0.000000 "4
+r1.000000 "5
+r0 "6
+r0 "7
+r0 "8
+0#
+0$
+1%
+0&
+0'
+0(
+0)
+0*
+0+
+0,
+0-
+0.
+0/
+10
+01
+02
+03
+14
+05
+06
+07
+18
+09
+0:
+0;
+1<
+0=
+0>
+0?
+1@
+0A
+0B
+0C
+1D
+0E
+0F
+0G
+1H
+0I
+0J
+0K
+1L
+0M
+0N
+0O
+1P
+0Q
+0R
+0S
+1T
+0U
+0V
+0W
+1X
+0Y
+0Z
+0[
+1\
+0]
+0^
+0_
+1`
+0a
+0b
+0c
+1d
+0e
+0f
+0g
+1h
+0i
+0j
+0k
+1l
+0m
+0n
+1o
+0p
+1q
+0r
+0s
+1t
+0u
+0v
+1w
+0x
+1y
+0z
+0{
+1|
+0}
+0~
+
+#1
+0"
+r0.000000 ""
+r0.000000 "#
+r0.000000 "$
+r0.000000 "%
+r0.000000 "&
+r0.000000 "(
+r0.000000 ")
+r0.000000 "*
+r0.000000 "+
+r0.000000 ",
+r0.000000 ".
+r0.000000 "/
+r0.000000 "0
+r0.000000 "1
+r0.000000 "2
+r0.000000 "4
+r1.000000 "5
+r0.000000 "6
+r0.000000 "7
+r1.000000 "8
+0$
+0%
+1&
+0(
+0*
+0,
+0.
+0q
+1s
+0t
+1u
+0y
+1{
+0|
+1}
+
+#2
+1!
+r1.000000 "!
+r0.250000 ""
+r0.000000 "#
+r0.000000 "%
+r0.000000 "&
+r1.000000 "'
+r0.250000 "(
+r0.027778 ")
+r0.000000 "+
+r0.000000 ",
+r0.100000 "-
+r0.025000 ".
+r0.000000 "/
+r0.000000 "1
+r0.000000 "2
+r1.000000 "3
+r0.250000 "4
+r1.000000 "5
+r0.000000 "7
+r1.000000 "8
+1#
+0&
+1'
+0)
+1+
+0-
+1/
+00
+11
+17
+08
+19
+1?
+0@
+1A
+1O
+0P
+1Q
+0u
+1w
+0x
+1y
+0}
+
+#3
+0!
+r2.000000 "!
+r0.750000 ""
+r0.000000 "#
+r0.000000 "%
+r0.000000 "&
+r2.000000 "'
+r0.750000 "(
+r0.083333 ")
+r0.000000 "+
+r0.000000 ",
+r0.200000 "-
+r0.075000 ".
+r0.000000 "/
+r0.000000 "1
+r0.000000 "2
+r2.000000 "3
+r0.750000 "4
+r1.000000 "5
+r0.000000 "7
+r1.000000 "8
+0#
+0'
+0)
+0+
+1-
+0/
+10
+01
+12
+07
+18
+09
+1:
+0?
+1@
+0A
+1B
+0O
+1P
+0Q
+1R
+1W
+0X
+1Y
+1w
+0x
+1y
+
+#4
+r1.250000 ""
+r0.000000 "#
+r0.000000 "%
+r0.000000 "&
+r1.250000 "(
+r0.138889 ")
+r0.000000 "+
+r0.000000 ",
+r0.125000 ".
+r0.000000 "/
+r0.000000 "1
+r0.000000 "2
+r1.250000 "4
+r1.000000 "5
+r0.000000 "7
+r1.000000 "8
+02
+0:
+0B
+0R
+0Y
+0y
+
+#5
+1!
+1"
+r5.000000 "!
+r2.500000 ""
+r0.100000 "#
+r5.000000 "$
+r1.250000 "%
+r0.000000 "&
+r5.000000 "'
+r2.500000 "(
+r0.277778 ")
+r5.000000 "*
+r1.250000 "+
+r0.138889 ",
+r0.500000 "-
+r0.250000 ".
+r0.000000 "/
+r0.500000 "0
+r0.125000 "1
+r0.000000 "2
+r5.000000 "3
+r2.500000 "4
+r1.000000 "5
+r5.000000 "6
+r1.250000 "7
+r1.000000 "8
+1#
+1$
+1%
+1&
+1'
+1(
+1)
+1*
+1+
+1,
+0-
+0.
+1/
+00
+11
+13
+04
+15
+17
+08
+19
+1;
+0<
+1=
+1?
+0@
+1A
+1C
+0D
+1E
+1G
+0H
+1I
+1K
+0L
+1M
+1O
+0P
+1Q
+1S
+0T
+1U
+0W
+1X
+1Z
+1g
+0h
+1i
+1k
+0l
+1m
+0w
+1x
+1z
+
+#6
+r3.500000 ""
+r0.300000 "#
+r2.500000 "%
+r0.100000 "&
+r3.500000 "(
+r0.388889 ")
+r2.500000 "+
+r0.277778 ",
+r0.350000 ".
+r0.000000 "/
+r0.250000 "1
+r0.000000 "2
+r3.500000 "4
+r1.000000 "5
+r2.500000 "7
+r1.000000 "8
+0%
+0&
+01
+05
+09
+0=
+0A
+0E
+0I
+0M
+0Q
+0U
+0Z
+0i
+0m
+0z
+
+#7
+r4.250000 ""
+r0.450000 "#
+r3.750000 "%
+r0.350000 "&
+r4.250000 "(
+r0.472222 ")
+r3.750000 "+
+r0.416667 ",
+r0.425000 ".
+r0.000000 "/
+r0.375000 "1
+r0.000000 "2
+r4.250000 "4
+r1.000000 "5
+r3.750000 "7
+r1.000000 "8
+
+#8
+r5.000000 ""
+r0.600000 "#
+r5.000000 "%
+r0.600000 "&
+r5.000000 "(
+r0.555556 ")
+r5.000000 "+
+r0.555556 ",
+r0.500000 ".
+r0.000000 "/
+r0.500000 "1
+r0.000000 "2
+r5.000000 "4
+r1.000000 "5
+r5.000000 "7
+r1.000000 "8
+
+#9
+r5.000000 ""
+r0.600000 "#
+r5.000000 "%
+r0.600000 "&
+r5.000000 "(
+r0.555556 ")
+r5.000000 "+
+r0.555556 ",
+r0.500000 ".
+r0.000000 "/
+r0.500000 "1
+r0.000000 "2
+r5.000000 "4
+r1.000000 "5
+r5.000000 "7
+r1.000000 "8
+
+#10
+r15.000000 "!
+r7.500000 ""
+r1.000000 "#
+r5.000000 "%
+r0.600000 "&
+r15.000000 "'
+r7.500000 "(
+r0.833333 ")
+r5.000000 "+
+r0.555556 ",
+r16.000000 "-
+r4.375000 ".
+r1.000000 "/
+r0.500000 "1
+r0.000000 "2
+r15.000000 "3
+r7.500000 "4
+r1.000000 "5
+r5.000000 "7
+r1.000000 "8
+1#
+1)
+1-
+1W
+0X
+1Y
+1_
+0`
+1a
+0g
+1h
+1j
+0o
+1p
+1r
+1w
+0x
+1y
+
+#11
+r8.000000 "!
+r8.250000 ""
+r1.000000 "#
+r5.000000 "%
+r0.600000 "&
+r8.000000 "'
+r8.250000 "(
+r0.916667 ")
+r5.000000 "+
+r0.555556 ",
+r8.000000 "-
+r6.250000 ".
+r1.000000 "/
+r0.500000 "1
+r0.000000 "2
+r8.000000 "3
+r8.250000 "4
+r1.000000 "5
+r5.000000 "7
+r1.000000 "8
+0#
+0)
+0-
+07
+18
+1:
+0G
+1H
+1J
+0W
+1X
+0Y
+1Z
+0_
+1`
+0a
+1b
+0g
+1h
+1j
+1o
+0p
+1q
+0r
+0y
+
+#12
+r9.000000 ""
+r1.000000 "#
+r5.000000 "%
+r0.600000 "&
+r9.000000 "(
+r1.000000 ")
+r5.000000 "+
+r0.555556 ",
+r8.125000 ".
+r1.000000 "/
+r0.500000 "1
+r0.000000 "2
+r9.000000 "4
+r1.000000 "5
+r5.000000 "7
+r1.000000 "8
+0:
+0J
+0Z
+0b
+0j
+0q
+
+#13
+r9.750000 ""
+r1.000000 "#
+r5.000000 "%
+r0.600000 "&
+r9.750000 "(
+r1.000000 ")
+r5.000000 "+
+r0.555556 ",
+r10.000000 ".
+r1.000000 "/
+r0.500000 "1
+r0.000000 "2
+r9.750000 "4
+r1.000000 "5
+r5.000000 "7
+r1.000000 "8
+
+#14
+r8.000000 ""
+r1.000000 "#
+r5.000000 "%
+r0.600000 "&
+r8.000000 "(
+r0.888889 ")
+r5.000000 "+
+r0.555556 ",
+r8.000000 ".
+r1.000000 "/
+r0.500000 "1
+r0.000000 "2
+r8.000000 "4
+r1.000000 "5
+r5.000000 "7
+r1.000000 "8
+
+#15
+r8.000000 ""
+r1.000000 "#
+r5.000000 "%
+r0.600000 "&
+r8.000000 "(
+r0.888889 ")
+r5.000000 "+
+r0.555556 ",
+r8.000000 ".
+r1.000000 "/
+r0.500000 "1
+r0.000000 "2
+r8.000000 "4
+r1.000000 "5
+r5.000000 "7
+r1.000000 "8
+
+#16
+r8.000000 ""
+r1.000000 "#
+r5.000000 "%
+r0.600000 "&
+r8.000000 "(
+r0.888889 ")
+r5.000000 "+
+r0.555556 ",
+r8.000000 ".
+r1.000000 "/
+r0.500000 "1
+r0.000000 "2
+r8.000000 "4
+r1.000000 "5
+r5.000000 "7
+r1.000000 "8
+
+#17
+r8.000000 ""
+r1.000000 "#
+r5.000000 "%
+r0.600000 "&
+r8.000000 "(
+r0.888889 ")
+r5.000000 "+
+r0.555556 ",
+r8.000000 ".
+r1.000000 "/
+r0.500000 "1
+r0.000000 "2
+r8.000000 "4
+r1.000000 "5
+r5.000000 "7
+r1.000000 "8
+
+#18
+r8.000000 ""
+r1.000000 "#
+r5.000000 "%
+r0.600000 "&
+r8.000000 "(
+r0.888889 ")
+r5.000000 "+
+r0.555556 ",
+r8.000000 ".
+r1.000000 "/
+r0.500000 "1
+r0.000000 "2
+r8.000000 "4
+r1.000000 "5
+r5.000000 "7
+r1.000000 "8
+
+#19
+r8.000000 ""
+r1.000000 "#
+r5.000000 "%
+r0.600000 "&
+r8.000000 "(
+r0.888889 ")
+r5.000000 "+
+r0.555556 ",
+r8.000000 ".
+r1.000000 "/
+r0.500000 "1
+r0.000000 "2
+r8.000000 "4
+r1.000000 "5
+r5.000000 "7
+r1.000000 "8
+
+#20
+1!
+0"
+r1.000000 "!
+r6.250000 ""
+r0.850000 "#
+r0.000000 "$
+r3.750000 "%
+r0.350000 "&
+r0.000000 "'
+r6.000000 "(
+r0.666667 ")
+r0.000000 "*
+r3.750000 "+
+r0.416667 ",
+r0.100000 "-
+r6.025000 ".
+r1.000000 "/
+r0.000000 "0
+r0.375000 "1
+r0.000000 "2
+r1.000000 "3
+r6.250000 "4
+r1.000000 "5
+r0.000000 "6
+r3.750000 "7
+r1.000000 "8
+1#
+0$
+1&
+1'
+0(
+0)
+0*
+1+
+0,
+0-
+0.
+03
+14
+16
+17
+08
+19
+0;
+1<
+1>
+0C
+1D
+1F
+0K
+1L
+1N
+0S
+1T
+1V
+0k
+1l
+1n
+1w
+0x
+1y
+1{
+0|
+1}

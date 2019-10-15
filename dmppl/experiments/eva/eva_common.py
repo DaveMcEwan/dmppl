@@ -36,9 +36,9 @@ def initPaths(argsEvcPath): # {{{
     #paths.fname_cov_base = outdir + "cov.X="
     #paths.dname_net = outdir + "net" + os.sep
 
-    module = inspect.stack()[-1][1]
-    appPaths.basemodule = os.path.basename(os.path.realpath(module))
-    appPaths.directory = os.path.dirname(os.path.realpath(module))
+    #module = inspect.stack()[-1][1]
+    appPaths.basemodule = os.path.basename(os.path.realpath(__file__))
+    appPaths.directory = os.path.dirname(os.path.realpath(__file__))
     appPaths.share = appPaths.directory + os.sep + "share" + os.sep
     appPaths.configDefault = appPaths.share + "configDefault.toml"
 

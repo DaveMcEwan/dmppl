@@ -433,7 +433,7 @@ def checkEvcxWithVcd(evcx, vcd): # {{{
 
     plainVarNames = [re.sub(r'\[.*$', '', x) for x in vcd.varNames]
 
-    newEvcx_ = {}
+    evcxx_ = {}
     for nm,v in evcx.items():
         hk = v["hook"]
 
@@ -458,17 +458,17 @@ def checkEvcxWithVcd(evcx, vcd): # {{{
         else:
             hkBit = None
 
-        newEvcx_[nm] = v
-        newEvcx_[nm].update({
+        evcxx_[nm] = v
+        evcxx_[nm].update({
             "hookVarId": hkVarId,
             "hookType": hkType,
             "hookBit": hkBit,
         })
     verb("Done")
 
-    infoEvcxWithVcd(newEvcx_)
+    infoEvcxWithVcd(evcxx_)
 
-    return newEvcx_
+    return evcxx_
 
 # }}} def checkEvcxWithVcd
 
@@ -514,7 +514,7 @@ def evsStage0(instream, evcx, cfg): # {{{
 
         All signals are of either "bit" or "real" VCD type.
         '''
-        measuresEvent =  (nm for nm,v in evcx.items() if "event"  == v["type"])
+        measuresEvent = (nm for nm,v in evcx.items() if "event"  == v["type"])
         measuresBstate = (nm for nm,v in evcx.items() if "bstate" == v["type"])
         measuresThreshold = (nm for nm,v in evcx.items() if "threshold" == v["type"])
         measuresNormal = (nm for nm,v in evcx.items() if "normal" == v["type"])
@@ -526,16 +526,16 @@ def evsStage0(instream, evcx, cfg): # {{{
 
         namesEvent = \
             ('.'.join(("event", pfx, nm)) \
-             for nm in measuresEvent for pfx in prefixesEvent)
+             for nm in sorted(measuresEvent) for pfx in prefixesEvent)
         namesBstate = \
             ('.'.join(("bstate", pfx, nm)) \
-             for nm in measuresBstate for pfx in prefixesBstate)
+             for nm in sorted(measuresBstate) for pfx in prefixesBstate)
         namesThreshold = \
             ('.'.join(("threshold", pfx, nm)) \
-             for nm in measuresThreshold for pfx in prefixesThreshold)
+             for nm in sorted(measuresThreshold) for pfx in prefixesThreshold)
         namesNormal = \
             ('.'.join(("normal", pfx, nm)) \
-             for nm in measuresNormal for pfx in prefixesNormal)
+             for nm in sorted(measuresNormal) for pfx in prefixesNormal)
 
         varlist = [(nm, 1, "bit") \
                    for nms in (namesEvent, namesBstate, namesThreshold,) \
@@ -581,16 +581,20 @@ def evsStage0(instream, evcx, cfg): # {{{
     with VcdReader(instream) as vcdi, VcdWriter(eva.paths.fname_mea) as vcdo:
         evcxx = checkEvcxWithVcd(evcx, vcdi)
 
-        evcxVarIds = set(v["hookVarId"] for nm,v in evcxx.items())
+        evcxVarIds = tuple(sorted(list(set(v["hookVarId"] \
+                                           for nm,v in evcxx.items()))))
+
+        meaSortKey = (lambda mea: mea["name"])
         mapVarIdToMeasures = \
-            {varId: [{"name": nm,
-                      "type": v["type"],
-                      "hookType": v["hookType"],
-                      "hookBit": v["hookBit"],
-                      "geq": v.get("geq"),
-                      "leq": v.get("leq")} \
-                     for nm,v in evcxx.items() \
-                     if varId == v["hookVarId"]] for varId in evcxVarIds}
+            {varId: sorted([{"name": nm,
+                             "type": v["type"],
+                             "hookType": v["hookType"],
+                             "hookBit": v["hookBit"],
+                             "geq": v.get("geq"),
+                             "leq": v.get("leq")} \
+                            for nm,v in evcxx.items() \
+                            if varId == v["hookVarId"]], key=meaSortKey) \
+             for varId in evcxVarIds}
 
         # Initialize previous values to 0.
         # {varId: (time, value), ...}

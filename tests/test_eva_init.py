@@ -5,6 +5,7 @@ from os import path
 import tempfile
 import shutil
 import sys
+import toml
 import unittest
 
 _curd = path.abspath(path.dirname(__file__)) # dmppl/tests
@@ -173,3 +174,20 @@ class Test_ExpandEvc(unittest.TestCase): # {{{
     # TODO: basic2
 
 # }}} class Test_ExpandEvc
+
+class Test_EvaInit(unittest.TestCase): # {{{
+
+    @unittest.skipIf(sys.version_info[0] == 2, "Unicode mess before Python3")
+    def test_Basic0(self):
+        self.maxDiff = None
+        eva.initPaths(path.join(_tstd, "basic2"))
+        args = Bunch()
+        args.input = path.join(_tstd, "basic2.vcd")
+
+        evaInit(args)
+
+        resultMeasureVcd = rdTxt(path.join(_tstd, "basic2.eva", "measure.vcd"))
+        goldenMeasureVcd = rdTxt(path.join(_tstd, "basic2.measure.golden.vcd"))
+        self.assertEqual(goldenMeasureVcd, resultMeasureVcd)
+
+# }}} class Test_EvaInit

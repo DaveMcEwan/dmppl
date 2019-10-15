@@ -30,6 +30,17 @@ def clog2(x): # {{{
     return int(math.ceil(math.log(x, 2)))
 # }}} def clog2
 
+def dotp(xs, ys): # {{{
+    '''Dot product.
+
+    NOTE: Allowing iterables as input means length can't be checked.
+    '''
+    assert all(isinstance(x, (int, long, float)) for x in xs), xs
+    assert all(isinstance(y, (int, long, float)) for y in ys), ys
+
+    return sum(x*y for x,y in zip(xs, ys))
+# }}} def dotp
+
 def clipNorm(x, lo=0.0, hi=1.0): # {{{
     '''Clip and normalize to range.
     '''

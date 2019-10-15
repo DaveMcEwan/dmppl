@@ -50,6 +50,26 @@ class Test_clog2(unittest.TestCase): # {{{
 
 # }}} class Test_clog2
 
+class Test_dotp(unittest.TestCase): # {{{
+
+    def test_Basic0(self):
+        result = dotp([1, 2, 5], (-10.0, 11.1, 0.5))
+        self.assertEqual(result, 14.7)
+
+    def test_Int0(self):
+        result = dotp([1, 2, 5], (-10, 11, 5))
+        self.assertEqual(result, 37)
+
+    def test_Float0(self):
+        result = dotp([1.1, 2.2, 5.5], (-10.0, 11.1, 5.5))
+        self.assertEqual(result, 43.67)
+
+    def test_Iters(self):
+        result = dotp(range(0, 5), range(5, 55, 3)) # unequal length
+        self.assertEqual(result, 140)
+
+# }}} class Test_dotp
+
 class Test_clipNorm(unittest.TestCase): # {{{
 
     def test_Basic0(self):

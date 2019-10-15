@@ -11,7 +11,7 @@ import numpy as np
 
 # Local library imports
 from dmppl.base import dbg, Bunch, appendNonDuplicate, indexDefault, info, mkDirP, verb
-from dmppl.math import saveNpy, clipNorm
+from dmppl.math import dotp, clipNorm, saveNpy
 from dmppl.toml import loadToml, saveToml
 from dmppl.vcd import VcdReader, VcdWriter, oneBitTypes
 
@@ -475,7 +475,7 @@ def checkEvcxWithVcd(evcx, vcd): # {{{
 def firFilter(zs): # {{{
     coeffs = eva.cfg.fir
     assert len(zs) == len(coeffs), zs
-    return sum(coeff*z for coeff,z in zip(coeffs, zs))
+    return dotp(zs, coeffs)
 # }}} def firFilter
 
 def evsStage0(instream, evcx, cfg): # {{{

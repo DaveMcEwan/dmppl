@@ -80,12 +80,13 @@ argparser_dep = subparsers.add_parser("dep",
 
 
 def argparseHttpdPort(s): # {{{
-    val = int(s)
-    if not 2**10 <= val < 2**16:
-        msg = "{} in not a valid TCP port number.".format(s)
-        msg += " (1024 <= p < 65535)"
+    p = int(s)
+    if not (2**10 <= p < 2**16 or 0 == p):
+        msg = "%d in not a valid TCP port number." % p
+        msg += " Must be in [1024, 65535]"
+        msg += " OR 0 ==> STDOUT"
         raise argparse.ArgumentTypeError(msg)
-    return val
+    return p
 # }}} def argparseHttpdPort
 
 argparser_html = subparsers.add_parser("html",
@@ -94,33 +95,40 @@ argparser_html = subparsers.add_parser("html",
 argparser_html.add_argument("-p", "--httpd-port",
     type=argparseHttpdPort,
     default=8080,
-    help="TCP port for HTTP server. Use 0 for STDOUT.")
+    help="TCP port for server. Use 0 for STDOUT.")
 
-argparser_html.add_argument("--leads",
-    default="x-given-y",
-    choices=["to-X-at-u", "from-Y-at-u"],
-    help="F(X|...;u) or F(...|Y;u) instead of F(X|Y;...")
+argparser_html.add_argument("--vary",
+    default='u',
+    choices=['x', 'y', 'u'],
+    help="f(x|...;u) or f(...|y;u) instead of f(x|y;...)")
 
-argparser_html.add_argument("-F", "--F",
+fgChoices = ["Dep", "Cov", "Ham", "Tmt", "Cls", "Cos"]
+argparser_html.add_argument("-f",
     type=str,
-    default="E",
-    choices=["E", "Dep", "Cov", "DepCov", "Ham", "Tmt", "Cls", "Cos"],
-    help="Analysis type.")
+    default="Dep",
+    choices=fgChoices,
+    help="Function f(x|y;u)")
 
-argparser_html.add_argument("-X", "--X",
-    type=str,
-    default=None,
-    help="F(X|Y;U), e.g. f_b.axi.ar")
-
-argparser_html.add_argument("-Y", "--Y",
+argparser_html.add_argument("-g",
     type=str,
     default=None,
-    help="F(X|Y;U), e.g. gp_r.rail.voltage")
+    choices=fgChoices,
+    help="Function g(x|y;u) for 2D colorspace (f, g)")
 
-argparser_html.add_argument("-U", "--U",
+argparser_html.add_argument("-x",
+    type=str,
+    default=None,
+    help="f(x|y;u), e.g: event.measure.cacheMiss")
+
+argparser_html.add_argument("-y",
+    type=str,
+    default=None,
+    help="f(x|y;u), e.g: bstate.rise.cpuIdle")
+
+argparser_html.add_argument("-u",
     type=int,
     default=None,
-    help="F(X|Y;U), e.g. 9876")
+    help="f(x|y;u), e.g. 9876")
 
 # }}} argparser
 

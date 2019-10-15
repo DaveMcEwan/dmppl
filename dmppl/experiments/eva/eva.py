@@ -54,16 +54,6 @@ argparser.add_argument("-r", "--purge",
     action='store_true',
     help="Force removal of any existing results.")
 
-argparser.add_argument("--savetxt",
-    default=False,
-    action='store_true',
-    help="Save results in text format.")
-
-argparser.add_argument("--savevcd",
-    default=False,
-    action='store_true',
-    help="Save results in VCD format.")
-
 argparser_init = subparsers.add_parser("init",
     help=("Parse VCD with EVC(YAML) to produce EVS(NumPy)."))
 

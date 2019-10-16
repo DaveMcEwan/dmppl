@@ -10,6 +10,7 @@
 
 # Standard library imports
 import argparse
+import shutil
 import sys
 
 # Local library imports
@@ -52,7 +53,9 @@ argparser.add_argument("-j", "--n_jobs",
 argparser.add_argument("-r", "--purge",
     default=False,
     action='store_true',
-    help="Force removal of any existing results.")
+    help="Force removal of any existing results. "
+         "Only makes sense with init, "
+         "but available as a general option to prevent mistakes.")
 
 argparser_init = subparsers.add_parser("init",
     help=("Parse VCD with EVC(YAML) to produce EVS(NumPy)."))
@@ -126,6 +129,9 @@ def main(args): # {{{
 
     eva.infoFlag = args.info
     eva.initPaths(args.evc)
+
+    if args.purge:
+        shutil.rmtree(eva.paths.outdir)
 
     ret = {
         "init": evaInit,

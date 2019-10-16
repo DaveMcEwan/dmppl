@@ -1,5 +1,6 @@
 
 # Standard library imports
+from itertools import chain
 import os
 import sys
 import time
@@ -7,7 +8,7 @@ import time
 # PyPI library imports
 
 # Local library imports
-from dmppl.base import dbg, info, verb, joinP, tmdiff
+from dmppl.base import dbg, info, verb, joinP, tmdiff, rdTxt
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
@@ -26,19 +27,45 @@ elif sys.version_info[0] == 3:
 else:
     assert False, version_help
 
+def htmlHead(inlineJs=True, inlineCss=True): # {{{
+    '''Return a string with HTML headers for JS and CSS.
+    '''
+
+    fnamesJs = (joinP(eva.appPaths.share, fname) for fname in \
+                ("jquery-3.3.1.slim.min.js",
+                 "bootstrap-3.3.7.min.js",
+                 "eva.js"))
+
+    fnamesCss = (joinP(eva.appPaths.share, fname) for fname in \
+                ("bootstrap-3.3.7.min.css",
+                 "eva.css"))
+
+    jsTxts = (('<script> %s </script>' % rdTxt(fname)) \
+              if inlineJs else \
+              ('<script type="text/javascript" src="%s"></script>' % fname)
+              for fname in fnamesJs)
+
+    cssTxts = (('<style> %s </style>' % rdTxt(fname)) \
+              if inlineCss else \
+              ('<link rel="stylesheet" type="text/css" href="%s">' % fname)
+              for fname in fnamesCss)
+
+    return "<head>" + '\n'.join(chain(jsTxts, cssTxts)) + "</head>"
+# }}} def htmlHead
+
 def evaHtmlString(args, cfg, evcx, request): # {{{
     '''Return a string of HTML.
 
     f     g     -->
-    None  None  error
+    None  None  invalid
     None  Func  1D color, swap f,g
     Func  None  1D color
     Func  Func  2D color
 
     u     x     y     -->
-    None  None  None  error
-    None  None  Metr  error
-    None  Metr  None  error
+    None  None  None  invalid
+    None  None  Metr  invalid
+    None  Metr  None  invalid
     None  Metr  Metr  Table varying u over rows, delta over columns
     Int   None  None  Network graph
     Int   None  Metr  Table varying x over rows, delta over columns
@@ -48,34 +75,41 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     f, g, u, x, y = \
         request['f'], request['g'], request['u'], request['x'], request['y']
 
+    verb("{f,g}(x|y;u) <-- {%s,%s}(%s|%s;%s)" % (f, g, x, y, u))
+
     if f is None and isinstance(g, str):
-        colorDimensions = 1
+        pass # 1D color
         f, g = g, f
     elif isinstance(f, str) and g is None:
-        colorDimensions = 1
+        pass # 1D color
     elif isinstance(f, str) and isinstance(g, str):
-        colorDimensions = 2
+        pass # 2D color
     else:
         assert False, "At least one of f,g must be string of function name." \
-                      " (f=%s, g=%s)" % (f, g)
+                      " (f%s=%s, g%s=%s)" % (type(f), f, type(g), g)
 
     if u is None and isinstance(x, str) and isinstance(y, str):
         pass # Table varying u over rows, delta over columns
-    elif isinstance(u, int) and x is None and y is None:
+    elif isinstance(u, str) and x is None and y is None:
         pass # Network graph
-    elif isinstance(u, int) and x is None and isinstance(y, str):
+    elif isinstance(u, str) and x is None and isinstance(y, str):
         pass # Table varying x over rows, delta over columns
-    elif isinstance(u, int) and isinstance(x, str) and y is None:
+    elif isinstance(u, str) and isinstance(x, str) and y is None:
         pass # Table varying y over rows, delta over columns
-    elif isinstance(u, int) and isinstance(x, str) and isinstance(y, str):
+    elif isinstance(u, str) and isinstance(x, str) and isinstance(y, str):
         pass # Table row varying delta over columns
     else:
         assert False, "Invalid combination of u,x,y." \
                       " (u=%s, x=%s, y=%s)" % (u, x, y)
 
-    verb("{f,g}(x|y;u) <-- {%s,%s}(%s|%s;%s)" % (f, g, x, y, u))
+    # Avoid inline JS or CSS for browser caching, but use for standalone files.
+    inlineHead = (args.httpd_port == 0)
+    head = htmlHead(inlineHead, inlineHead)
 
-    return "TODO"
+    u = int(u)
+    assert 0 <= u, u
+
+    return head + "TODO"
 # }}} def evaHtmlString
 
 class EvaHTMLException(Exception): # {{{
@@ -99,7 +133,7 @@ class EvaHTTPRequestHandler(BaseHTTPRequestHandler): # {{{
         '''Parse and sanitize GET path.
         '''
         parsed = parse_qs(path.strip("/?")) # Parse query string.
-        ret = {k: (parsed[k] if k in parsed.keys() else None) \
+        ret = {k: (parsed[k][0] if k in parsed.keys() else None) \
                for k in ('f', 'g', 'u', 'x', 'y')}
         return ret
     # }}} def parseGetRequest

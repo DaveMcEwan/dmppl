@@ -112,17 +112,17 @@ argparser_html.add_argument("-g",
 argparser_html.add_argument("-x",
     type=str,
     default=None,
-    help="f(x|y;u), e.g: event.measure.cacheMiss")
+    help="String measurement name in f(x|y;u), e.g: event.measure.cacheMiss")
 
 argparser_html.add_argument("-y",
     type=str,
     default=None,
-    help="f(x|y;u), e.g: bstate.rise.cpuIdle")
+    help="String measurement name in f(x|y;u), e.g: bstate.rise.cpuIdle")
 
 argparser_html.add_argument("-u",
-    type=int,
+    type=str, # Int conversion performed later for consistency with HTTPD.
     default=None,
-    help="f(x|y;u), e.g. 9876")
+    help="Non-negative integer time in f(x|y;u), e.g. 9876")
 
 # }}} argparser
 

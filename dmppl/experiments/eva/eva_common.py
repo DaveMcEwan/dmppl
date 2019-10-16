@@ -7,7 +7,7 @@ import os
 import toml
 
 # Local library imports
-from dmppl.base import Bunch, fnameAppendExt, verb
+from dmppl.base import Bunch, fnameAppendExt, verb, joinP
 
 __version__ = "0.1.0"
 
@@ -28,25 +28,18 @@ def initPaths(argsEvcPath): # {{{
 
     paths.fname_evc = fnameAppendExt(argsEvcPath, "evc")
 
-    outdir = os.path.splitext(paths.fname_evc)[0] + ".eva" + os.sep
+    outdir = os.path.splitext(paths.fname_evc)[0] + ".eva"
 
     paths.outdir = outdir
-    paths.fname_evcx = outdir + "evcx.toml"
-    paths.fname_cfg = outdir + "config.toml"
-    paths.fname_mea = outdir + "measure.vcd"
-    paths.dname_evs = outdir + "evs" + os.sep
-    #paths.fname_ex = outdir + "ex"
-    #paths.fname_ex_vcd = outdir + "ex.vcd"
-    #paths.fname_cex_base = outdir + "cex.X="
-    #paths.fname_dep_base = outdir + "dep.X="
-    #paths.fname_cov_base = outdir + "cov.X="
-    #paths.dname_net = outdir + "net" + os.sep
+    paths.fname_evcx = joinP(outdir, "evcx.toml")
+    paths.fname_cfg = joinP(outdir, "config.toml")
+    paths.fname_mea = joinP(outdir, "measure.vcd")
 
     #module = inspect.stack()[-1][1]
     appPaths.basemodule = os.path.basename(os.path.realpath(__file__))
     appPaths.directory = os.path.dirname(os.path.realpath(__file__))
-    appPaths.share = appPaths.directory + os.sep + "share" + os.sep
-    appPaths.configDefault = appPaths.share + "configDefault.toml"
+    appPaths.share = joinP(appPaths.directory, "share")
+    appPaths.configDefault = joinP(appPaths.share, "configDefault.toml")
 
     global initPathsDone
     initPathsDone = True

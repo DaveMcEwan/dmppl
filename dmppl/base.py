@@ -400,6 +400,8 @@ def mkDirP(path): # {{{
     return
 # }}} def mkDirP
 
+joinP = os.path.join # Just a convenient alias
+
 def verb(msg='', end='\n', sv_tm=False, rpt_tm=False): # {{{
     '''Print a message to STDOUT when verbose flag is set.
 

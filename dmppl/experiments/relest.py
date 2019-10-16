@@ -88,8 +88,6 @@ metrics = [
 nMetrics = len(metrics)
 metricNames = [nm for nm,fn in metrics]
 
-# TODO: Move stats to separate module
-
 # https://en.wikipedia.org/wiki/Confusion_matrix
 # https://en.wikipedia.org/wiki/Evaluation_of_binary_classifiers
 stats = [
@@ -118,7 +116,7 @@ def arcsine_invCDF(u): # {{{
 
 def constructSystem(sysNum, n_maxm): # {{{
 
-    systems_dir = outdir + "systems" + os.sep
+    systems_dir = joinP(outdir, "systems")
     mkDirP(systems_dir)
 
     # Type of system.
@@ -195,7 +193,7 @@ def constructSystem(sysNum, n_maxm): # {{{
         "consrc": consrc,
         "conop": conop,
     }
-    saveYml(system, systems_dir + system["name"])
+    saveYml(system, joinP(systems_dir, system["name"]))
 
     return system
 # }}} def constructSystem
@@ -207,9 +205,8 @@ def systemKnown(system): # {{{
     n_src = system["n_src"]
     n_dst = system["n_dst"]
 
-    knowns_dir = outdir + "knowns" + os.sep
+    knowns_dir = joinP(outdir, "knowns")
     mkDirP(knowns_dir)
-
 
     # Save matrix of known relationships.
     # Rows -> "from", columns -> "to".
@@ -218,7 +215,7 @@ def systemKnown(system): # {{{
         for ss in consrc[d]:
             known[ss][n_src + d] = True
 
-    fname_known = knowns_dir + system["name"] + ".known"
+    fname_known = joinP(knowns_dir, system["name"] + ".known")
     saveNpy(known, fname_known)
     np.savetxt(fname_known + ".txt", known.astype(np.int),
                fmt='%d', delimiter='')
@@ -237,14 +234,14 @@ def generateSamples(system, n_time): # {{{
     n_dst = len(consrc)
     assert n_dst == system["n_dst"]
 
-    EVSs_dir = outdir + "evs" + os.sep
+    EVSs_dir = joinP(outdir, "evs")
     mkDirP(EVSs_dir)
 
     # EVS for src nodes.
     evs_src = np.stack([uniform(size=n_time) < density[i] \
                         for i in range(n_src)]).astype(np.bool)
 
-    #fname_evs_src = EVSs_dir + sysname + ".evs.src"
+    #fname_evs_src = joinP(EVSs_dir, sysname + ".evs.src")
     #saveNpy(evs_src, fname_evs_src)
     #np.savetxt(fname_evs_src + ".txt", evs_src.astype(np.int),
     #           fmt='%d', delimiter='')
@@ -270,7 +267,7 @@ def generateSamples(system, n_time): # {{{
             evs_dst[d][t] = v
 
     evs = np.vstack((evs_src, evs_dst))
-    fname_evs_full = EVSs_dir + sysname + ".evs"
+    fname_evs_full = joinP(EVSs_dir, sysname + ".evs")
     np.savetxt(fname_evs_full + ".txt", evs.astype(np.int),
                fmt='%d', delimiter='')
     saveNpy(evs, fname_evs_full)
@@ -284,11 +281,11 @@ def exportCsv(system, evs, known, estimated, n_time): # {{{
     This is intended to be used as a dataset to feed a learning model.
     '''
 
-    csvDir = outdir + "csv" + os.sep
+    csvDir = joinP(outdir, "csv")
     mkDirP(csvDir)
 
     sysname = system["name"]
-    fnameCsv = csvDir + sysname + ".csv"
+    fnameCsv = joinP(csvDir, sysname + ".csv")
 
     # [ (<title>, <format>), ... ]
     columns = [
@@ -375,7 +372,7 @@ def exportCsv(system, evs, known, estimated, n_time): # {{{
 
 def performEstimations(system, evs, n_time): # {{{
 
-    estimateds_dir = outdir + "estimated" + os.sep
+    estimateds_dir = joinP(outdir, "estimated")
     mkDirP(estimateds_dir)
 
     m = system["m"]
@@ -386,7 +383,7 @@ def performEstimations(system, evs, n_time): # {{{
     #W = powsineCoeffs(n_time, 4) # Alternative Blackman
 
     # Calculate similarity metrics.
-    fname_estimated = estimateds_dir + system["name"] + ".estimated"
+    fname_estimated = joinP(estimateds_dir, system["name"] + ".estimated")
     estimated = np.zeros((nMetrics, m, m))
     for i in range(m): # Row "from"
         for j in range(i+1, m): # Column "to". Upper triangle only.
@@ -418,9 +415,9 @@ def scoreSystem(system, known, estimated): # {{{
         sysScore = [fn(TP, FP, FN, TN) for nm,fn in stats]
 
     # Print score for this system in table.
-    scoretable_dir = outdir + "scoretables" + os.sep
+    scoretable_dir = joinP(outdir, "scoretables")
     mkDirP(scoretable_dir)
-    fname_table = scoretable_dir + system["name"] + ".table.txt"
+    fname_table = joinP(scoretable_dir, system["name"] + ".table.txt")
     table = PrettyTable(["Metric"] + statNames)
     rows = zip(metricNames, *sysScore)
     for row in rows:
@@ -451,7 +448,7 @@ def tabulateScores(scoresByTypename): # {{{
             table.add_row(rowStrings)
 
         #dbg(table)
-        with open(outdir + "mean.%s.table.txt" % sysTypename, 'w') as fd:
+        with open(joinP(outdir, "mean.%s.table.txt" % sysTypename), 'w') as fd:
             fd.write(str(table))
 
     return
@@ -459,10 +456,10 @@ def tabulateScores(scoresByTypename): # {{{
 
 def plotScores(scoresByTypename): # {{{
 
-    plotDir = outdir + "plot" + os.sep
+    plotDir = joinP(outdir, "plot")
     mkDirP(plotDir)
-    plotPathFmtPdf = plotDir + "relest_%s_%s.pdf"
-    plotPathFmtPng = plotDir + "relest_%s_%s.png"
+    plotPathFmtPdf = joinP(plotDir, "relest_%s_%s.pdf")
+    plotPathFmtPng = joinP(plotDir, "relest_%s_%s.png")
 
     markers = [".", "o", "x", "^", "s", "*", "", "", "", ""]
 
@@ -572,8 +569,7 @@ def main(args): # {{{
     '''
 
     global outdir
-    outdir = args.outdir + \
-        ("" if args.outdir.endswith(os.sep) else os.sep)
+    outdir = args.outdir
 
     mkDirP(outdir)
     verb("outdir: %s" % outdir)
@@ -606,14 +602,12 @@ def main(args): # {{{
     if load_system:
         verb("Loading systems... ", end='')
 
-        systems_fname_fmt = outdir + "systems" + os.sep + \
-                            "system*.yml"
+        systems_fname_fmt = joinP(outdir, "systems", "system*.yml")
         systems_fnames = sorted([f for f in glob.glob(systems_fname_fmt)])
         systems = [loadYml(f) for f in systems_fnames]
         assert len(systems) == len(systems_fnames)
 
-        knowns_fname_fmt = outdir + "knowns" + os.sep + \
-                           "system*.known.npy.gz"
+        knowns_fname_fmt = joinP(outdir, "knowns", "system*.known.npy.gz")
         knowns_fnames = sorted([f for f in glob.glob(knowns_fname_fmt)])
         assert len(systems) == len(knowns_fnames)
         knowns = (loadNpy(f) for f in knowns_fnames)
@@ -640,8 +634,7 @@ def main(args): # {{{
 
     # Lazily read EVS from disk.
     verb("Loading EVSs... ", end='')
-    EVSs_fname_fmt = outdir + "evs" + os.sep + \
-                     "system*.evs.npy.gz"
+    EVSs_fname_fmt = joinP(outdir, "evs", "system*.evs.npy.gz")
     EVSs_fnames = sorted([f for f in glob.glob(EVSs_fname_fmt)])
     assert len(systems) == len(EVSs_fnames)
     EVSs = (loadNpy(f) for f in EVSs_fnames)
@@ -663,8 +656,7 @@ def main(args): # {{{
 
     # Lazily read estimations from disk.
     verb("Loading estimations... ", end='')
-    estimateds_fname_fmt = outdir + "estimated" + os.sep + \
-                          "system*.estimated.npy.gz"
+    estimateds_fname_fmt = joinP(outdir, "estimated", "system*.estimated.npy.gz")
     estimateds_fnames = sorted([f for f in glob.glob(estimateds_fname_fmt)])
     assert len(systems) == len(estimateds_fnames)
     estimateds = (loadNpy(f) for f in estimateds_fnames)
@@ -680,7 +672,7 @@ def main(args): # {{{
 
     elif args.action == "score":
 
-        fnameFmtScores = outdir + "scores.%s"
+        fnameFmtScores = joinP(outdir, "scores.%s")
         sysTypenames = ["and", "or", "xor", "mix", "lha"] # "all" is appended
 
         if load_score:

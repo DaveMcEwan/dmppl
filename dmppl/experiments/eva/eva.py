@@ -90,12 +90,13 @@ argparser_html.add_argument("-p", "--httpd-port",
     default=8080,
     help="TCP port for server. Use 0 for STDOUT.")
 
-argparser_html.add_argument("--vary",
-    default='u',
-    choices=['x', 'y', 'u'],
-    help="f(x|...;u) or f(...|y;u) instead of f(x|y;...)")
+# TODO: required?
+#argparser_html.add_argument("--vary",
+#    default='u',
+#    choices=['u', 'x', 'y'],
+#    help="f(x|y;...) OR f(...|y;u) OR f(x|...;u)")
 
-fgChoices = ["Dep", "Cov", "Ham", "Tmt", "Cls", "Cos"]
+fgChoices = ["Cex", "Dep", "Cov", "Ham", "Tmt", "Cls", "Cos"]
 argparser_html.add_argument("-f",
     type=str,
     default="Dep",

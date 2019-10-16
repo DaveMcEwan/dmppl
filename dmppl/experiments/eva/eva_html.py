@@ -28,9 +28,50 @@ else:
 
 def evaHtmlString(args, cfg, evcx, request): # {{{
     '''Return a string of HTML.
+
+    f     g     -->
+    None  None  error
+    None  Func  1D color, swap f,g
+    Func  None  1D color
+    Func  Func  2D color
+
+    u     x     y     -->
+    None  None  None  error
+    None  None  Metr  error
+    None  Metr  None  error
+    None  Metr  Metr  Table varying u over rows, delta over columns
+    Int   None  None  Network graph
+    Int   None  Metr  Table varying x over rows, delta over columns
+    Int   Metr  None  Table varying y over rows, delta over columns
+    Int   Metr  Metr  Table row varying delta over columns
     '''
     f, g, u, x, y = \
         request['f'], request['g'], request['u'], request['x'], request['y']
+
+    if f is None and isinstance(g, str):
+        colorDimensions = 1
+        f, g = g, f
+    elif isinstance(f, str) and g is None:
+        colorDimensions = 1
+    elif isinstance(f, str) and isinstance(g, str):
+        colorDimensions = 2
+    else:
+        assert False, "At least one of f,g must be string of function name." \
+                      " (f=%s, g=%s)" % (f, g)
+
+    if u is None and isinstance(x, str) and isinstance(y, str):
+        pass # Table varying u over rows, delta over columns
+    elif isinstance(u, int) and x is None and y is None:
+        pass # Network graph
+    elif isinstance(u, int) and x is None and isinstance(y, str):
+        pass # Table varying x over rows, delta over columns
+    elif isinstance(u, int) and isinstance(x, str) and y is None:
+        pass # Table varying y over rows, delta over columns
+    elif isinstance(u, int) and isinstance(x, str) and isinstance(y, str):
+        pass # Table row varying delta over columns
+    else:
+        assert False, "Invalid combination of u,x,y." \
+                      " (u=%s, x=%s, y=%s)" % (u, x, y)
 
     verb("{f,g}(x|y;u) <-- {%s,%s}(%s|%s;%s)" % (f, g, x, y, u))
 

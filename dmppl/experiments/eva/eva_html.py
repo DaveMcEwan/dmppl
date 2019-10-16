@@ -27,6 +27,50 @@ elif sys.version_info[0] == 3:
 else:
     assert False, version_help
 
+def sliderControls(): # {{{
+    ret = '''\
+<div class="controls">
+    <input id="thr_max_slider" type="range"
+           min="0.0" max="1.0"
+           step="0.01" value="1.0"/>
+    <p><span id="thr_min_val"></span>
+       &le; Pr <span id="thr_andxor"></span> Pr &le;
+       <span id="thr_max_val"></span></p>
+    <input id="thr_min_slider" type="range"
+           min="0.0" max="1.0"
+           step="0.01" value="0.0"/>
+</div>
+'''
+    return ret
+# }}} def sliderControls
+
+def popoverUl(ulTitle, items): # {{{
+    '''Return a string for use in bootstrap popover.
+    '''
+
+    assert isinstance(ulTitle, str) and len(ulTitle), ulTitle
+    for liName, liHref in items:
+        assert isinstance(liName, str) and len(liName), liName
+        assert isinstance(liHref, str) and len(liHref), liHref
+
+    liFmt = '<li> <a href=&quot;{liHref}&quot;> {liName} </a> </li>'
+    lis = (liFmt.format(liName=liName, liHref=liHref)for liName,liHref in items)
+
+    fmt = '''\
+<a tabindex="0"
+   role="button"
+   href="#"
+   title="{ulTitle}"
+   data-html="true"
+   data-toggle="popover"
+   data-trigger="click"
+   data-content="<ul>{lis}</ul>">
+{ulTitle}
+</a>
+'''
+    return fmt.format(ulTitle=ulTitle, lis=''.join(lis))
+# }}} def popoverUl
+
 def htmlHead(inlineJs=True, inlineCss=True): # {{{
     '''Return a string with HTML headers for JS and CSS.
     '''

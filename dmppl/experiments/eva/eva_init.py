@@ -9,10 +9,12 @@ import sys
 import toml
 
 # Local library imports
-from dmppl.base import dbg, Bunch, appendNonDuplicate, indexDefault, info, mkDirP, verb
+from dmppl.base import dbg, info, verb, \
+                       Bunch, appendNonDuplicate, indexDefault, \
+                       mkDirP, joinP
 from dmppl.math import dotp, clipNorm, saveNpy
 from dmppl.toml import loadToml, saveToml
-from dmppl.vcd import VcdReader, VcdWriter, oneBitTypes
+from dmppl.vcd import VcdReader, VcdWriter, oneBitTypes, detypeVarName
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
@@ -478,9 +480,10 @@ def firFilter(zs): # {{{
 # }}} def firFilter
 
 def evsStage0(instream, evcx, cfg): # {{{
-    '''Filter input VCD to output stage0 VCD.
+    '''Filter input data to output stage0 VCD (measure.vcd).
 
     Extract measurements of interest, at times of interest.
+    Perform interpolation for normal measurements.
     In stage0 time is a straightforward EVS index.
     In stage0 hierarchy shows raw measures and reflection/rise/fall.
 
@@ -828,6 +831,37 @@ def evsStage0(instream, evcx, cfg): # {{{
 
 # }}} def evsStage0
 
+def evsStage1(): # {{{
+    '''Apply post-processing steps to stage0.
+
+    Compile [(<time>, <file offset>), ... ] for each signal in stage0.
+    '''
+
+    mkDirP(eva.paths.dname_timejumps)
+
+    with VcdReader(eva.paths.fname_mea) as vcdi:
+
+        # Stage0 file has bijective map between varId and varName by
+        # construction, so take first (only) name for convenience.
+        mapVarIdToName = {varId: nms[0] \
+                          for varId,nms in vcdi.mapVarIdToNames.items()}
+
+        fdTjs = \
+            {nm: open(joinP(eva.paths.dname_timejumps,
+                            detypeVarName(nm)), 'w') \
+             for nm in vcdi.varNames}
+
+        for newTime, changedVarIds, newValues in vcdi.timechunks:
+            varNames = [mapVarIdToName[varId] for varId in changedVarIds]
+            for nm in varNames:
+                fdTjs[nm].write("%d %s %s\n" % (newTime,
+                                                vcdi.tcLineNum_,
+                                                vcdi.tcTell_))
+        for _,fd in fdTjs.items():
+            fd.close()
+
+# }}} def evsStage1
+
 def evaInit(args): # {{{
     '''Read in EVC and VCD to create result directory like ./foo.eva/
     '''
@@ -843,6 +877,7 @@ def evaInit(args): # {{{
     evcx = expandEvc(evc, eva.cfg)
 
     evsStage0(args.input, evcx, eva.cfg)
+    evsStage1()
 
     return 0
 # }}} def evaInit

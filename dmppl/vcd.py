@@ -247,7 +247,7 @@ class VcdReader(object): # {{{
     # }}} def vcdHeader
 
     @staticmethod
-    def vcdTimechunks(lines): # {{{
+    def vcdTimechunks(self, lines): # {{{
 
         def procChangeLine(line): # {{{
             c0 = line[0].lower() if 0 < len(line) else ''
@@ -281,9 +281,18 @@ class VcdReader(object): # {{{
         newTime = None # Initial value to read first timechunk.
         changedVarIds = []
         valueStrings = []
+        prevTcLineNum_, prevTcTell_ = None, None
         for lineNum, line in lines:
             timeNotData, value, varId = \
                 procChangeLine(line)
+
+            if timeNotData:
+                self.tcLineNum_, self.tcTell_ = prevTcLineNum_, prevTcTell_
+                prevTcLineNum_ = lineNum
+                try:
+                    prevTcTell_ = self.fd.tell()
+                except:
+                    pass # Ignore lack of tell() on STDIN
 
             if (timeNotData, value, varId) == (None, None, None):
                 # Unknown type of change line, ignore.
@@ -320,8 +329,19 @@ class VcdReader(object): # {{{
                   if self.filename is not None else \
                   sys.stdin
 
-        # Generator producing striped lines with numbers.
-        lines = ((n, l.strip()) for (n,l) in enumerate(self.fd, start=1))
+        def getLines(fd): # {{{
+            '''Generator producing stripped lines with numbers.
+
+            NOTE: The usual for/__next__() method disables tell().
+            '''
+            line = fd.readline()
+            lineNum = 1
+            while line:
+                yield lineNum, line.strip()
+                line = fd.readline()
+                lineNum += 1
+        # }}} def getLines
+        lines = getLines(self.fd)
 
         try:
             self.varIds, \
@@ -358,7 +378,7 @@ class VcdReader(object): # {{{
         self.mapVarNameNovectorToVarId = \
             {re.sub(r'\[.*$', '', nm): v for nm,v in self.mapVarNameToVarId.items()}
 
-        self.timechunks = self.vcdTimechunks(lines)
+        self.timechunks = self.vcdTimechunks(self, lines)
 
         return self
     # }}} def __enter__

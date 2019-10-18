@@ -316,6 +316,7 @@ class VcdReader(object): # {{{
 
         # Last timechunk.
         if newTime is not None:
+            self.tcLineNum_, self.tcTell_ = prevTcLineNum_, prevTcTell_
             tc = (
                 newTime,
                 changedVarIds,
@@ -417,6 +418,37 @@ def detypeVarName(varName): # {{{
     nmParts = withoutRange.split('.')
     return '.'.join([p.split(':')[-1] for p in nmParts])
 # }}} def detypeVarName
+
+def rdMetadata(fname): # {{{
+    '''Read through file counting actual value changes and finding
+       location of timechunks.
+
+    tcTell_ is 'an opaque number' which can be used with fd.seek()
+
+    Use mapVarIdToNumChanges to assign shorter varIds to signals which change
+    more frequently.
+    '''
+    with VcdReader(fname) as vdi:
+        timejumps_ = [] # [(time, position), ...]
+        mapVarIdToTimejumps_ = {i: [] for i in vdi.varIdsUnique}
+        mapVarIdToNumChanges_ = {i: 0 for i in vdi.varIdsUnique}
+
+        prevValues_ = {i: None for i in vdi.varIdsUnique}
+        for newTime,changedVarIds,newValues in vdi.timechunks:
+            timejumps_.append((newTime, vdi.tcTell_))
+
+            tcPrevValues = [prevValues_[i] for i in changedVarIds]
+            for i,n,p in zip(changedVarIds, newValues, tcPrevValues):
+                mapVarIdToTimejumps_[i].append((newTime, vdi.tcTell_))
+
+                if n != p:
+                    mapVarIdToNumChanges_[i] += 1
+                prevValues_[i] = n
+
+    timejumps_.sort()
+
+    return timejumps_, mapVarIdToTimejumps_, mapVarIdToNumChanges_
+# }}} def rdMetadata
 
 def _vcdVarDefs(self): # {{{
     varIds = self.varIds

@@ -91,26 +91,7 @@ def clean(src=None, dst=None): # {{{
     with open(tmpf, 'w') as fd:
         fd.write('\n'.join(rdLines(fnamei, commentLines=False)))
 
-    def countChanges(fname): # {{{
-    #def countChanges(fname: str) -> dict:
-        '''Read through input file and count the number of actual value changes.
-
-        The output file will assign shorter varIds to ones which change more
-        often.
-        '''
-        with VcdReader(fname) as vdi:
-            numChanges = {i: 0 for i in vdi.varIdsUnique}
-
-            prevValues = [None] * len(vdi.varIdsUnique)
-            for newTime, changedVarIds, newValues in vdi.timechunks:
-                for i,n,p in zip(changedVarIds, newValues, prevValues):
-                    if p != n:
-                        numChanges[i] += 1
-                prevValues = newValues
-        return numChanges
-    # }}} def countChanges
-
-    numChanges = countChanges(tmpf)
+    timejumps, mapVarIdToTimejumps, mapVarIdToNumChanges = rdMetadata(tmpf)
 
     cleanComment = "<<< Cleaned by vcd-utils %s >>>" % __version__
 
@@ -131,7 +112,7 @@ def clean(src=None, dst=None): # {{{
                 varaliases.append(alias)
 
         # Sort varlist by number of changes.
-        vlistSorted = sorted([(numChanges[i], i, n, s, t) \
+        vlistSorted = sorted([(mapVarIdToNumChanges[i], i, n, s, t) \
                               for i,n,s,t in vlistUnsorted], reverse=True)
         varlist = [(n, s, t) for c,i,n,s,t in vlistSorted]
 

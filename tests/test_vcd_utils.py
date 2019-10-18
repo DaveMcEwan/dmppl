@@ -148,24 +148,24 @@ $var real 64 % aReal [63:0] $end
 $var wire 1 " clk  $end
 $var event 1 & lookNow  $end
 $scope module myblock $end
-$var reg 8 $ counter [7:0] $end
+$var reg 8 # counter [7:0] $end
 $var bit 1 ! fastChanging  $end
 $var wire 1 " i_clk  $end
-$var wire 1 # i_rst  $end
+$var wire 1 $ i_rst  $end
 $upscope $end
-$var wire 1 # rst  $end
+$var wire 1 $ rst  $end
 $upscope $end
 $enddefinitions $end
 #0
 0"
-0#
-b00000000 $
+b00000000 #
+0$
 #1
-1#
+1$
 #2
 1!
 1"
-b00000001 $
+b00000001 #
 #3
 0!
 0"
@@ -174,7 +174,7 @@ r123.456 %
 #4
 1!
 1"
-b00000010 $
+b00000010 #
 #5
 0!
 #6

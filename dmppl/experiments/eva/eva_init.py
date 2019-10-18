@@ -856,7 +856,7 @@ def evsStage1(): # {{{
         for newTime, changedVarIds, newValues in vcdi.timechunks:
             varNames = [mapVarIdToName[varId] for varId in changedVarIds]
             for nm in varNames:
-                fdTjs[nm].write("%d %s %s\n" % (newTime,
+                fdTjs[nm].write("%d %d %d\n" % (newTime,
                                                 vcdi.tcLineNum_,
                                                 vcdi.tcTell_))
         for _,fd in fdTjs.items():

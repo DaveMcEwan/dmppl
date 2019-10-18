@@ -164,3 +164,51 @@ def dsfDeltas(winSize, nReqDeltasBk, nReqDeltasFw, zoomFactor): # {{{
     return ret
 # }}} def dsfDeltas
 
+def rdEvs(names, startTime, finishTime): # {{{
+    '''Read in EVent Samples the checked data written by evaInit.
+
+    Return relevant data as NumPy array.
+    '''
+    assert initPathsDone
+
+    def rdTimejump(name, startTime, finishTime): # {{{
+        '''Read in a single timejump file to [(time, fileOffset), ...].
+        '''
+
+        ret = []
+        with open(joinP(eva.paths.dname_timejumps, name), 'r') as fd:
+            for line in fd:
+                sTime, sLineNum, sFileOffset = line.split()
+                dTime = int(sTime)
+
+                if finishTime < dTime:
+                    break
+
+                if startTime <= dTime:
+                    ret.append((dTime, int(sFileOffset)))
+
+        return ret
+    # }}} def rdEvs
+
+    verb("Loading EVS... ", end='')
+
+    # Read in timejump file for each measurement name.
+    # Merge and sort timejumps into single list.
+    mergedTimejumps = \
+        sorted(list(set(tj for tjs in \
+                        [rdTimejump(nm, startTime, finishTime) for nm in names] \
+                        for tj in tjs)))
+
+    # TODO:
+    # Read relevant timechunks and copy values into ndarray.
+    # Axis0 corresponds to order of names.
+    shape = (len(names), finishTime-StartTime+1)
+    # TODO: shape with deltas
+    # TODO: timejumps with previous values. Maybe easier to just extract values
+    # into timejump files too.
+
+    verb("Done")
+
+    return ret
+# }}} def rdEvs
+

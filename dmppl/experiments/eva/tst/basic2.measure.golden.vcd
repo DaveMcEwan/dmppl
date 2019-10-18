@@ -1,4 +1,4 @@
-$comment <<< Extracted by evaInit >>> Use with basic2.evc $end
+$comment Use with basic2.evc <<< Cleaned by vcd-utils 0.1.0 >>> <<< Extracted by evaInit >>> $end
 $version handcoded $end
 $timescale 1 ns $end
 $scope module bstate $end

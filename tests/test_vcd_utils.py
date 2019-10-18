@@ -139,9 +139,9 @@ b00000010 Q
             fd.write(self.vcd0)
 
         self.goldenVcd0 = '''\
-$comment Something to say here? More to say here. $end
+$comment Something to say here? More to say here. <<< Cleaned by vcd-utils 0.1.0 >>> $end
 $date Monday 19th August $end
-$version Handwritten 123<<< cleaned by vcd-utils 0.1.0 >>> $end
+$version Handwritten 123 $end
 $timescale 1 s $end
 $scope module TOP $end
 $var real 64 % aReal [63:0] $end

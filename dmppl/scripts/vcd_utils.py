@@ -44,8 +44,8 @@ __version__ = "0.1.0"
 noneCsvStr = '-' # Unknown value or non-occurrence.
 occurCsvStr = '*' # Event occurrence
 
-def info(args): # {{{
-    fnamei = fnameAppendExt(args.input, "vcd")
+def info(src, showTime): # {{{
+    fnamei = fnameAppendExt(src, "vcd")
 
     verb("Opening file and reading header...", end='')
     with VcdReader(fnamei) as vd:
@@ -59,7 +59,7 @@ def info(args): # {{{
         for varId,varName,varSize,varType in vs:
             print(" ", varId, varName, varSize, varType)
 
-        if args.time:
+        if showTime:
             print("<timechunkNumber> <#changes> <time>:")
             for i,tc in enumerate(vd.timechunks, start=1):
                 newTime, changedVarIds, newValues = tc
@@ -69,7 +69,7 @@ def info(args): # {{{
     return 0
 # }}} def info
 
-def clean(args, output=None): # {{{
+def clean(src=None, dst=None): # {{{
     '''Read in VCD with forgiving reader and write out cleaned version with
        strict writer.
 
@@ -78,11 +78,11 @@ def clean(args, output=None): # {{{
     3. Empty timechunks are eliminated.
     TODO: 4. Timechunks are ordered.
     '''
-    fnamei = None if args.input is None else fnameAppendExt(args.input, "vcd")
+    fnamei = None if src is None else fnameAppendExt(src, "vcd")
 
-    _stdoutNotFile = (fnamei is None and output is None)
+    _stdoutNotFile = (fnamei is None and dst is None)
     fnameo = None if _stdoutNotFile else \
-        (fnameAppendExt(args.input, "clean.vcd") if output is None else output)
+        (fnameAppendExt(src, "clean.vcd") if dst is None else dst)
 
     # Read/copy input to temporary file.
     # Required when input is STDIN because it's read multiple times.
@@ -112,7 +112,7 @@ def clean(args, output=None): # {{{
 
     numChanges = countChanges(tmpf)
 
-    cleanVersion = "<<< cleaned by vcd-utils %s >>>" % __version__
+    cleanComment = "<<< Cleaned by vcd-utils %s >>>" % __version__
 
     with VcdReader(tmpf) as vdi, \
          VcdWriter(fnameo) as vdo:
@@ -136,9 +136,9 @@ def clean(args, output=None): # {{{
         varlist = [(n, s, t) for c,i,n,s,t in vlistSorted]
 
         vdo.wrHeader(varlist,
-                     comment=vdi.vcdComment,
+                     comment=' '.join((vdi.vcdComment, cleanComment)),
                      date=vdi.vcdDate,
-                     version=vdi.vcdVersion + cleanVersion,
+                     version=vdi.vcdVersion,
                      timescale=' '.join(vdi.vcdTimescale),
                      varaliases=varaliases)
 
@@ -158,11 +158,11 @@ def clean(args, output=None): # {{{
     return 0
 # }}} def clean
 
-def vcd2csv(args): # {{{
+def vcd2csv(src, delimiter): # {{{
     import csv
 
-    fnamei = fnameAppendExt(args.input, "vcd")
-    fnameo = fnameAppendExt(args.input, "csv")
+    fnamei = fnameAppendExt(src, "vcd")
+    fnameo = fnameAppendExt(src, "csv")
 
     def vcdToCsvField(v, varSize, varType): # {{{
     #def vcdToCsvField(v: str, varSize: int, varType: str) -> str:
@@ -215,7 +215,7 @@ def vcd2csv(args): # {{{
         varNamesDt  = [detypeVarName(vd.mapVarIdToNames[v][0]) for v in varIds]
         nSrc = len(varIds)
 
-        writer = csv.writer(fdo, delimiter=args.delimiter)
+        writer = csv.writer(fdo, delimiter=delimiter)
 
         # First line is types.
         # Second line is name/titles.
@@ -251,7 +251,7 @@ def vcd2csv(args): # {{{
     return 0
 # }}} def vcd2csv
 
-def csv2vcd(args): # {{{
+def csv2vcd(src, delimiter, no_names, bit_types, time_mul): # {{{
     import csv
 
     def intStrToBin(i): # {{{
@@ -386,12 +386,12 @@ def csv2vcd(args): # {{{
         return tc
     # }}} def mkTimechunk
 
-    fnamei = fnameAppendExt(args.input, "csv")
-    fnameo = fnameAppendExt(args.input, "vcd")
+    fnamei = fnameAppendExt(src, "csv")
+    fnameo = fnameAppendExt(src, "vcd")
 
     # Manipulate constant in VCD module for type convenience.
     # Relies on (t in twoStateTypes) being tested first in csvFieldToVcd.
-    for t in args.bit_types:
+    for t in bit_types:
         assert t in supportedTypes
         twoStateTypes.append(t)
 
@@ -400,7 +400,7 @@ def csv2vcd(args): # {{{
     # used for calculating time.
     colTypeNames = supportedTypes + ["Time", "None"]
 
-    reader = csv.reader(rdLines(fnamei, expandTabs=False), delimiter=args.delimiter)
+    reader = csv.reader(rdLines(fnamei, expandTabs=False), delimiter=delimiter)
     with VcdWriter(fnameo) as vd:
 
         for rowNum,row in enumerate(reader):
@@ -421,7 +421,7 @@ def csv2vcd(args): # {{{
 
                 # Auto-assign source names.
                 # Sources are allocated IDs in column order.
-                if args.no_names:
+                if no_names:
                     #colNames: List[str] = ["col%d" % i for i in range(n_col)]
                     colNames = ["col%d" % i for i in range(n_col)]
 
@@ -433,7 +433,7 @@ def csv2vcd(args): # {{{
                     vd.wrHeader(varlist)
 
                 continue
-            elif 1 == rowNum and not args.no_names:
+            elif 1 == rowNum and not no_names:
                 # Take names from this row.
                 #colNames: List[str] = list(row)
                 colNames = list(row)
@@ -450,9 +450,9 @@ def csv2vcd(args): # {{{
                 pass # No continue to avoid indent.
 
             # Give row and varCols, get list of (id, newvalue)
-            newTime = int(float(row[timeCol]) * args.time_mul) \
+            newTime = int(float(row[timeCol]) * time_mul) \
                 if timeCol is not None else \
-                (rowNum - (1 if args.no_names else 2))
+                (rowNum - (1 if no_names else 2))
 
             tc = mkTimechunk(newTime, prevRow, row, h, vd.varIds, varCols)
             prevRow = row
@@ -461,12 +461,12 @@ def csv2vcd(args): # {{{
     return 0
     # }}} def csv2vcd
 
-def vcd2yml(args): # {{{
+def vcd2yml(src): # {{{
     import math
     import yaml
 
-    fnamei = fnameAppendExt(args.input, "vcd")
-    fnameo = fnameAppendExt(args.input, "yml")
+    fnamei = fnameAppendExt(src, "vcd")
+    fnameo = fnameAppendExt(src, "yml")
 
     def ymlStrEscape(s):
         assert isinstance(s, str), (type(s), s)
@@ -522,11 +522,11 @@ def vcd2yml(args): # {{{
     return 0
 # }}} def vcd2yml
 
-def yml2vcd(args): # {{{
+def yml2vcd(src): # {{{
     import yaml
 
-    fnamei = fnameAppendExt(args.input, "yml")
-    fnameo = fnameAppendExt(args.input, "vcd")
+    fnamei = fnameAppendExt(src, "yml")
+    fnameo = fnameAppendExt(src, "vcd")
 
     with open(fnamei, 'r') as fdi, \
          VcdWriter(fnameo) as vd:
@@ -614,31 +614,38 @@ argparser_csv2vcd.add_argument("--no-names",
     default=False,
     action='store_true',
     help="Second non-comment row is not source name/titles.")
-argparser_csv2vcd.add_argument("-t", "--time-mul",
-    type=float,
-    default=1.0,
-    help="Time multiplier.")
 argparser_csv2vcd.add_argument("-2", "--bit-types",
     type=str,
     default=["reg", "logic"], # Treat wire as 4s by default.
     choices=["reg", "logic", "wire"],
     nargs='*',
     help="Four state VCD types to treat as binary, allow values in hex, and decimal.")
+argparser_csv2vcd.add_argument("-t", "--time-mul",
+    type=float,
+    default=1.0,
+    help="Time multiplier.")
 
 # }}} argparser
 
 def main(args): # {{{
 
-    args.input = args.input[0] # Force to single element
+    src = args.input[0] # Force to single element
 
-    ret = {
-        "info": info,
-        "clean": clean,
-        "vcd2csv": vcd2csv,
-        "csv2vcd": csv2vcd,
-        "vcd2yml": vcd2yml,
-        "yml2vcd": yml2vcd,
-    }[args.command](args)
+    if "info" == args.command:
+        ret = info(src, args.time)
+    elif "clean" == args.command:
+        ret = clean(src)
+    elif "vcd2csv" == args.command:
+        ret = vcd2csv(src, args.delimiter)
+    elif "csv2vcd" == args.command:
+        ret = csv2vcd(src, args.delimiter,
+                      args.no_names, args.bit_types, args.time_mul)
+    elif "vcd2yml" == args.command:
+        ret = vcd2yml(src)
+    elif "yml2vcd" == args.command:
+        ret = yml2vcd(src)
+    else:
+        assert False
 
     return ret
 # }}} def main

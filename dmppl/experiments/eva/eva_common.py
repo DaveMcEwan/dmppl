@@ -37,8 +37,9 @@ def initPaths(argsEvcPath): # {{{
     paths.outdir = outdir
     paths.fname_evcx = joinP(outdir, "evcx.toml")
     paths.fname_cfg = joinP(outdir, "config.toml")
+    paths.fname_cln = joinP(outdir, "clean.vcd")
     paths.fname_mea = joinP(outdir, "measure.vcd")
-    paths.dname_timejumps = joinP(outdir, "timejumps")
+    paths.dname_tjs = joinP(outdir, "timejumps")
 
     #module = inspect.stack()[-1][1]
     appPaths.basemodule = os.path.basename(os.path.realpath(__file__))

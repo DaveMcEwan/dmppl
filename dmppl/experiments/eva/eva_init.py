@@ -15,6 +15,7 @@ from dmppl.base import dbg, info, verb, \
 from dmppl.math import dotp, clipNorm, saveNpy
 from dmppl.toml import loadToml, saveToml
 from dmppl.vcd import VcdReader, VcdWriter, oneBitTypes, detypeVarName
+from dmppl.scripts.vcd_utils import clean as vcdClean
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
@@ -610,8 +611,8 @@ def evsStage0(instream, evcx, cfg): # {{{
              if "normal" in [mea["type"] for mea in mapVarIdToMeasures[varId]]}
 
         vcdo.wrHeader(vcdoVarlist(evcx),
-                      comment=' '.join(("<<< Extracted by evaInit >>>",
-                                        vcdi.vcdComment)),
+                      comment=' '.join((vcdi.vcdComment,
+                                        "<<< Extracted by evaInit >>>")),
                       date=vcdi.vcdDate,
                       version=vcdi.vcdVersion,
                       timescale=' '.join(vcdi.vcdTimescale))
@@ -829,6 +830,7 @@ def evsStage0(instream, evcx, cfg): # {{{
             nqChangedVars, nqNewValues = zip(*dedupVars)
             vcdo.wrTimechunk((oTime, nqChangedVars, nqNewValues))
 
+    return
 # }}} def evsStage0
 
 def evsStage1(): # {{{
@@ -837,7 +839,7 @@ def evsStage1(): # {{{
     Compile [(<time>, <file offset>), ... ] for each signal in stage0.
     '''
 
-    mkDirP(eva.paths.dname_timejumps)
+    mkDirP(eva.paths.dname_tjs)
 
     with VcdReader(eva.paths.fname_mea) as vcdi:
 
@@ -847,7 +849,7 @@ def evsStage1(): # {{{
                           for varId,nms in vcdi.mapVarIdToNames.items()}
 
         fdTjs = \
-            {nm: open(joinP(eva.paths.dname_timejumps,
+            {nm: open(joinP(eva.paths.dname_tjs,
                             detypeVarName(nm)), 'w') \
              for nm in vcdi.varNames}
 
@@ -877,7 +879,14 @@ def evaInit(args): # {{{
 
     evcx = expandEvc(evc, eva.cfg)
 
-    evsStage0(args.input, evcx, eva.cfg)
+    # Fully read in and copy then clean input data.
+    vcdClean(args.input, eva.paths.fname_cln)
+
+    # VCD-to-VCD: extract, interpolate, clean
+    evsStage0(eva.paths.fname_cln, evcx, eva.cfg)
+    #vcdClean(eva.paths.fname_mea) # Reduce size of varIds
+
+    # VCD-to-metadata
     evsStage1()
 
     return 0

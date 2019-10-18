@@ -106,13 +106,13 @@ $enddefinitions $end
 0R
 b00000000 Q
 
-#1
-1R
-
 #2
 1C
 b00000001 Q
 1F
+
+#1
+1R
 
 #3
 0C

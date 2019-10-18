@@ -76,7 +76,7 @@ def clean(src=None, dst=None): # {{{
     1. Most frequently changing signals are assigned shorter varIds.
     2. Redundant value changes are eliminated.
     3. Empty timechunks are eliminated.
-    TODO: 4. Timechunks are ordered.
+    4. Timechunks are ordered.
     '''
     fnamei = None if src is None else fnameAppendExt(src, "vcd")
 
@@ -126,8 +126,12 @@ def clean(src=None, dst=None): # {{{
 
         vdo.separateTimechunks = False # Omit blank lines between timechunks.
 
-        for tci in vdi.timechunks:
-            newTime, changedVarIds, newValues = tci
+        _ = next(vdi.timechunks) # Initialize timechunks generator FSM.
+        for newTime,fileOffset in timejumps:
+            vdi.fd.seek(fileOffset)
+            tci = next(vdi.timechunks)
+            _, changedVarIds, newValues = tci
+
             changedVars = \
                 [detypeVarName(vdi.mapVarIdToNames[v][0]) \
                  for v in changedVarIds]

@@ -198,7 +198,7 @@ b00000010 $
         resultTxt = rdTxt(os.path.join(self.tstDir, fnameClean))
         self.assertEqual(self.goldenVcd0, resultTxt)
 
-# }}} class Test_Vcd2csv
+# }}} class Test_Clean
 
 class Test_Vcd2csv(unittest.TestCase): # {{{
 

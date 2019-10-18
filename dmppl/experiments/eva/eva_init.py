@@ -860,6 +860,7 @@ def evsStage1(): # {{{
         for _,fd in fdTjs.items():
             fd.close()
 
+    return
 # }}} def evsStage1
 
 def evaInit(args): # {{{

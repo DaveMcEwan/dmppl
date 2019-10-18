@@ -423,7 +423,10 @@ def rdMetadata(fname): # {{{
     '''Read through file counting actual value changes and finding
        location of timechunks.
 
-    tcTell_ is 'an opaque number' which can be used with fd.seek()
+    tcTell_ is 'an opaque number' (fileOffset) which can be with fd.seek()
+        It points to the start of the line *after* the time specifier.
+        Calling seek then next(timechunks) will give a wrong newTime.
+        So you must save a list of (time, fileOffset) and use the saved time.
 
     Use mapVarIdToNumChanges to assign shorter varIds to signals which change
     more frequently.

@@ -28,6 +28,8 @@ from __future__ import print_function
 import argparse
 import re
 import sys
+import tempfile
+import shutil
 
 from dmppl.base import *
 from dmppl.vcd import *
@@ -67,26 +69,36 @@ def info(args): # {{{
     return 0
 # }}} def info
 
-def clean(args): # {{{
+def clean(args, output=None): # {{{
     '''Read in VCD with forgiving reader and write out cleaned version with
        strict writer.
 
-    Filesize should be reduced where possible.
-    Most changing signals are given shorter varIds.
-    Redundant value changes are eliminated.
-    Empty timechunks are eliminated.
+    1. Most frequently changing signals are assigned shorter varIds.
+    2. Redundant value changes are eliminated.
+    3. Empty timechunks are eliminated.
+    TODO: 4. Timechunks are ordered.
     '''
-    fnamei = fnameAppendExt(args.input, "vcd")
-    fnameo = fnameAppendExt(args.input, "clean.vcd")
+    fnamei = None if args.input is None else fnameAppendExt(args.input, "vcd")
 
-    def countChanges(fnamei): # {{{
-    #def countChanges(fnamei: str) -> dict:
+    _stdoutNotFile = (fnamei is None and output is None)
+    fnameo = None if _stdoutNotFile else \
+        (fnameAppendExt(args.input, "clean.vcd") if output is None else output)
+
+    # Read/copy input to temporary file.
+    # Required when input is STDIN because it's read multiple times.
+    tmpd = tempfile.mkdtemp()
+    tmpf = joinP(tmpd, "tmpf.vcd")
+    with open(tmpf, 'w') as fd:
+        fd.write('\n'.join(rdLines(fnamei, commentLines=False)))
+
+    def countChanges(fname): # {{{
+    #def countChanges(fname: str) -> dict:
         '''Read through input file and count the number of actual value changes.
 
         The output file will assign shorter varIds to ones which change more
         often.
         '''
-        with VcdReader(fnamei) as vdi:
+        with VcdReader(fname) as vdi:
             numChanges = {i: 0 for i in vdi.varIdsUnique}
 
             prevValues = [None] * len(vdi.varIdsUnique)
@@ -98,11 +110,11 @@ def clean(args): # {{{
         return numChanges
     # }}} def countChanges
 
-    numChanges = countChanges(fnamei)
+    numChanges = countChanges(tmpf)
 
     cleanVersion = "<<< cleaned by vcd-utils %s >>>" % __version__
 
-    with VcdReader(fnamei) as vdi, \
+    with VcdReader(tmpf) as vdi, \
          VcdWriter(fnameo) as vdo:
 
         usedVarIds = []
@@ -140,6 +152,8 @@ def clean(args): # {{{
                  for v in changedVarIds]
             tco = newTime, changedVars, newValues
             vdo.wrTimechunk(tco)
+
+    shutil.rmtree(tmpd)
 
     return 0
 # }}} def clean

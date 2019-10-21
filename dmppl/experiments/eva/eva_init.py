@@ -3,6 +3,7 @@
 from itertools import groupby, product
 import os
 import re
+import struct
 import sys
 
 # PyPI library imports
@@ -836,30 +837,69 @@ def evsStage0(instream, evcx, cfg): # {{{
 def evsStage1(): # {{{
     '''Apply post-processing steps to stage0.
 
-    Compile [(<time>, <file offset>), ... ] for each signal in stage0.
+    Extract changes from measure.vcd into fast-to-read binary form.
+
+    measure.vcd has only 2 datatypes: bit, real
+
+    Assume initial state for all measurements is 0.:
+    All timestamps are 32b non-negative integers.
+    Binary format for bit is different from that of real.
+        bit: Ordered sequence of timestamps.
+        real: Ordered sequence of (timestamp, value) pairs.
+            All values are 32b IEEE754 floats, OR 32b(zext) fx.
     '''
 
-    mkDirP(eva.paths.dname_tjs)
+    def usableMeasure(name): # {{{
+        '''All VCD::bit signals in measure.vcd are usable, but of the VCD::real
+           signals, only normal.clipnorm.* are usable.
+
+        Other VCD::real signals are not guaranteed to be in [0, 1].
+        '''
+        return name.startswith("normal.clipnorm.") \
+            if name.startswith("normal.") else True
+    # }}} def usableMeasure
+
+    mkDirP(eva.paths.dname_mea)
 
     with VcdReader(eva.paths.fname_mea) as vcdi:
 
         # Stage0 file has bijective map between varId and varName by
         # construction, so take first (only) name for convenience.
-        mapVarIdToName = {varId: nms[0] \
-                          for varId,nms in vcdi.mapVarIdToNames.items()}
+        _mapVarIdToName = {varId: detypeVarName(nms[0]) \
+                           for varId,nms in vcdi.mapVarIdToNames.items()}
+        mapVarIdToName = {varId: nm \
+                          for varId,nm in _mapVarIdToName.items() \
+                          if usableMeasure(nm)}
 
-        fdTjs = \
-            {nm: open(joinP(eva.paths.dname_tjs,
-                            detypeVarName(nm)), 'w') \
-             for nm in vcdi.varNames}
+        fds = {nm: open(joinP(eva.paths.dname_mea, nm), 'wb') \
+             for varId,nm in mapVarIdToName.items()}
+
+        prevValues = {varId: 0 for varId in mapVarIdToName.keys()}
 
         for newTime, changedVarIds, newValues in vcdi.timechunks:
-            varNames = [mapVarIdToName[varId] for varId in changedVarIds]
-            for nm in varNames:
-                fdTjs[nm].write("%d %d %d\n" % (newTime,
-                                                vcdi.tcLineNum_,
-                                                vcdi.tcTell_))
-        for _,fd in fdTjs.items():
+            for varId,newValue in zip(changedVarIds, newValues):
+                nm = mapVarIdToName.get(varId, None)
+                if nm is None:
+                    continue
+
+                p = prevValues[varId]
+
+                if nm.startswith("normal."):
+                    v = float(newValue)
+                    bs = struct.pack(">Lf", newTime, v)
+                else:
+                    v = int(newValue)
+                    # Big-endian, unsigned long (32b)
+                    bs = struct.pack(">L", newTime)
+
+                # Essential for signals which are 1 at time 0.
+                if v == p:
+                    continue
+
+                fds[nm].write(bs)
+                prevValues[varId] = v
+
+        for _,fd in fds.items():
             fd.close()
 
     return

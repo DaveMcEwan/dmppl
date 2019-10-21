@@ -15,7 +15,7 @@ from dmppl.base import dbg, info, verb, \
                        mkDirP, joinP
 from dmppl.math import dotp, clipNorm, saveNpy
 from dmppl.toml import loadToml, saveToml
-from dmppl.vcd import VcdReader, VcdWriter, oneBitTypes, detypeVarName
+from dmppl.vcd import VcdReader, VcdWriter, oneBitTypes
 from dmppl.scripts.vcd_utils import vcdClean
 
 # Project imports
@@ -481,13 +481,13 @@ def firFilter(zs): # {{{
     return dotp(zs, coeffs)
 # }}} def firFilter
 
-def evsStage0(instream, evcx, cfg): # {{{
-    '''Filter input data to output stage0 VCD (measure.vcd).
+def meaVcd(instream, evcx, cfg): # {{{
+    '''Filter input data to sanitized VCD (measure.vcd).
 
     Extract measurements of interest, at times of interest.
     Perform interpolation for normal measurements.
-    In stage0 time is a straightforward EVS index.
-    In stage0 hierarchy shows raw measures and reflection/rise/fall.
+    Time becomes a straightforward sample index.
+    Hierarchy shows raw measures and reflection/rise/fall.
 
     NOTE: This initial extraction to filter/clean the dataset is probably the
     most complex part of eva!
@@ -832,78 +832,7 @@ def evsStage0(instream, evcx, cfg): # {{{
             vcdo.wrTimechunk((oTime, nqChangedVars, nqNewValues))
 
     return
-# }}} def evsStage0
-
-def evsStage1(): # {{{
-    '''Apply post-processing steps to stage0.
-
-    Extract changes from measure.vcd into fast-to-read binary form.
-
-    measure.vcd has only 2 datatypes: bit, real
-
-    Assume initial state for all measurements is 0.:
-    All timestamps are 32b non-negative integers.
-    Binary format for bit is different from that of real.
-        bit: Ordered sequence of timestamps.
-        real: Ordered sequence of (timestamp, value) pairs.
-            All values are 32b IEEE754 floats, OR 32b(zext) fx.
-    '''
-
-    def usableMeasure(name): # {{{
-        '''All VCD::bit signals in measure.vcd are usable, but of the VCD::real
-           signals, only normal.clipnorm.* are usable.
-
-        Other VCD::real signals are not guaranteed to be in [0, 1].
-        '''
-        return name.startswith("normal.clipnorm.") \
-            if name.startswith("normal.") else True
-    # }}} def usableMeasure
-
-    mkDirP(eva.paths.dname_mea)
-
-    with VcdReader(eva.paths.fname_mea) as vcdi:
-
-        # Stage0 file has bijective map between varId and varName by
-        # construction, so take first (only) name for convenience.
-        _mapVarIdToName = {varId: detypeVarName(nms[0]) \
-                           for varId,nms in vcdi.mapVarIdToNames.items()}
-        mapVarIdToName = {varId: nm \
-                          for varId,nm in _mapVarIdToName.items() \
-                          if usableMeasure(nm)}
-
-        fds = {nm: open(joinP(eva.paths.dname_mea, nm), 'wb') \
-             for varId,nm in mapVarIdToName.items()}
-
-        prevValues = {varId: 0 for varId in mapVarIdToName.keys()}
-
-        for newTime, changedVarIds, newValues in vcdi.timechunks:
-            for varId,newValue in zip(changedVarIds, newValues):
-                nm = mapVarIdToName.get(varId, None)
-                if nm is None:
-                    continue
-
-                p = prevValues[varId]
-
-                if nm.startswith("normal."):
-                    v = float(newValue)
-                    bs = struct.pack(">Lf", newTime, v)
-                else:
-                    v = int(newValue)
-                    # Big-endian, unsigned long (32b)
-                    bs = struct.pack(">L", newTime)
-
-                # Essential for signals which are 1 at time 0.
-                if v == p:
-                    continue
-
-                fds[nm].write(bs)
-                prevValues[varId] = v
-
-        for _,fd in fds.items():
-            fd.close()
-
-    return
-# }}} def evsStage1
+# }}} def meaVcd
 
 def evaInit(args): # {{{
     '''Read in EVC and VCD to create result directory like ./foo.eva/
@@ -923,11 +852,11 @@ def evaInit(args): # {{{
     vcdClean(args.input, eva.paths.fname_cln)
 
     # VCD-to-VCD: extract, interpolate, clean
-    evsStage0(eva.paths.fname_cln, evcx, eva.cfg)
+    meaVcd(eva.paths.fname_cln, evcx, eva.cfg)
     #vcdClean(eva.paths.fname_mea) # Reduce size of varIds
 
-    # VCD-to-metadata
-    evsStage1()
+    # VCD-to-binaries
+    eva.meaDbFromVcd()
 
     return 0
 # }}} def evaInit

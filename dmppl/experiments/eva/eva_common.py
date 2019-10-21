@@ -9,16 +9,16 @@ import struct
 import toml
 
 # Local library imports
-from dmppl.base import dbg, verb, Bunch, fnameAppendExt, joinP
+from dmppl.base import dbg, verb, Bunch, fnameAppendExt, joinP, mkDirP
 from dmppl.fx import *
 from dmppl.math import powsineCoeffs
 from dmppl.nd import *
+from dmppl.vcd import VcdReader, detypeVarName
 
 __version__ = "0.1.0"
 
 # Don't write .pyc or .pyo files unless it's a release.
 # This doesn't affect eva_common.
-# Only affects eva-exo, eva-exc, ...
 if int(__version__.split('.')[-1]) != 0:
     sys.dont_write_bytecode = True
 
@@ -165,6 +165,86 @@ def dsfDeltas(winSize, nReqDeltasBk, nReqDeltasFw, zoomFactor): # {{{
     return ret
 # }}} def dsfDeltas
 
+def meaDtype(name): # {{{
+    # [(t,v), ...] OR [t, ...]
+    # timestamp: Big-endian, unsigned long (32b)
+
+    hasValues = name.startswith("normal.")
+
+    # NOTE: int is required instead of bool as newValue is given from VcdReader
+    # as a string.
+    # int("0") --> 0, bool(0) -- False, bool("0") --> True
+    tp = float if hasValues else int
+
+    strideBytes = 8 if hasValues else 4
+    structFmt = ">Lf" if hasValues else ">L" # [(t,v), ...] OR [t, ...]
+
+    return tp, strideBytes, structFmt
+# }}} def meaDtype
+
+def meaDbFromVcd(): # {{{
+    '''Apply post-processing steps to stage0.
+
+    Extract changes from measure.vcd into fast-to-read binary form.
+
+    measure.vcd has only 2 datatypes: bit, real
+
+    Assume initial state for all measurements is 0.:
+    All timestamps are 32b non-negative integers.
+    Binary format for bit is different from that of real.
+        bit: Ordered sequence of timestamps.
+        real: Ordered sequence of (timestamp, value) pairs.
+            All values are 32b IEEE754 floats, OR 32b(zext) fx.
+    '''
+
+    def usableMeasure(name): # {{{
+        '''All VCD::bit signals in measure.vcd are usable, but of the VCD::real
+           signals, only normal.clipnorm.* are usable.
+
+        Other VCD::real signals are not guaranteed to be in [0, 1].
+        '''
+        return name.startswith("normal.clipnorm.") \
+            if name.startswith("normal.") else True
+    # }}} def usableMeasure
+
+    mkDirP(paths.dname_mea)
+
+    with VcdReader(paths.fname_mea) as vcdi:
+
+        # Stage0 file has bijective map between varId and varName by
+        # construction, so take first (only) name for convenience.
+        _mapVarIdToName = {varId: detypeVarName(nms[0]) \
+                           for varId,nms in vcdi.mapVarIdToNames.items()}
+        mapVarIdToName = {varId: nm \
+                          for varId,nm in _mapVarIdToName.items() \
+                          if usableMeasure(nm)}
+
+        fds = {nm: open(joinP(paths.dname_mea, nm), 'wb') \
+             for varId,nm in mapVarIdToName.items()}
+
+        prevValues = {varId: 0 for varId in mapVarIdToName.keys()}
+
+        for newTime, changedVarIds, newValues in vcdi.timechunks:
+            for varId,newValue in zip(changedVarIds, newValues):
+                nm = mapVarIdToName.get(varId, None)
+                if nm is None:
+                    continue
+
+                tp, _, structFmt = meaDtype(nm)
+                v, p = tp(newValue), prevValues[varId]
+
+                if v != p:
+                    _packArgs = [newTime, v] if tp is float else [newTime]
+                    bs = struct.pack(structFmt, *_packArgs)
+                    fds[nm].write(bs)
+                    prevValues[varId] = v
+
+        for _,fd in fds.items():
+            fd.close()
+
+    return
+# }}} def meaDbFromVcd
+
 def meaSearch(name, targetTime, precNotSucc=True): # {{{
     '''Return offset of nearest timestamp.
 
@@ -183,8 +263,7 @@ def meaSearch(name, targetTime, precNotSucc=True): # {{{
     assert 0 <= targetTime, targetTime
     assert isinstance(precNotSucc, bool)
 
-    hasValues = name.startswith("normal.")
-    strideBytes = 8 if hasValues else 4 # [(t,v), ...] OR [t, ...]
+    _, strideBytes, structFmt = meaDtype(name)
 
     stepSize_ = 1
     stepDir_ = 1
@@ -205,7 +284,7 @@ def meaSearch(name, targetTime, precNotSucc=True): # {{{
             if len(bs) != strideBytes:
                 t_ = None # Tried reading past EOF
             else:
-                t_ = struct.unpack(">Lf" if hasValues else ">L", bs)[0]
+                t_ = struct.unpack(structFmt, bs)[0]
 
             assert t_ is None or (0 <= t_), t_
 
@@ -267,6 +346,7 @@ def rdEvs(names, startTime, finishTime): # {{{
     assert initPathsDone
 
     verb("Loading EVS... ", end='')
+    startOffsets = (meaSearch(name, startTime) for name in names)
 
     # TODO:
     # Read relevant timechunks and copy values into ndarray.

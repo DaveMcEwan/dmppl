@@ -419,40 +419,6 @@ def detypeVarName(varName): # {{{
     return '.'.join([p.split(':')[-1] for p in nmParts])
 # }}} def detypeVarName
 
-def rdMetadata(fname): # {{{
-    '''Read through file counting actual value changes and finding
-       location of timechunks.
-
-    tcTell_ is 'an opaque number' (fileOffset) which can be with fd.seek()
-        It points to the start of the line *after* the time specifier.
-        Calling seek then next(timechunks) will give a wrong newTime.
-        So you must save a list of (time, fileOffset) and use the saved time.
-
-    Use mapVarIdToNumChanges to assign shorter varIds to signals which change
-    more frequently.
-    '''
-    with VcdReader(fname) as vdi:
-        timejumps_ = [] # [(time, position), ...]
-        mapVarIdToTimejumps_ = {i: [] for i in vdi.varIdsUnique}
-        mapVarIdToNumChanges_ = {i: 0 for i in vdi.varIdsUnique}
-
-        prevValues_ = {i: None for i in vdi.varIdsUnique}
-        for newTime,changedVarIds,newValues in vdi.timechunks:
-            timejumps_.append((newTime, vdi.tcTell_))
-
-            tcPrevValues = [prevValues_[i] for i in changedVarIds]
-            for i,n,p in zip(changedVarIds, newValues, tcPrevValues):
-                mapVarIdToTimejumps_[i].append((newTime, vdi.tcTell_))
-
-                if n != p:
-                    mapVarIdToNumChanges_[i] += 1
-                prevValues_[i] = n
-
-    timejumps_.sort()
-
-    return timejumps_, mapVarIdToTimejumps_, mapVarIdToNumChanges_
-# }}} def rdMetadata
-
 def _vcdVarDefs(self): # {{{
     varIds = self.varIds
     varTypes = self.varTypes
@@ -808,6 +774,114 @@ class VcdWriter(object): # {{{
             self.fd.close()
 
 # }}} class VcdWriter
+
+def rdMetadata(fname): # {{{
+    '''Read through file counting actual value changes and finding
+       location of timechunks.
+
+    tcTell_ is 'an opaque number' (fileOffset) which can be with fd.seek()
+        It points to the start of the line *after* the time specifier.
+        Calling seek then next(timechunks) will give a wrong newTime.
+        So you must save a list of (time, fileOffset) and use the saved time.
+
+    Use mapVarIdToNumChanges to assign shorter varIds to signals which change
+    more frequently.
+    '''
+    with VcdReader(fname) as vdi:
+        timejumps_ = [] # [(time, position), ...]
+        mapVarIdToTimejumps_ = {i: [] for i in vdi.varIdsUnique}
+        mapVarIdToNumChanges_ = {i: 0 for i in vdi.varIdsUnique}
+
+        prevValues_ = {i: None for i in vdi.varIdsUnique}
+        for newTime,changedVarIds,newValues in vdi.timechunks:
+            timejumps_.append((newTime, vdi.tcTell_))
+
+            tcPrevValues = [prevValues_[i] for i in changedVarIds]
+            for i,n,p in zip(changedVarIds, newValues, tcPrevValues):
+                mapVarIdToTimejumps_[i].append((newTime, vdi.tcTell_))
+
+                if n != p:
+                    mapVarIdToNumChanges_[i] += 1
+                prevValues_[i] = n
+
+    timejumps_.sort()
+
+    return timejumps_, mapVarIdToTimejumps_, mapVarIdToNumChanges_
+# }}} def rdMetadata
+
+def vcdClean(fnamei, fnameo, comment=None): # {{{
+    '''Read in VCD with forgiving reader and write out cleaned version with
+       strict writer.
+
+    1. Most frequently changing signals are assigned shorter varIds.
+    2. Redundant value changes are eliminated.
+    3. Empty timechunks are eliminated.
+    4. Timechunks are ordered.
+    '''
+    # Imports just for vcdClean kept separately since this isn't strictly
+    # required for just reading and writing VCD.
+    from dmppl.base import joinP, rdLines
+    from tempfile import mkdtemp
+    from shutil import rmtree
+
+    # Read/copy input to temporary file.
+    # Required when input is STDIN because it's read multiple times.
+    tmpd = mkdtemp()
+    tmpf = joinP(tmpd, "tmpf.vcd")
+    with open(tmpf, 'w') as fd:
+        fd.write('\n'.join(rdLines(fnamei, commentLines=False)))
+
+    timejumps, mapVarIdToTimejumps, mapVarIdToNumChanges = rdMetadata(tmpf)
+
+    cleanComment = "<<< dmppl.vcd.vcdClean >>>" if comment is None else comment
+
+    with VcdReader(tmpf) as vdi, \
+         VcdWriter(fnameo) as vdo:
+
+        usedVarIds = []
+        vlistUnsorted = []
+        varaliases = []
+        for i,n,s,t in zip(vdi.varIds, vdi.varNames, vdi.varSizes, vdi.varTypes):
+
+            if i not in usedVarIds:
+                usedVarIds.append(i)
+                var = (i, n, s, t)
+                vlistUnsorted.append(var)
+            else:
+                alias = (vdi.mapVarIdToNames[i][0], n, t)
+                varaliases.append(alias)
+
+        # Sort varlist by number of changes.
+        vlistSorted = sorted([(mapVarIdToNumChanges[i], i, n, s, t) \
+                              for i,n,s,t in vlistUnsorted], reverse=True)
+        varlist = [(n, s, t) for c,i,n,s,t in vlistSorted]
+
+        vdo.wrHeader(varlist,
+                     comment=' '.join((vdi.vcdComment, cleanComment)),
+                     date=vdi.vcdDate,
+                     version=vdi.vcdVersion,
+                     timescale=' '.join(vdi.vcdTimescale),
+                     varaliases=varaliases)
+
+
+        vdo.separateTimechunks = False # Omit blank lines between timechunks.
+
+        _ = next(vdi.timechunks) # Initialize timechunks generator FSM.
+        for newTime,fileOffset in timejumps:
+            vdi.fd.seek(fileOffset)
+            tci = next(vdi.timechunks)
+            _, changedVarIds, newValues = tci
+
+            changedVars = \
+                [detypeVarName(vdi.mapVarIdToNames[v][0]) \
+                 for v in changedVarIds]
+            tco = newTime, changedVars, newValues
+            vdo.wrTimechunk(tco)
+
+    rmtree(tmpd)
+
+    return 0
+# }}} def vcdClean
 
 if __name__ == "__main__":
     assert False, "Not a standalone script."

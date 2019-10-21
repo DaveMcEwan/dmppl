@@ -1,4 +1,4 @@
-$comment Use with basic2.evc <<< Cleaned by vcd-utils 0.1.0 >>> <<< Extracted by evaInit >>> $end
+$comment Use with basic2.evc <<< dmppl.vcd.vcdClean >>> <<< Extracted by evaInit >>> $end
 $version handcoded $end
 $timescale 1 ns $end
 $scope module bstate $end

@@ -69,80 +69,6 @@ def info(src, showTime): # {{{
     return 0
 # }}} def info
 
-def clean(src=None, dst=None): # {{{
-    '''Read in VCD with forgiving reader and write out cleaned version with
-       strict writer.
-
-    1. Most frequently changing signals are assigned shorter varIds.
-    2. Redundant value changes are eliminated.
-    3. Empty timechunks are eliminated.
-    4. Timechunks are ordered.
-    '''
-    fnamei = None if src is None else fnameAppendExt(src, "vcd")
-
-    _stdoutNotFile = (fnamei is None and dst is None)
-    fnameo = None if _stdoutNotFile else \
-        (fnameAppendExt(src, "clean.vcd") if dst is None else dst)
-
-    # Read/copy input to temporary file.
-    # Required when input is STDIN because it's read multiple times.
-    tmpd = tempfile.mkdtemp()
-    tmpf = joinP(tmpd, "tmpf.vcd")
-    with open(tmpf, 'w') as fd:
-        fd.write('\n'.join(rdLines(fnamei, commentLines=False)))
-
-    timejumps, mapVarIdToTimejumps, mapVarIdToNumChanges = rdMetadata(tmpf)
-
-    cleanComment = "<<< Cleaned by vcd-utils %s >>>" % __version__
-
-    with VcdReader(tmpf) as vdi, \
-         VcdWriter(fnameo) as vdo:
-
-        usedVarIds = []
-        vlistUnsorted = []
-        varaliases = []
-        for i,n,s,t in zip(vdi.varIds, vdi.varNames, vdi.varSizes, vdi.varTypes):
-
-            if i not in usedVarIds:
-                usedVarIds.append(i)
-                var = (i, n, s, t)
-                vlistUnsorted.append(var)
-            else:
-                alias = (vdi.mapVarIdToNames[i][0], n, t)
-                varaliases.append(alias)
-
-        # Sort varlist by number of changes.
-        vlistSorted = sorted([(mapVarIdToNumChanges[i], i, n, s, t) \
-                              for i,n,s,t in vlistUnsorted], reverse=True)
-        varlist = [(n, s, t) for c,i,n,s,t in vlistSorted]
-
-        vdo.wrHeader(varlist,
-                     comment=' '.join((vdi.vcdComment, cleanComment)),
-                     date=vdi.vcdDate,
-                     version=vdi.vcdVersion,
-                     timescale=' '.join(vdi.vcdTimescale),
-                     varaliases=varaliases)
-
-
-        vdo.separateTimechunks = False # Omit blank lines between timechunks.
-
-        _ = next(vdi.timechunks) # Initialize timechunks generator FSM.
-        for newTime,fileOffset in timejumps:
-            vdi.fd.seek(fileOffset)
-            tci = next(vdi.timechunks)
-            _, changedVarIds, newValues = tci
-
-            changedVars = \
-                [detypeVarName(vdi.mapVarIdToNames[v][0]) \
-                 for v in changedVarIds]
-            tco = newTime, changedVars, newValues
-            vdo.wrTimechunk(tco)
-
-    shutil.rmtree(tmpd)
-
-    return 0
-# }}} def clean
-
 def vcd2csv(src, delimiter): # {{{
     import csv
 
@@ -619,7 +545,9 @@ def main(args): # {{{
     if "info" == args.command:
         ret = info(src, args.time)
     elif "clean" == args.command:
-        ret = clean(src)
+        dst = fnameAppendExt(src, "clean.vcd")
+        cleanComment = "<<< Cleaned by vcd-utils %s >>>" % __version__
+        ret = vcdClean(src, dst, comment=cleanComment)
     elif "vcd2csv" == args.command:
         ret = vcd2csv(src, args.delimiter)
     elif "csv2vcd" == args.command:

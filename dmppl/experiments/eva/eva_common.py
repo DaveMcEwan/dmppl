@@ -3,12 +3,13 @@
 from functools import partial
 import inspect
 import os
+import struct
 
 # PyPI library imports
 import toml
 
 # Local library imports
-from dmppl.base import Bunch, fnameAppendExt, verb, joinP
+from dmppl.base import dbg, verb, Bunch, fnameAppendExt, joinP
 from dmppl.fx import *
 from dmppl.math import powsineCoeffs
 from dmppl.nd import *
@@ -164,6 +165,100 @@ def dsfDeltas(winSize, nReqDeltasBk, nReqDeltasFw, zoomFactor): # {{{
     return ret
 # }}} def dsfDeltas
 
+def meaSearch(name, targetTime, precNotSucc=True): # {{{
+    '''Return offset of nearest timestamp.
+
+    Offset is number of timestamps, not number of bytes.
+    Search forward in exponential steps, then bisect when overstepped.
+
+    Return offset of nearest previous/next depending on precNotSucc when an
+    exact match isn't found.
+
+    None    <-- Request succeeding timestamp after EOF
+    -1      <-- Request preceeding timestamp before first
+    '''
+
+    assert isinstance(name, str), type(name)
+    assert isinstance(targetTime, int), type(targetTime)
+    assert 0 <= targetTime, targetTime
+    assert isinstance(precNotSucc, bool)
+
+    hasValues = name.startswith("normal.")
+    strideBytes = 8 if hasValues else 4 # [(t,v), ...] OR [t, ...]
+
+    stepSize_ = 1
+    stepDir_ = 1
+
+    # Sticky flag tracks search phase.
+    # Search forward in exponential steps, then bisect when overstepped.
+    bisect_ = False
+
+    t_, offset_ = None, -1
+
+    with open(joinP(paths.dname_mea, name), 'rb') as fd:
+        while True:
+            # Offset *before* reading timestamp.
+            offset_ = fd.tell() // strideBytes
+
+            # Read timestamp.
+            bs = fd.read(strideBytes)
+            if len(bs) != strideBytes:
+                t_ = None # Tried reading past EOF
+            else:
+                t_ = struct.unpack(">Lf" if hasValues else ">L", bs)[0]
+
+            assert t_ is None or (0 <= t_), t_
+
+            if t_ is None or t_ > targetTime:
+                # Overstepped, continue search backwards.
+                stepDir_ = -1
+                bisect_ = True
+            elif t_ < targetTime:
+                # Understepped, continue search forwards.
+                stepDir_ = 1
+            else:
+                assert t_ == targetTime
+                break # Exact match
+
+            stepSize_ = (stepSize_ >> 1) if bisect_ else (stepSize_ << 1)
+
+            if 0 == stepSize_:
+                # No exact match exists
+                break
+
+            nextOffset = offset_ + stepSize_ * stepDir_
+            fd.seek(nextOffset * strideBytes)
+
+    # t_ is now the "closest" possible.
+    if t_ is None: # EOF
+        # EOF, return last/maximum offset which must preceed targetTime or
+        # None if no successor is possible.
+        ret = (offset_ - 1) if precNotSucc else None
+    else:
+        assert isinstance(t_, int)
+        assert 0 <= t_
+        if t_ == targetTime:
+            # Simple case, exact match.
+            ret = offset_
+        elif t_ < targetTime:
+            ret = offset_ if precNotSucc else None
+        else: # t_ > targetTime:
+            ret = (offset_ - 1) if precNotSucc else offset_
+
+    # Offset of -1 when targetTime is less than the first
+    # timestamp and precNotSucc is True.
+    assert ret is None or (isinstance(ret, int) and -1 <= ret), ret
+
+    ## Self-test to ensure that when ret is not None or -1, then it can be used
+    ## to seek.
+    #if isinstance(ret, int) and 0 <= ret:
+    #    with open(joinP(paths.dname_mea, name), 'rb') as fd:
+    #        fd.seek(ret)
+    #        assert len(fd.read(strideBytes)) == strideBytes
+
+    return ret
+# }}} def meaSearch
+
 def rdEvs(names, startTime, finishTime): # {{{
     '''Read in EVent Samples the checked data written by evaInit.
 
@@ -171,44 +266,17 @@ def rdEvs(names, startTime, finishTime): # {{{
     '''
     assert initPathsDone
 
-    def rdTimejump(name, startTime, finishTime): # {{{
-        '''Read in a single timejump file to [(time, fileOffset), ...].
-        '''
-
-        ret = []
-        with open(joinP(eva.paths.dname_timejumps, name), 'r') as fd:
-            for line in fd:
-                sTime, sLineNum, sFileOffset = line.split()
-                dTime = int(sTime)
-
-                if finishTime < dTime:
-                    break
-
-                if startTime <= dTime:
-                    ret.append((dTime, int(sFileOffset)))
-
-        return ret
-    # }}} def rdEvs
-
     verb("Loading EVS... ", end='')
-
-    # Read in timejump file for each measurement name.
-    # Merge and sort timejumps into single list.
-    mergedTimejumps = \
-        sorted(list(set(tj for tjs in \
-                        [rdTimejump(nm, startTime, finishTime) for nm in names] \
-                        for tj in tjs)))
 
     # TODO:
     # Read relevant timechunks and copy values into ndarray.
     # Axis0 corresponds to order of names.
-    shape = (len(names), finishTime-StartTime+1)
+    shape = (len(names), finishTime-startTime+1)
     # TODO: shape with deltas
-    # TODO: timejumps with previous values. Maybe easier to just extract values
-    # into timejump files too.
 
     verb("Done")
 
+    ret = None
     return ret
 # }}} def rdEvs
 

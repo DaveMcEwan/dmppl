@@ -16,4 +16,5 @@ from .test_parvec import *
 from .test_vcd_utils import *
 
 # Tests for expeniments
+from .test_eva_common import *
 from .test_eva_init import *

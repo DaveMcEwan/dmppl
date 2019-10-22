@@ -278,7 +278,7 @@ def fxToFloat(x, **kwargs): # {{{
 # }}} def fxToFloat
 
 def fxFromFloat(x, **kwargs): # {{{
-    '''Convert NumPy array in fixed point (0, 1] from IEEE754 float.
+    '''Convert NumPy array to fixed point (0, 1] from IEEE754 float.
     '''
     assert np.all(np.logical_and(0.0 <= x, x <= 1.0))
 

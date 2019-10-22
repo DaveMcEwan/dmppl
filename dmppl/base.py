@@ -56,6 +56,27 @@ class Borg: # {{{
         self.__dict__ = self._shared_state
 # }}} class Borg
 
+class Fragile(object): # {{{
+    '''Wrap `with` variable using this to allow breaking out of context manager
+    by raising Fragile.Break.
+    '''
+
+    class Break(Exception):
+        pass
+
+    def __init__(self, value):
+        self.value = value
+
+    def __enter__(self):
+        return self.value.__enter__()
+
+    def __exit__(self, etype, value, traceback):
+        error = self.value.__exit__(etype, value, traceback)
+        if etype == self.Break:
+            return True
+        return error
+# }}} class Fragile
+
 def indexDefault(xs, x, default=None): # {{{
     '''Return the first index of an item in a list, or a default value.
 

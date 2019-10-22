@@ -9,9 +9,9 @@ import struct
 import toml
 
 # Local library imports
-from dmppl.base import dbg, verb, Bunch, fnameAppendExt, joinP, mkDirP
+from dmppl.base import dbg, verb, Bunch, Fragile, fnameAppendExt, joinP, mkDirP
 from dmppl.fx import *
-from dmppl.math import powsineCoeffs
+from dmppl.math import powsineCoeffs, isEven
 from dmppl.nd import *
 from dmppl.vcd import VcdReader, detypeVarName
 
@@ -171,6 +171,7 @@ def meaDtype(name): # {{{
 
     hasValues = name.startswith("normal.")
 
+    # Type corresponds to bit/real in measure.vcd.
     # NOTE: int is required instead of bool as newValue is given from VcdReader
     # as a string.
     # int("0") --> 0, bool(0) -- False, bool("0") --> True
@@ -338,25 +339,110 @@ def meaSearch(name, targetTime, precNotSucc=True): # {{{
     return ret
 # }}} def meaSearch
 
-def rdEvs(names, startTime, finishTime): # {{{
+def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
     '''Read in EVent Samples the checked data written by evaInit.
 
-    Return relevant data as NumPy array.
+    Return relevant data in [startTime, finishTime) as NumPy array.
     '''
     assert initPathsDone
 
-    verb("Loading EVS... ", end='')
-    startOffsets = (meaSearch(name, startTime) for name in names)
+    assert isinstance(startTime, int), type(startTime)
+    assert isinstance(finishTime, int), type(finishTime)
+    assert startTime < finishTime, (startTime, finishTime)
+    assert 0 <= startTime, startTime
+    assert 1 <= finishTime, finishTime
+    sIdx, fIdx = 0, finishTime - startTime
 
-    # TODO:
-    # Read relevant timechunks and copy values into ndarray.
-    # Axis0 corresponds to order of names.
-    shape = (len(names), finishTime-startTime+1)
-    # TODO: shape with deltas
+    bNames, rNames = \
+        [nm for nm in names if not nm.startswith("normal.")], \
+        [nm for nm in names if nm.startswith("normal.")]
 
-    verb("Done")
+    bStartOffsets, rStartOffsets = \
+        (meaSearch(nm, startTime) for nm in bNames), \
+        (meaSearch(nm, startTime) for nm in rNames)
 
-    ret = None
-    return ret
+    # Axis0 corresponds to order of names, which are also returned.
+    bShape, rShape = \
+        (len(bNames), fIdx), \
+        (len(rNames), fIdx)
+
+    bDtype, rDtype = \
+        np.bool, \
+        np.float32 if fxbits == 0 else fxDtype(fxbits)
+
+    # Fully allocate memory before any filling to ensure there is enough.
+    bEvs, rEvs = \
+        np.zeros(bShape, dtype=bDtype), \
+        np.zeros(rShape, dtype=rDtype)
+
+    bStructFmt, rStructFmt = \
+        ">L", \
+        ">Lf" if fxbits == 0 else ">LL"
+
+    bStrideBytes, rStrideBytes = 4, 8
+
+    # Fill by infer/copy bit values from measure.vcd to ndarray.
+    for i,(nm,startOffset) in enumerate(zip(bNames, bStartOffsets)): # {{{
+        prevIdx, prevValue = 0, False
+
+        with Fragile(open(joinP(paths.dname_mea, nm), 'rb')) as fd:
+            o_ = max(0, startOffset)
+            fd.seek(o_ * bStrideBytes)
+
+            bs = fd.read(bStrideBytes) # Read first timestamp.
+            if len(bs) != bStrideBytes:
+                raise Fragile.Break # Tried reading past EOF
+            t,v = struct.unpack(bStructFmt, bs)[0], isEven(o_)
+            tIdx = t - startTime
+            o_ += 1
+
+            while tIdx < fIdx:
+                if prevValue: # Initialised to 0, only update bool if necessary.
+                    bEvs[i][prevIdx:tIdx] = prevValue
+                prevIdx, prevValue = tIdx, v
+
+                bs = fd.read(bStrideBytes) # Read timestamp.
+                if len(bs) != bStrideBytes:
+                    raise Fragile.Break # Tried reading past EOF
+                t,v = struct.unpack(bStructFmt, bs)[0], isEven(o_)
+                tIdx = t - startTime
+                o_ += 1
+
+        if prevValue: # Initialised to 0, only update bool if necessary.
+            bEvs[i][prevIdx:] = prevValue
+    # }}} infer/copy/fill bEvs
+
+    # Fill by infer/copy real values from measure.vcd to ndarray.
+    for i,(nm,startOffset) in enumerate(zip(rNames, rStartOffsets)): # {{{
+        prevIdx, prevValue = 0, 0.0
+
+        with Fragile(open(joinP(paths.dname_mea, nm), 'rb')) as fd:
+            o_ = max(0, startOffset)
+            fd.seek(o_ * rStrideBytes)
+
+            bs = fd.read(rStrideBytes) # Read first timestamp.
+            if len(bs) != rStrideBytes:
+                raise Fragile.Break # Tried reading past EOF
+            t,v = struct.unpack(rStructFmt, bs)
+            tIdx = t - startTime
+            o_ += 1
+
+            while tIdx < fIdx:
+                rEvs[i][prevIdx:tIdx] = prevValue \
+                    if fxbits == 0 else fxFromFloat(prevValue, nBits=fxbits)
+                prevIdx, prevValue = tIdx, v
+
+                bs = fd.read(rStrideBytes) # Read timestamp.
+                if len(bs) != rStrideBytes:
+                    raise Fragile.Break # Tried reading past EOF
+                t,v = struct.unpack(rStructFmt, bs)
+                tIdx = t - startTime
+                o_ += 1
+
+        rEvs[i][prevIdx:] = prevValue \
+            if fxbits == 0 else fxFromFloat(prevValue, nBits=fxbits)
+    # }}} infer/copy/fill rEvs
+
+    return (bNames, bEvs), (rNames, rEvs)
 # }}} def rdEvs
 

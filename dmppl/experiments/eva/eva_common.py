@@ -85,6 +85,15 @@ def loadEvcx(): # {{{
     return evcx
 # }}} def loadEvcx
 
+metricNames = [
+    "Cex",
+    "Cls",
+    "Cos",
+    "Cov",
+    "Dep",
+    "Ham",
+    "Tmt",
+]
 def metric(name, winSize, winAlpha, nBits=0): # {{{
     '''Take attributes of a metric, return a callable implementation.
 
@@ -93,6 +102,7 @@ def metric(name, winSize, winAlpha, nBits=0): # {{{
     w = powsineCoeffs(winSize, winAlpha)
 
     assert 0 == nBits, "TODO: Implement fx*()"
+    assert name in metricNames, name
     fs = {
         "Cex": partial(fxCex if 0 < nBits else ndCex, w, nBits=nBits),
         "Cls": partial(fxCls if 0 < nBits else ndCls, w, nBits=nBits),
@@ -164,6 +174,10 @@ def dsfDeltas(winSize, nReqDeltasBk, nReqDeltasFw, zoomFactor): # {{{
 
     return ret
 # }}} def dsfDeltas
+
+def cfgDsfDeltas(cfg): # {{{
+    return dsfDeltas(cfg.windowsize, cfg.deltabk, cfg.deltafw, cfg.deltazoom)
+# }}} def cfgDsfDeltas
 
 def meaDtype(name): # {{{
     # [(t,v), ...] OR [t, ...]

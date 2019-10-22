@@ -12,6 +12,22 @@ from .base import stripSuffix
 if sys.version_info[0] > 2:
     long = int
 
+def isEven(x): # {{{
+    '''Return True if x is an even integer, else False.
+    '''
+    assert isinstance(x, (int, long))
+
+    return (x % 2 == 0)
+# }}} def isEven
+
+def isOdd(x): # {{{
+    '''Return True if x is an odd integer, else False.
+    '''
+    assert isinstance(x, (int, long))
+
+    return (x % 2 == 1)
+# }}} def isOdd
+
 def isPow2(x): # {{{
     '''Return True if x is an integer power of 2, else False.
     '''

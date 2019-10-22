@@ -5,6 +5,66 @@ import tempfile
 import shutil
 import unittest
 
+class Test_isEven(unittest.TestCase): # {{{
+
+    def test_Pos0(self):
+        result = isEven(3)
+        self.assertFalse(result)
+
+    def test_Pos1(self):
+        result = isEven(4)
+        self.assertTrue(result)
+
+    def test_Zero(self):
+        result = isEven(0)
+        self.assertTrue(result)
+
+    def test_Neg0(self):
+        result = isEven(-7)
+        self.assertFalse(result)
+
+    def test_Neg1(self):
+        result = isEven(-8)
+        self.assertTrue(result)
+
+    def test_Float0(self):
+        self.assertRaises(AssertionError, isEven, 7.0)
+
+    def test_Float1(self):
+        self.assertRaises(AssertionError, isEven, 8.0)
+
+# }}} class Test_isEven
+
+class Test_isOdd(unittest.TestCase): # {{{
+
+    def test_Pos0(self):
+        result = isOdd(3)
+        self.assertTrue(result)
+
+    def test_Pos1(self):
+        result = isOdd(4)
+        self.assertFalse(result)
+
+    def test_Zero(self):
+        result = isOdd(0)
+        self.assertFalse(result)
+
+    def test_Neg0(self):
+        result = isOdd(-7)
+        self.assertTrue(result)
+
+    def test_Neg1(self):
+        result = isOdd(-8)
+        self.assertFalse(result)
+
+    def test_Float0(self):
+        self.assertRaises(AssertionError, isOdd, 7.0)
+
+    def test_Float1(self):
+        self.assertRaises(AssertionError, isOdd, 8.0)
+
+# }}} class Test_isEven
+
 class Test_isPow2(unittest.TestCase): # {{{
 
     def test_Basic0(self):

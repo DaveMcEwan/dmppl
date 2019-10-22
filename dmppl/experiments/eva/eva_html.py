@@ -138,9 +138,94 @@ def htmlLink(f=None, g=None, x=None, y=None, u=None, txt=None): # {{{
     return ''.join(ret)
 # }}} def htmlLink
 
+def tableTitleRow(f, g, u, x, y, xs, nDeltas, winStride): # {{{
+    '''Return a string with HTML tr.
+    '''
+    #'    <tr>'
+    #'        <th class="tabletitle" colspan="{max_colspan}">'
+    #'           {title_f}(X={title_x} | Y={title_y}<sub>&lang;&delta;&rang;</sub> ; u=...)'
+    #'        </th>'
+    #'    </tr>'
 
-    return "<head>" + '\n'.join(chain(jsTxts, cssTxts)) + "</head>"
-# }}} def htmlHead
+    #'    <tr>'
+    #'        <th class="tabletitle" colspan="{max_colspan}">'
+    #'           {title_f}(X={title_x} | Y=...<sub>&lang;&delta;&rang;</sub> ; u={time_u})'
+    #'        </th>'
+    #'        <th class="nav_u" colspan="5">{prev_u} {next_u}</th>'
+    #'    </tr>'
+
+    #'    <tr>'
+    #'        <th class="tabletitle" colspan="{max_colspan}">'
+    #'           {title_f}(X=... | Y={title_y}<sub>&lang;&delta;&rang;</sub> ; u={time_u})'
+    #'        </th>'
+    #'        <th class="nav_u" colspan="5">{prev_u} {next_u}</th>'
+    #'    </tr>'
+
+    #title_fmt = ('<a tabindex="0"'
+    #             '   role="button"'
+    #             '   href="#"'
+    #             '   title="{nm}"'
+    #             '   data-html="true"'
+    #             '   data-toggle="popover"'
+    #             '   data-trigger="click"'
+    #             '   data-content="<ul>{others}</ul>">'
+    #             '{nm}'
+    #             '</a>')
+    #html_kwargs["title_f"] = title_fmt.format(nm=F, others=''.join(otherFs))
+    #html_kwargs["title_x"] = title_fmt.format(nm=offset_name_x, others=''.join(otherXs))
+    #html_kwargs["time_u"] = title_fmt.format(nm=time_u, others=''.join(otherUs))
+
+    titleFmt = ("{funcStr}("
+                " x={xStr} |"
+                " y={yStr}<sub>&lang;&delta;&rang;</sub> ;"
+                " u={uStr})")
+
+    if f is not None and g is not None:
+        # TODO: items arg for popoverUL is [(href, txt), ]
+        funcStr = popoverUl("{%s,%s}" % (f, g), eva.metricNames)
+    elif g is None:
+        funcStr = popoverUl(f, names)
+    elif f is None:
+        funcStr = popoverUl(g, names)
+    else:
+        assert False # Checking already performed in evaHtmlString()
+
+    # TODO
+    xStr = popoverUl(x, names)
+    yStr = popoverUl(y, names)
+
+    if u is None:
+        # Possibly overestimate colspanTitle but browsers handle it properly.
+        # No need for prev/next navigation since u varies over rows.
+        colspanTitle = 8 + nDeltas
+
+        uStr = "..."
+        navPrevNext = ''
+    else:
+        assert isinstance(int, u), type(u)
+        # Exactly choose colspan of whole table, then take off some to make
+        # room for prev/next navigation links.
+        colspanTitle = 7 + nDeltas - 7
+
+        uStr = str(u)
+        navPrevNext = ' '.join((
+            '<th class="nav_u" colspan="5">',
+            htmlLink(f, g, u - winStride, x, y, "prev"),
+            htmlLink(f, g, u + winStride, x, y, "next"),
+            '</th>',
+        ))
+
+
+    ret = (
+        '<tr>',
+        '  <th class="tabletitle" colspan="%d">' % colspanTitle,
+        titleFmt.format(funcStr=funcStr, xStr=xStr, yStr=yStr, uStr=uStr),
+        '  </th>',
+        navPrevNext,
+        '</tr>',
+    )
+    return ''.join(r.strip() for r in ret)
+# }}} def tableTitleRow
 
 def evaHtmlString(args, cfg, evcx, request): # {{{
     '''Return a string of HTML.
@@ -167,38 +252,91 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     verb("{f,g}(x|y;u) <-- {%s,%s}(%s|%s;%s)" % (f, g, x, y, u))
 
     if f is None and isinstance(g, str):
-        pass # 1D color
+        # 1D color
+        assert g in eva.metricNames, g
         f, g = g, f
     elif isinstance(f, str) and g is None:
-        pass # 1D color
+        # 1D color
+        assert f in eva.metricNames, f
     elif isinstance(f, str) and isinstance(g, str):
-        pass # 2D color
+        # 2D color
+        assert f in eva.metricNames, f
+        assert g in eva.metricNames, g
     else:
         assert False, "At least one of f,g must be string of function name." \
                       " (f%s=%s, g%s=%s)" % (type(f), f, type(g), g)
 
+    # Every view varies delta - tables by horizontal, networks by edges.
+    dsfDeltas = eva.cfgDsfDeltas(cfg) # [(<downsample factor>, <delta>), ...]
+
     if u is None and isinstance(x, str) and isinstance(y, str):
-        pass # Table varying u over rows, delta over columns
+        # Table varying u over rows, delta over columns
+        tableNotNetwork = True
+
+        # Possibly overestimate colspanTitle but browsers handle it properly.
+        # No need for prev/next navigation since u varies over rows.
+        colspanTitle = 8 + len(dsfDeltas)
+
     elif isinstance(u, str) and x is None and y is None:
-        pass # Network graph
+        # Network graph
+        tableNotNetwork = False
+
+        u = int(u)
+        assert 0 <= u, u
+
     elif isinstance(u, str) and x is None and isinstance(y, str):
-        pass # Table varying x over rows, delta over columns
+        # Table varying x over rows, delta over columns
+        tableNotNetwork = True
+
+        u = int(u)
+        assert 0 <= u, u
+
+        # Exactly choose colspan of whole table, then take off some to make
+        # room for prev/next navigation links.
+        colspanTitle = 7 + len(dsfDeltas) - 7
+
     elif isinstance(u, str) and isinstance(x, str) and y is None:
-        pass # Table varying y over rows, delta over columns
+        # Table varying y over rows, delta over columns
+        tableNotNetwork = True
+
+        u = int(u)
+        assert 0 <= u, u
+
+        # Exactly choose colspan of whole table, then take off some to make
+        # room for prev/next navigation links.
+        colspanTitle = 7 + len(dsfDeltas) - 7
+        titleRow = htmlTitleRow(u, x, y, len(dsfDeltas))
+
     elif isinstance(u, str) and isinstance(x, str) and isinstance(y, str):
-        pass # Table row varying delta over columns
+        # Table row varying delta over columns
+        tableNotNetwork = True
+
+        u = int(u)
+        assert 0 <= u, u
+
+        # Exactly choose colspan of whole table, then take off some to make
+        # room for prev/next navigation links.
+        colspanTitle = 7 + len(dsfDeltas) - 7
+
     else:
         assert False, "Invalid combination of u,x,y." \
                       " (u=%s, x=%s, y=%s)" % (u, x, y)
 
+
+    body_ = []
+    if tableNotNetwork:
+        body_.append(sliderControls())
+        body_.append("<table>")
+        body_.append(tableTitleRow(f, g, u, x, y))
+        # TODO
+        body_.append("</table>")
+    else:
+        body_.append("TODO") # TODO: Holder for SVG
+
     # Avoid inline JS or CSS for browser caching, but use for standalone files.
     inlineHead = (args.httpd_port == 0)
-    head = htmlHead(inlineHead, inlineHead)
 
-    u = int(u)
-    assert 0 <= u, u
-
-    return head + "TODO"
+    return htmlTopFmt(inlineHead, inlineHead).format(''.join(body_))
 # }}} def evaHtmlString
 
 class EvaHTMLException(Exception): # {{{

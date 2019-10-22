@@ -858,6 +858,23 @@ def evaInit(args): # {{{
     # VCD-to-binaries
     eva.meaDbFromVcd()
 
+    # TODO: rm
+    import numpy as np
+    names= [
+        "bstate.measure.twovalFromBitA",
+        "bstate.reflection.twovalFromBitA",
+        "bstate.rise.twovalFromBitA",
+        "bstate.fall.twovalFromBitA",
+        "normal.clipnorm.normFromIntegerA",
+        "normal.clipnorm.normFromRealA",
+        "normal.clipnorm.normFromRealB",
+    ]
+    (bNames, bEvs), (rNames, rEvs) = eva.rdEvs(names, 1, 7)
+    print("bNames", bNames)
+    print("rNames", rNames)
+    np.savetxt(joinP(eva.paths.outdir, "bEvs.txt"), bEvs, fmt='%d')
+    np.savetxt(joinP(eva.paths.outdir, "rEvs.txt"), rEvs, fmt='%0.03f')
+
     return 0
 # }}} def evaInit
 

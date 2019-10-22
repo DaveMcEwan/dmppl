@@ -71,7 +71,7 @@ def popoverUl(ulTitle, items): # {{{
     return fmt.format(ulTitle=ulTitle, lis=''.join(lis))
 # }}} def popoverUl
 
-def htmlHead(inlineJs=True, inlineCss=True): # {{{
+def htmlTopFmt(inlineJs=True, inlineCss=True): # {{{
     '''Return a string with HTML headers for JS and CSS.
     '''
 
@@ -81,8 +81,8 @@ def htmlHead(inlineJs=True, inlineCss=True): # {{{
                  "eva.js"))
 
     fnamesCss = (joinP(eva.appPaths.share, fname) for fname in \
-                ("bootstrap-3.3.7.min.css",
-                 "eva.css"))
+                 ("bootstrap-3.3.7.min.css",
+                  "eva.css"))
 
     jsTxts = (('<script> %s </script>' % rdTxt(fname)) \
               if inlineJs else \
@@ -90,9 +90,54 @@ def htmlHead(inlineJs=True, inlineCss=True): # {{{
               for fname in fnamesJs)
 
     cssTxts = (('<style> %s </style>' % rdTxt(fname)) \
-              if inlineCss else \
-              ('<link rel="stylesheet" type="text/css" href="%s">' % fname)
-              for fname in fnamesCss)
+               if inlineCss else \
+               ('<link rel="stylesheet" type="text/css" href="%s">' % fname)
+               for fname in fnamesCss)
+
+    ret = (
+        '<!DOCTYPE html>',
+        '<html>',
+        '  <head>',
+        '\n'.join(chain(jsTxts, cssTxts)),
+        '  </head>',
+        '  <body>',
+        '    {}',
+        '  </body>',
+        '</html>',
+    )
+    return ''.join(r.strip() for r in ret)
+# }}} def htmlTopFmt
+
+def htmlLink(f=None, g=None, x=None, y=None, u=None, txt=None): # {{{
+    '''Return a link to a data view.
+    '''
+    parts_ = []
+
+    if f is not None:
+        parts_.append("f=" + str(f))
+
+    if g is not None:
+        parts_.append("g=" + str(g))
+
+    if u is not None:
+        parts_.append("u=" + str(u))
+
+    if x is not None:
+        parts_.append("x=" + str(x))
+
+    if y is not None:
+        parts_.append("y=" + str(y))
+
+    ret = (
+        '<a href="./?',
+        '&'.join(parts_),
+        '">',
+        str(txt),
+        '</a>',
+    )
+    return ''.join(ret)
+# }}} def htmlLink
+
 
     return "<head>" + '\n'.join(chain(jsTxts, cssTxts)) + "</head>"
 # }}} def htmlHead

@@ -340,9 +340,8 @@ def meaSearch(name, targetTime, precNotSucc=True): # {{{
 # }}} def meaSearch
 
 def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
-    '''Read in EVent Samples the checked data written by evaInit.
-
-    Return relevant data in [startTime, finishTime) as NumPy array.
+    '''Read EVent Samples (sanitized data written by evaInit to
+       foo.eva/measure/*) in [startTime, finishTime), and return as ndarrays.
     '''
     assert initPathsDone
 

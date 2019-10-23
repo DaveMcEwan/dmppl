@@ -151,7 +151,60 @@ def evaLink(f, g, u, x, y, txt): # {{{
     return ''.join(ret)
 # }}} def evaLink
 
-def tableTitleRow(f, g, u, x, y, xs, nDeltas, winStride): # {{{
+def fnDisplay(f, g): # {{{
+    assert f is None or isinstance(f, str), type(f)
+    assert g is None or isinstance(g, str), type(g)
+    if f is not None:
+        assert f in eva.metricNames, f
+    if g is not None:
+        assert g in eva.metricNames, g
+    assert f or g, (f, g)
+    return ("{%s,%s}" % (f, g)) if f and g else (f if f else g)
+# }}} def fnDisplay
+
+def uDisplay(u): # {{{
+    assert u is None or isinstance(u, int), type(u)
+    return "..." if u is None else str(u)
+# }}} def uDisplay
+
+def xDisplay(x): # {{{
+    assert x is None or isinstance(x, str), type(x)
+    return "..." if x is None else x
+# }}} def xDisplay
+
+def yDisplay(y): # {{{
+    assert y is None or isinstance(y, str), type(y)
+    return "..." if y is None else y
+# }}} def yDisplay
+
+evaTitleFmt = "{fn}(x={x} | y={y}<sub>&lang;&delta;&rang;</sub> ; u={u})"
+
+def evaTitleText(f, g, u, x, y): # {{{
+    '''Return the title of a data view as a simple string without nested markup.
+    '''
+    # NOTE: Assertions handled in *Display().
+    return evaTitleFmt.format(fn=fnDisplay(f, g),
+                              x=xDisplay(x),
+                              y=yDisplay(y),
+                              u=uDisplay(u))
+# }}} def evaTitleText
+
+def evaTitleAny(fn, u, x, y): # {{{
+    '''Return the title of a data view substituing in arbitary markup strings.
+    '''
+    assert isinstance(fn, str), type(fn)
+    assert isinstance(u, str), type(u)
+    assert isinstance(x, str), type(x)
+    assert isinstance(y, str), type(y)
+    assert 0 < len(fn), fn
+    assert 0 < len(u), u
+    assert 0 < len(x), x
+    assert 0 < len(y), y
+
+    return evaTitleFmtformat(fn=fn, x=x, y=y, u=u)
+# }}} def evaTitleAny
+
+def tableTitleRow(f, g, u, x, y, measureNames, nDeltas, winStride): # {{{
     '''Return a string with HTML tr.
     '''
     #'    <tr>'
@@ -188,31 +241,12 @@ def tableTitleRow(f, g, u, x, y, xs, nDeltas, winStride): # {{{
     #html_kwargs["title_x"] = title_fmt.format(nm=offset_name_x, others=''.join(otherXs))
     #html_kwargs["time_u"] = title_fmt.format(nm=time_u, others=''.join(otherUs))
 
-    titleFmt = ("{funcStr}("
-                " x={xStr} |"
-                " y={yStr}<sub>&lang;&delta;&rang;</sub> ;"
-                " u={uStr})")
-
-    if f is not None and g is not None:
-        # TODO: items arg for popoverUL is [(href, txt), ]
-        funcStr = popoverUl("{%s,%s}" % (f, g), eva.metricNames)
-    elif g is None:
-        funcStr = popoverUl(f, names)
-    elif f is None:
-        funcStr = popoverUl(g, names)
-    else:
-        assert False # Checking already performed in evaHtmlString()
-
-    # TODO
-    xStr = popoverUl(x, names)
-    yStr = popoverUl(y, names)
-
+    # NOTE: u may be 0 --> Cannot use "if u".
     if u is None:
         # Possibly overestimate colspanTitle but browsers handle it properly.
         # No need for prev/next navigation since u varies over rows.
         colspanTitle = 8 + nDeltas
 
-        uStr = "..."
         navPrevNext = ''
     else:
         assert isinstance(int, u), type(u)
@@ -220,19 +254,52 @@ def tableTitleRow(f, g, u, x, y, xs, nDeltas, winStride): # {{{
         # room for prev/next navigation links.
         colspanTitle = 7 + nDeltas - 7
 
-        uStr = str(u)
         navPrevNext = ' '.join((
             '<th class="nav_u" colspan="5">',
-            htmlLink(f, g, u - winStride, x, y, "prev"),
-            htmlLink(f, g, u + winStride, x, y, "next"),
+            evaLink(f, g, u - winStride, x, y, "prev"),
+            evaLink(f, g, u + winStride, x, y, "next"),
             '</th>',
         ))
+
+
+    # NOTE: f and g must be valid strings containing name of measurement.
+    if f and g:
+        fnOthers = [(evaTitleText(fOther, gOther, u, x, y),
+                     evaLink(fOther, gOther, u, x, y)) \
+                    for fOther in eva.metricNames \
+                    for gOther in eva.metricNames \
+                    if fOther != f and gOther != g]
+    elif f:
+        fnOthers = [(evaTitleText(nm, None, u, x, y),
+                     evaLink(nm, None, u, x, y)) \
+                    for nm in eva.metricNames \
+                    if nm != f]
+    elif g:
+        fnOthers = [(evaTitleText(None, nm, u, x, y),
+                     evaLink(None, nm, u, x, y)) \
+                    for nm in eva.metricNames \
+                    if nm != g]
+    else:
+        assert False # Checking already performed in evaHtmlString()
+    fnPopover = popoverUl(fnDisplay(f, g), fnOthers)
+
+    xOthers = [(evaTitleText(f, g, u, nm, None),
+                 evaLink(f, g, u, nm, None)) \
+                for nm in measureNames \
+                if nm != x]
+    xPopover = popoverUl(xDisplay(x), xOthers)
+
+    yOthers = [(evaTitleText(f, g, u, None, nm),
+                 evaLink(f, g, u, None, nm)) \
+                for nm in measureNames \
+                if nm != y]
+    yPopover = popoverUl(yDisplay(y), yOthers)
 
 
     ret = (
         '<tr>',
         '  <th class="tabletitle" colspan="%d">' % colspanTitle,
-        titleFmt.format(funcStr=funcStr, xStr=xStr, yStr=yStr, uStr=uStr),
+        evaTitleAny(fnPopover, xPopover, yPopover, uDisplay(u)),
         '  </th>',
         navPrevNext,
         '</tr>',
@@ -281,14 +348,11 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
 
     # Every view varies delta - tables by horizontal, networks by edges.
     dsfDeltas = eva.cfgDsfDeltas(cfg) # [(<downsample factor>, <delta>), ...]
+    nDeltas = len(dsfDeltas)
 
     if u is None and isinstance(x, str) and isinstance(y, str):
         # Table varying u over rows, delta over columns
         tableNotNetwork = True
-
-        # Possibly overestimate colspanTitle but browsers handle it properly.
-        # No need for prev/next navigation since u varies over rows.
-        colspanTitle = 8 + len(dsfDeltas)
 
     elif isinstance(u, str) and x is None and y is None:
         # Network graph
@@ -304,10 +368,6 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
         u = int(u)
         assert 0 <= u, u
 
-        # Exactly choose colspan of whole table, then take off some to make
-        # room for prev/next navigation links.
-        colspanTitle = 7 + len(dsfDeltas) - 7
-
     elif isinstance(u, str) and isinstance(x, str) and y is None:
         # Table varying y over rows, delta over columns
         tableNotNetwork = True
@@ -315,21 +375,12 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
         u = int(u)
         assert 0 <= u, u
 
-        # Exactly choose colspan of whole table, then take off some to make
-        # room for prev/next navigation links.
-        colspanTitle = 7 + len(dsfDeltas) - 7
-        titleRow = htmlTitleRow(u, x, y, len(dsfDeltas))
-
     elif isinstance(u, str) and isinstance(x, str) and isinstance(y, str):
         # Table row varying delta over columns
         tableNotNetwork = True
 
         u = int(u)
         assert 0 <= u, u
-
-        # Exactly choose colspan of whole table, then take off some to make
-        # room for prev/next navigation links.
-        colspanTitle = 7 + len(dsfDeltas) - 7
 
     else:
         assert False, "Invalid combination of u,x,y." \
@@ -340,8 +391,14 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     if tableNotNetwork:
         body_.append(sliderControls())
         body_.append("<table>")
-        body_.append(tableTitleRow(f, g, u, x, y))
-        # TODO
+
+        # Top-most row with title (with nav links), and prev/next.
+        body_.append(tableTitleRow(f, g, u, x, y,
+                                   measureNames, nDeltas, winStride))
+
+        # TODO: Column headers with delta values. Both hi and lo rows.
+
+        # TODO: Data rows.
         body_.append("</table>")
     else:
         body_.append("TODO") # TODO: Holder for SVG

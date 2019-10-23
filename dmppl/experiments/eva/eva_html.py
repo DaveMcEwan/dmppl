@@ -204,9 +204,11 @@ def evaTitleAny(fn, u, x, y): # {{{
     return evaTitleFmt.format(fn=fn, x=x, y=y, u=u)
 # }}} def evaTitleAny
 
-def tableTitleRow(f, g, u, x, y, measureNames, nDeltas, winStride): # {{{
-    '''Return a string with HTML tr.
+def tableTitleRow(f, g, u, x, y, measureNames, dsfDeltas, winStride): # {{{
+    '''Return a string with HTML <tr>.
     '''
+    nDeltas = len(dsfDeltas)
+
     # NOTE: u may be 0 --> Cannot use "if u".
     if u is None:
         # Possibly overestimate colspanTitle but browsers handle it properly.
@@ -218,6 +220,8 @@ def tableTitleRow(f, g, u, x, y, measureNames, nDeltas, winStride): # {{{
         assert isinstance(u, int), type(u)
         # Exactly choose colspan of whole table, then take off some to make
         # room for prev/next navigation links.
+        # TODO: Exact number (first 7) is from number of columns from sibling
+        # measurements - Need to correct when siblings are implemented.
         colspanTitle = 7 + nDeltas - 7
 
         navPrevNext = ' '.join((
@@ -276,6 +280,39 @@ def tableTitleRow(f, g, u, x, y, measureNames, nDeltas, winStride): # {{{
     )
     return ''.join(r.strip() for r in ret)
 # }}} def tableTitleRow
+
+mapSiblingTypeToHtmlSymbol = {
+    "clipnorm":     "&#xb7;",   # MIDDLE DOT
+    "occur":        "&#xb7;",   # MIDDLE DOT
+    "measure":      "&#xb7;",   # MIDDLE DOT
+    "reflection":   "&#x00ac;", # NOT SIGN
+    "rise":         "&#x2191;", # UPWARDS ARROW
+    "fall":         "&#x2193;", # DOWNWARDS ARROW
+}
+def tableHeaderRows(u, x, y, dsfDeltas): # {{{
+    '''Return a string with HTML one or more <tr>.
+    '''
+
+    # Sort by delta value, not by downsampling factor.
+    dsfDeltas.sort(key=lambda dsf_d: dsf_d[1])
+
+    nDeltas = len(dsfDeltas)
+    nLeftDeltas, nRightDeltas = nDeltas // 2, nDeltas // 2 - 1
+
+    # TODO: Sibling columns
+
+    ret = (
+        '<tr>',
+        ' <th colspan="%d"></th>' % nLeftDeltas,
+        ' <th>&delta;</th>',
+        ' <th colspan="%d"></th>' % nRightDeltas,
+        '</tr>',
+        '<tr>',
+        ''.join('<th class="th_d">%d</th>' % d for dsf,d in dsfDeltas),
+        '</tr>',
+    )
+    return ''.join(r.strip() for r in ret)
+# }}} def tableHeaderRows
 
 def evaHtmlString(args, cfg, evcx, request): # {{{
     '''Return a string of HTML.
@@ -356,7 +393,6 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
 
     # Every view varies delta - tables by horizontal, networks by edges.
     dsfDeltas = eva.cfgDsfDeltas(cfg) # [(<downsample factor>, <delta>), ...]
-    nDeltas = len(dsfDeltas)
 
     winStride = cfg.windowsize - cfg.windowoverlap
 
@@ -368,11 +404,14 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
 
         # Top-most row with title (with nav links), and prev/next.
         body_.append(tableTitleRow(f, g, u, x, y,
-                                   measureNames, nDeltas, winStride))
+                                   measureNames, dsfDeltas, winStride))
 
         # TODO: Column headers with delta values. Both hi and lo rows.
+        #body_.append("\n")
+        body_.append(tableHeaderRows(u, x, y, dsfDeltas))
 
         # TODO: Data rows.
+
         body_.append("</table>")
     else:
         body_.append("TODO: networkNotTable") # TODO: Holder for SVG

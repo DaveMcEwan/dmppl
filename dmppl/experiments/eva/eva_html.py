@@ -250,7 +250,7 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     Func  Func  2D color
 
     u     x     y     -->
-    None  None  None  invalid
+    None  None  None  Default values
     None  None  Metr  invalid
     None  Metr  None  invalid
     None  Metr  Metr  Table varying u over rows, delta over columns

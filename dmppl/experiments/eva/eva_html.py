@@ -108,9 +108,22 @@ def htmlTopFmt(inlineJs=True, inlineCss=True): # {{{
     return ''.join(r.strip() for r in ret)
 # }}} def htmlTopFmt
 
-def htmlLink(f=None, g=None, x=None, y=None, u=None, txt=None): # {{{
-    '''Return a link to a data view.
+def evaLink(f, g, u, x, y, txt): # {{{
+    '''Return the link to a data view.
     '''
+    assert f is None or isinstance(f, str), type(f)
+    assert g is None or isinstance(g, str), type(g)
+    if f is not None:
+        assert f in eva.metricNames, f
+    if g is not None:
+        assert g in eva.metricNames, g
+    assert f or g
+    assert u is None or isinstance(u, int), type(u)
+    assert x is None or isinstance(x, str), type(x)
+    assert y is None or isinstance(y, str), type(y)
+
+    assert isinstance(txt, str), type(txt)
+
     parts_ = []
 
     if f is not None:
@@ -136,7 +149,7 @@ def htmlLink(f=None, g=None, x=None, y=None, u=None, txt=None): # {{{
         '</a>',
     )
     return ''.join(ret)
-# }}} def htmlLink
+# }}} def evaLink
 
 def tableTitleRow(f, g, u, x, y, xs, nDeltas, winStride): # {{{
     '''Return a string with HTML tr.

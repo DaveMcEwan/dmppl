@@ -116,7 +116,7 @@ def metric(name, winSize, winAlpha, nBits=0): # {{{
     return fs[name]
 # }}} def metric
 
-def dsfDeltas(winSize, nReqDeltasBk, nReqDeltasFw, zoomFactor): # {{{
+def dsfDeltas(winSize, reqNDeltasBk, reqNDeltasFw, reqZoomFactor): # {{{
     '''Return a list of downsample factors and deltas (timeshifts).
 
     [ (<downsample factor>, <delta>), ... ]
@@ -124,11 +124,21 @@ def dsfDeltas(winSize, nReqDeltasBk, nReqDeltasFw, zoomFactor): # {{{
     The downsample factor may of course be ignored, but provides a method of
     "zooming out" from a plot when there are many deltas to calculate.
     This does not choose a method of performing the downsampling.
+    reqZoomFactor < 2 ==> zoomFactor = max(nDeltasBk, nDeltasFw)
     '''
-    assert(0 <= nReqDeltasBk), nReqDeltasBk # Non-negative
-    assert(1 <= nReqDeltasFw), nReqDeltasFw # Positive
-    nDeltasBk = min(nReqDeltasBk, winSize // 2)
-    nDeltasFw = min(nReqDeltasFw, winSize // 2)
+    assert isinstance(winSize, int), type(winSize)
+    assert 1 <= winSize, winSize
+    assert isinstance(reqNDeltasBk, int), type(reqNDeltasBk)
+    assert 0 <= reqNDeltasBk, reqNDeltasBk # Non-negative
+    assert isinstance(reqNDeltasFw, int), type(reqNDeltasFw)
+    assert 1 <= reqNDeltasFw, reqNDeltasFw # Positive
+    assert isinstance(reqZoomFactor, int), type(reqZoomFactor)
+    assert 0 <= reqZoomFactor, reqZoomFactor
+
+    nDeltasBk = min(reqNDeltasBk, winSize // 2)
+    nDeltasFw = min(reqNDeltasFw, winSize // 2)
+    zoomFactor = reqZoomFactor if 1 < reqZoomFactor \
+                               else max(nDeltasBk, nDeltasFw)
 
     # All feasible downsample factors with associated upper absdeltas.
     # 64 scaling factors is always more than enough in practice.
@@ -169,8 +179,9 @@ def dsfDeltas(winSize, nReqDeltasBk, nReqDeltasFw, zoomFactor): # {{{
 
     #nDeltas = len(ret)
     #delta0Idx = ret.index((1,0))
-    assert nDeltasBk == len([d for dsf,d in ret if d < 0])
-    assert nDeltasFw == len([d for dsf,d in ret if 0 <= d])
+    if 0 == reqZoomFactor:
+        assert nDeltasBk == len([d for dsf,d in ret if d < 0])
+        assert nDeltasFw == len([d for dsf,d in ret if 0 <= d])
 
     return ret
 # }}} def dsfDeltas

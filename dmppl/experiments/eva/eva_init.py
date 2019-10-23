@@ -523,6 +523,7 @@ def meaVcd(instream, evcx, cfg): # {{{
         measuresThreshold = (nm for nm,v in evcx.items() if "threshold" == v["type"])
         measuresNormal = (nm for nm,v in evcx.items() if "normal" == v["type"])
 
+        # Sibling measurements denoted by prefix.
         prefixesEvent =  ("measure",)
         prefixesBstate = ("measure", "reflection", "rise", "fall",)
         prefixesNormal = ("measure", "smooth", "clipnorm",)

@@ -275,3 +275,86 @@ class Test_DsfDeltas(unittest.TestCase): # {{{
 
 # }}} class Test_DsfDeltas
 
+class Test_SiblingMeasurements(unittest.TestCase): # {{{
+
+    def test_Event0(self):
+        self.maxDiff = None
+        result = siblingMeasurements("event.measure.foo")
+        golden = (
+            "event.measure.foo",
+        )
+        self.assertEqual(golden, result)
+
+    def test_Event1(self):
+        self.maxDiff = None
+        result = siblingMeasurements("event.measure.foo.bar.baz")
+        golden = (
+            "event.measure.foo.bar.baz",
+        )
+        self.assertEqual(golden, result)
+
+    def test_Bstate0(self):
+        self.maxDiff = None
+        result = siblingMeasurements("bstate.measure.foo")
+        golden = (
+            "bstate.measure.foo",
+            "bstate.reflection.foo",
+            "bstate.rise.foo",
+            "bstate.fall.foo",
+        )
+        self.assertEqual(golden, result)
+
+    def test_Bstate1(self):
+        self.maxDiff = None
+        result = siblingMeasurements("bstate.reflection.foo")
+        golden = (
+            "bstate.measure.foo",
+            "bstate.reflection.foo",
+            "bstate.rise.foo",
+            "bstate.fall.foo",
+        )
+        self.assertEqual(golden, result)
+
+    def test_Bstate2(self):
+        self.maxDiff = None
+        result = siblingMeasurements("bstate.rise.foo")
+        golden = (
+            "bstate.measure.foo",
+            "bstate.reflection.foo",
+            "bstate.rise.foo",
+            "bstate.fall.foo",
+        )
+        self.assertEqual(golden, result)
+
+    def test_Bstate3(self):
+        self.maxDiff = None
+        result = siblingMeasurements("bstate.fall.foo")
+        golden = (
+            "bstate.measure.foo",
+            "bstate.reflection.foo",
+            "bstate.rise.foo",
+            "bstate.fall.foo",
+        )
+        self.assertEqual(golden, result)
+
+    def test_Threshold0(self):
+        self.maxDiff = None
+        result = siblingMeasurements("threshold.measure.foo.bar.baz")
+        golden = (
+            "threshold.measure.foo.bar.baz",
+            "threshold.reflection.foo.bar.baz",
+            "threshold.rise.foo.bar.baz",
+            "threshold.fall.foo.bar.baz",
+        )
+        self.assertEqual(golden, result)
+
+    def test_Normal0(self):
+        self.maxDiff = None
+        result = siblingMeasurements("normal.measure.foo.bar.baz")
+        golden = (
+            "normal.clipnorm.foo.bar.baz",
+        )
+        self.assertEqual(golden, result)
+
+# }}} class Test_SiblingMeasurements
+

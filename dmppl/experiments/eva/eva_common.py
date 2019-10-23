@@ -470,3 +470,35 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
     return (bNames, bEvs), (rNames, rEvs)
 # }}} def rdEvs
 
+def siblingMeasurements(nm): # {{{
+    '''Take a measurement name and return a tuple of sibling/related
+       measurements which can be used with eva metrics.
+
+    E.g: "bstate.reflection.foo" -> ("bstate.fall.foo",
+                                     "bstate.measure.foo",
+                                     "bstate.reflection.foo",
+                                     "bstate.rise.foo")
+
+    E.g: "event.measure.foo" -> ("event.measure.foo",)
+    '''
+    siblingTypes = {
+        "event": ("measure",),
+        "bstate": ("measure", "reflection", "rise", "fall",),
+        "normal": ("clipnorm",),
+        "threshold": ("measure", "reflection", "rise", "fall",),
+    }
+
+    nmParts = nm.split('.')
+
+    (measureType, siblingType), measureName = nmParts[:2], nmParts[2:]
+    assert measureType in siblingTypes.keys(), nm
+    if "normal" == measureType:
+        assert siblingType in ("clipnorm", "measure", "smooth"), nm
+    else:
+        assert siblingType in siblingTypes[measureType], nm
+
+    ret = tuple('.'.join([measureType, s] + measureName) \
+                for s in siblingTypes[measureType])
+    return ret
+# }}} def siblingMeasurements
+

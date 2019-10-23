@@ -24,23 +24,23 @@ class Test_MeaSearch(unittest.TestCase): # {{{
         shutil.copy(joinP(_tstd, name), paths.dname_mea)
 
         result = []
-        for i in [12]:#range(13):
+        for i in range(13):
             r = (i, meaSearch(name, i, True), meaSearch(name, i, False))
             result.append(r)
 
         golden = [
-            #(0,     -1, 0),
-            #(1,     -1, 0),
-            #(2,     -1, 0),
-            #(3,     -1, 0),
-            #(4,     -1, 0),
-            #(5,     0,  0),
-            #(6,     1,  1),
-            #(7,     2,  2),
-            #(8,     2,  3),
-            #(9,     2,  3),
-            #(10,    3,  3),
-            #(11,    3,  None),
+            (0,     -1, 0),
+            (1,     -1, 0),
+            (2,     -1, 0),
+            (3,     -1, 0),
+            (4,     -1, 0),
+            (5,     0,  0),
+            (6,     1,  1),
+            (7,     2,  2),
+            (8,     2,  3),
+            (9,     2,  3),
+            (10,    3,  3),
+            (11,    3,  None),
             (12,    3,  None),
         ]
         self.assertEqual(golden, result)

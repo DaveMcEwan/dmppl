@@ -288,6 +288,7 @@ mapSiblingTypeToHtmlEntity = {
     "rise":         "&#x2191;", # UPWARDS ARROW
     "fall":         "&#x2193;", # DOWNWARDS ARROW
 }
+
 def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
     '''Return a string with HTML one or more <tr>.
     '''
@@ -489,6 +490,88 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
     return '\n'.join(r.strip() for r in ret)
 # }}} def tableHeaderRows
 
+def calculateTableData(f, g, u, x, y, cfg): # {{{
+
+    fMetric = eva.metric(f, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
+    gMetric = eva.metric(g, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits) \
+        if g is not None else None
+
+    ((xBNames, xBEvs), (xRNames, xREvs)), \
+    ((yBNames, yBEvs), (yRNames, yREvs)) = \
+        rdEvs(measureSiblings(x), u, u+cfg.windowsize, cfg.fxbits), \
+        rdEvs(measureSiblings(y), u, u+cfg.windowsize, cfg.fxbits)
+
+    # TODO
+    xExSibs = None
+    yExSibs = None
+    fXY = None
+    gXY = None
+
+    return xExSibs, yExSibs, fXY, gXY
+# }}} def calculateTableData
+
+def tableDataRows(f, g, u, x, y, cfg): # {{{
+
+    xExSibs, yExSibs, fXY, gXY = calculateTableData(f, g, u, x, y, cfg)
+
+    if gXY is not None:
+        assert fXY.shape == gXY.shape, (fXY.shape, gXY.shape)
+
+    if x and y:
+        # x and y are constant, u is varying
+        assert u is None, (u,)
+        #     +--------+--------+--------+--------+--------+--------+--------+--------+
+        #     | E[.]_x | E[¬]_x | E[↑]_x | E[↓]_x | E[.]_y | E[¬]_y | E[↑]_y | E[↓]_y |
+        #     +--------+--------+--------+--------+--------+--------+--------+--------+
+        #
+
+    elif x:
+        # x and u are constant, y is varying
+        assert y is None, (y,)
+
+        # 1. CASE: y has max number of siblings.
+        #     +--------+--------+--------+--------+
+        #     | E[.]_y | E[¬]_y | E[↑]_y | E[↓]_y |
+        #     +--------+--------+--------+--------+
+        #
+        # 2. CASE: y has fewer siblings than max.
+        #     +--------+--------+--------+--------+
+        #     | E[.]_y |        |        |        |
+        #     +--------+--------+--------+--------+
+
+    elif y:
+        # y and u are constant, x is varying
+        assert x is None, (x,)
+
+        # 1. CASE: x has max number of siblings.
+        #     +--------+--------+--------+--------+
+        #     | E[.]_x | E[¬]_x | E[↑]_x | E[↓]_x |
+        #     +--------+--------+--------+--------+
+        #
+        # 2. CASE: x has fewer siblings than max.
+        #     +--------+--------+--------+--------+
+        #     | E[.]_x |        |        |        |
+        #     +--------+--------+--------+--------+
+
+    else:
+        assert False
+
+    # TODO
+
+    def tableDataRow(row): # {{{
+        ret = (
+            '<tr>',
+              '\n'.join(sibExTds),
+              varTd,
+              '\n'.join(fnTds),
+            '</tr>',
+        )
+        return '\n'.join(ret)
+    # }}} def tableDataRow
+
+    return '\n'.join(tableDataRow(row) for row in rows)
+# }}} def tableDataRows
+
 def evaHtmlString(args, cfg, evcx, request): # {{{
     '''Return a string of HTML.
 
@@ -574,23 +657,24 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     # Every view varies delta - tables by horizontal, networks by edges.
     dsfDeltas = eva.cfgDsfDeltas(cfg) # [(<downsample factor>, <delta>), ...]
 
-    winStride = cfg.windowsize - cfg.windowoverlap
-
-
     body_ = []
     if tableNotNetwork:
+        winStride = cfg.windowsize - cfg.windowoverlap
+
         body_.append(sliderControls())
         body_.append("<table>")
 
-        # Top-most row with title (with nav links), and prev/next.
+        # Top-most row with title (with nav popovers), and prev/next.
         body_.append(tableTitleRow(f, g, u, x, y,
                                    measureNames, dsfDeltas, winStride))
 
-        # TODO: Column headers with delta values. Both hi and lo rows.
-        #body_.append("\n")
-        body_.append(tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar))
+        # Column headers with delta values. Both hi and lo rows.
+        body_.append(tableHeaderRows(f, g, u, x, y,
+                                     dsfDeltas, rowVar))
 
         # TODO: Data rows.
+        #body_.append(tableDataRows(f, g, u, x, y,
+        #                           cfg))
 
         body_.append("</table>")
     else:

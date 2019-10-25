@@ -9,6 +9,7 @@ import time
 
 # Local library imports
 from dmppl.base import dbg, info, verb, joinP, tmdiff, rdTxt
+from dmppl.color import rgb1D
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
@@ -102,7 +103,7 @@ def htmlTopFmt(inlineJs=True, inlineCss=True): # {{{
         '  </body>',
         '</html>',
     )
-    return ''.join(r.strip() for r in ret)
+    return '\n'.join(r.strip() for r in ret)
 # }}} def htmlTopFmt
 
 def evaLink(f, g, u, x, y, txt, escapeQuotes=False): # {{{
@@ -281,37 +282,214 @@ def tableTitleRow(f, g, u, x, y, measureNames, dsfDeltas, winStride): # {{{
     return ''.join(r.strip() for r in ret)
 # }}} def tableTitleRow
 
-mapSiblingTypeToHtmlSymbol = {
-    "clipnorm":     "&#xb7;",   # MIDDLE DOT
-    "occur":        "&#xb7;",   # MIDDLE DOT
+mapSiblingTypeToHtmlEntity = {
     "measure":      "&#xb7;",   # MIDDLE DOT
     "reflection":   "&#x00ac;", # NOT SIGN
     "rise":         "&#x2191;", # UPWARDS ARROW
     "fall":         "&#x2193;", # DOWNWARDS ARROW
+    "clipnorm":     "&#xb7;",   # MIDDLE DOT
+    "occur":        "&#xb7;",   # MIDDLE DOT
 }
-def tableHeaderRows(u, x, y, dsfDeltas): # {{{
+def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
     '''Return a string with HTML one or more <tr>.
     '''
+    assert isinstance(rowVar, str), type(rowVar)
+    assert rowVar in ['u', 'x', 'y'], rowVar
+
+    sibThTxtFmt = "E[%s]<sub>%s</sub>" # symbol, x/y
+    sibTypes = ("measure", "reflection", "rise", "fall",)
+
+    def sibHiThs(nm, xNotY, rowspan, values=None): # {{{
+
+        measureType, siblingType, measureName = eva.measureNameParts(nm)
+
+        siblings = \
+            [eva.measureNameParts(s) \
+             for s in eva.measureSiblings(nm)]
+
+        sibNames = \
+            ['.'.join((mt,st,mn)) \
+             for mt,st,mn in siblings]
+
+        if values is not None:
+            assert isinstance(values, (list, tuple)), type(values)
+            #assert len(values) == len(siblings) # TODO: uncomment
+
+
+        possibleClasses = ("sibsel", "th_d", "xsib" if xNotY else "ysib")
+
+        classLists = \
+            [possibleClasses[(0 if st == siblingType else 1):] \
+             for mt,st,mn in siblings]
+
+        attrClasses = \
+            ['class="%s"' % ' '.join(c for c in cs)
+             for cs in classLists]
+
+        attrRowspans = \
+            [('rowspan="%d"' % rowspan) if 1 < rowspan else '' \
+             for _ in siblings]
+
+        attrStyles = \
+            ['style="background-color:#%s"' % rgb1D(v) \
+             for v in values] if values is not None else \
+            ['' for _ in siblings]
+
+        attrTitles = \
+            ['title="%0.02f"' % v \
+             for v in values] if values is not None else \
+            ['' for _ in siblings]
+
+        sibAttrs = [' '.join(attrs) for attrs in zip(attrClasses,
+                                                     attrRowspans,
+                                                     attrStyles,
+                                                     attrTitles)]
+        sibLinkTxts = \
+            [sibThTxtFmt % (mapSiblingTypeToHtmlEntity[st],
+                            'x' if xNotY else 'y') \
+             for mt,st,mn in siblings]
+
+        sibLinks = \
+            [evaLink(f, g, u, fnm, y, txt) if xNotY else \
+             evaLink(f, g, u, x, fnm, txt) \
+             for fnm,txt in zip(sibNames, sibLinkTxts)]
+
+        sibValueTxts = \
+            ['<br/> %0.02f' % v \
+             for v in values] if values is not None else \
+            ['' for _ in siblings]
+
+
+
+        fmt = '<th {attrs}> {partA} {partB} </th>'
+
+        ret = [fmt.format(attrs=attrsStr, partA=linkStr, partB=valueStr) \
+               for attrsStr,linkStr,valueStr in zip(sibAttrs,
+                                                    sibLinks,
+                                                    sibValueTxts)]
+        return ret
+    # }}} sibHiThs
+
+    def sibLoThs(xNotY): # {{{
+
+        sibTxts = \
+            [sibThTxtFmt % (mapSiblingTypeToHtmlEntity[st],
+                            'x' if xNotY else 'y') \
+             for st in sibTypes]
+
+        classes = ("th_d", "xsib" if xNotY else "ysib")
+
+        attrClasses = \
+            ['class="%s"' % ' '.join(c for c in classes)
+             for _ in sibTypes]
+
+        fmt = '<th {attrs}> {partA} </th>'
+
+        ret = [fmt.format(attrs=attrsStr, partA=txt) \
+               for attrsStr,txt in zip(attrClasses, sibTxts)]
+        return ret
+    # }}} sibLoThs
+
+    # TODO: Use proper values
+    sibValuesTODO_rm = [0.1, 0.2, 0.3, 0.4, 0.5]
+    xSibValues = sibValuesTODO_rm
+    ySibValues = sibValuesTODO_rm
+
+    if x and y:
+        assert u is None and rowVar == 'u', (u, rowVar)
+        #     +--------+--------+--------+--------+--------+--------+--------+--------+
+        # hi  |        |        |        |        |        |        |        |        |
+        #     + E[.]_x + E[¬]_x + E[↑]_x + E[↓]_x + E[.]_y + E[¬]_y + E[↑]_y + E[↓]_y +
+        # lo  |        |        |        |        |        |        |        |        |
+        #     +--------+--------+--------+--------+--------+--------+--------+--------+
+        #
+        # Expectation of sibling measurements in each window,
+        # Span both rows.
+
+        xSibHiThs, ySibHiThs = \
+            sibHiThs(x, True,  2, xSibValues), \
+            sibHiThs(y, False, 2, ySibValues)
+        xSibLoThs, ySibLoThs = [], []
+
+    elif x:
+        # x is constant but y is varying
+        assert y is None and rowVar == 'y', (y, rowVar)
+
+        # 1. CASE: x has max number of siblings.
+        #     +--------+--------+--------+--------+
+        # hi  + E[.]_x | E[¬]_x | E[↑]_x | E[↓]_x | clickable, to x siblings
+        #     + 0.1234 | 0.1234 | 0.1234 | 0.1234 |
+        #     +--------+--------+--------+--------+
+        # lo  | E[.]_y | E[¬]_y | E[↑]_y | E[↓]_y | non-clickable column heads
+        #     +--------+--------+--------+--------+
+        #
+        # 2. CASE: x has fewer siblings than max.
+        #     +--------+--------+--------+--------+
+        # hi  + E[.]_x |                          |  clickable, to x siblings
+        #     + 0.1234 |                          |
+        #     +--------+--------+--------+--------+
+        # lo  | E[.]_y | E[¬]_y | E[↑]_y | E[↓]_y | non-clickable column heads
+        #     +--------+--------+--------+--------+
+        #
+        # NOTE: Values of x sibling's expectation by number and bgcolor.
+
+        xSibHiThs, ySibHiThs = sibHiThs(x, True, 1, xSibValues), []
+        xSibLoThs, ySibLoThs = [], sibLoThs(False)
+
+    elif y:
+        # y is constant but x is varying
+        assert x is None and rowVar == 'x', (x, rowVar)
+
+        # 1. CASE: y has max number of siblings.
+        #     +--------+--------+--------+--------+
+        # hi  + E[.]_y | E[¬]_y | E[↑]_y | E[↓]_y | clickable, to y siblings
+        #     + 0.1234 | 0.1234 | 0.1234 | 0.1234 |
+        #     +--------+--------+--------+--------+
+        # lo  | E[.]_x | E[¬]_x | E[↑]_x | E[↓]_x | non-clickable column heads
+        #     +--------+--------+--------+--------+
+        #
+        # 2. CASE: y has fewer siblings than max.
+        #     +--------+--------+--------+--------+
+        # hi  + E[.]_y |                          |  clickable, to y siblings
+        #     + 0.1234 |                          |
+        #     +--------+--------+--------+--------+
+        # lo  | E[.]_x | E[¬]_x | E[↑]_x | E[↓]_x | non-clickable column heads
+        #     +--------+--------+--------+--------+
+        #
+        # NOTE: Values of y sibling's expectation by number and bgcolor.
+
+        xSibHiThs, ySibHiThs = [], sibHiThs(y, False, 1, ySibValues)
+        xSibLoThs, ySibLoThs = sibLoThs(True), []
+
+    else:
+        assert False
+
+    hiSibThs = xSibHiThs + ySibHiThs
+    loSibThs = xSibLoThs + ySibLoThs
+
 
     # Sort by delta value, not by downsampling factor.
     dsfDeltas.sort(key=lambda dsf_d: dsf_d[1])
 
     nDeltas = len(dsfDeltas)
     nLeftDeltas, nRightDeltas = nDeltas // 2, nDeltas // 2 - 1
-
-    # TODO: Sibling columns
+    deltaThs = ('<th class="th_d">%d</th>' % d for dsf,d in dsfDeltas)
 
     ret = (
         '<tr>',
-        ' <th colspan="%d"></th>' % nLeftDeltas,
-        ' <th>&delta;</th>',
-        ' <th colspan="%d"></th>' % nRightDeltas,
+          '\n'.join(hiSibThs),
+          ' <th class="varying" rowspan="2">%s</th>' % rowVar,
+          ' <th colspan="%d"></th>' % nLeftDeltas,
+          ' <th>&delta;</th>',
+          ' <th colspan="%d"></th>' % nRightDeltas,
         '</tr>',
         '<tr>',
-        ''.join('<th class="th_d">%d</th>' % d for dsf,d in dsfDeltas),
+          '\n'.join(loSibThs),
+          # varying spans both rows
+          ''.join(deltaThs),
         '</tr>',
     )
-    return ''.join(r.strip() for r in ret)
+    return '\n'.join(r.strip() for r in ret)
 # }}} def tableHeaderRows
 
 def evaHtmlString(args, cfg, evcx, request): # {{{
@@ -356,10 +534,12 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     if u is None and isinstance(x, str) and isinstance(y, str):
         # Table varying u over rows, delta over columns
         tableNotNetwork = True
+        rowVar = 'u'
 
     elif isinstance(u, str) and x is None and y is None:
         # Network graph
         tableNotNetwork = False
+        rowVar = None # Not a table with rows.
 
         u = int(u)
         assert 0 <= u, u
@@ -367,6 +547,7 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     elif isinstance(u, str) and x is None and isinstance(y, str):
         # Table varying x over rows, delta over columns
         tableNotNetwork = True
+        rowVar = 'x'
 
         u = int(u)
         assert 0 <= u, u
@@ -374,6 +555,7 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     elif isinstance(u, str) and isinstance(x, str) and y is None:
         # Table varying y over rows, delta over columns
         tableNotNetwork = True
+        rowVar = 'y'
 
         u = int(u)
         assert 0 <= u, u
@@ -381,6 +563,7 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     elif isinstance(u, str) and isinstance(x, str) and isinstance(y, str):
         # Table row varying delta over columns
         tableNotNetwork = True
+        rowVar = None # Only one row.
 
         u = int(u)
         assert 0 <= u, u
@@ -408,7 +591,7 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
 
         # TODO: Column headers with delta values. Both hi and lo rows.
         #body_.append("\n")
-        body_.append(tableHeaderRows(u, x, y, dsfDeltas))
+        body_.append(tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar))
 
         # TODO: Data rows.
 
@@ -419,7 +602,7 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     # Avoid inline JS or CSS for browser caching, but use for standalone files.
     inlineHead = (args.httpd_port == 0)
 
-    return htmlTopFmt(inlineHead, inlineHead).format(''.join(body_))
+    return htmlTopFmt(inlineHead, inlineHead).format('\n'.join(body_))
 # }}} def evaHtmlString
 
 class EvaHTMLException(Exception): # {{{

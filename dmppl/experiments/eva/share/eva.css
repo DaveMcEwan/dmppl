@@ -34,15 +34,15 @@ th.th_d {
     max-width: 20px;
 }
 
-th.fpos > a {
+th.xsib > a {
     color: blue;
 }
 
-th.gneg > a {
+th.ysib > a {
     color: red;
 }
 
-th.xysel {
+th.sibsel {
     border: 1px solid lime;
 }
 

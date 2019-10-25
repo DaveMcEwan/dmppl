@@ -12,7 +12,7 @@ _curd = path.abspath(path.dirname(__file__)) # dmppl/tests
 _topd = path.dirname(_curd)
 _tstd = joinP(_topd, "dmppl", "experiments", "eva", "tst")
 
-class Test_MeaSearch(unittest.TestCase): # {{{
+class Test_meaSearch(unittest.TestCase): # {{{
 
     def test_Basic0(self):
         self.maxDiff = None
@@ -76,9 +76,9 @@ class Test_MeaSearch(unittest.TestCase): # {{{
         ]
         self.assertEqual(golden, result)
 
-# }}} class Test_MeaSearch
+# }}} class Test_meaSearch
 
-class Test_DsfDeltas(unittest.TestCase): # {{{
+class Test_dsfDeltas(unittest.TestCase): # {{{
 
     def test_Basic0(self):
         self.maxDiff = None
@@ -273,13 +273,13 @@ class Test_DsfDeltas(unittest.TestCase): # {{{
         ]
         self.assertEqual(golden, result)
 
-# }}} class Test_DsfDeltas
+# }}} class Test_dsfDeltas
 
-class Test_SiblingMeasurements(unittest.TestCase): # {{{
+class Test_measureSiblings(unittest.TestCase): # {{{
 
     def test_Event0(self):
         self.maxDiff = None
-        result = siblingMeasurements("event.measure.foo")
+        result = measureSiblings("event.measure.foo")
         golden = (
             "event.measure.foo",
         )
@@ -287,7 +287,7 @@ class Test_SiblingMeasurements(unittest.TestCase): # {{{
 
     def test_Event1(self):
         self.maxDiff = None
-        result = siblingMeasurements("event.measure.foo.bar.baz")
+        result = measureSiblings("event.measure.foo.bar.baz")
         golden = (
             "event.measure.foo.bar.baz",
         )
@@ -295,7 +295,7 @@ class Test_SiblingMeasurements(unittest.TestCase): # {{{
 
     def test_Bstate0(self):
         self.maxDiff = None
-        result = siblingMeasurements("bstate.measure.foo")
+        result = measureSiblings("bstate.measure.foo")
         golden = (
             "bstate.measure.foo",
             "bstate.reflection.foo",
@@ -306,7 +306,7 @@ class Test_SiblingMeasurements(unittest.TestCase): # {{{
 
     def test_Bstate1(self):
         self.maxDiff = None
-        result = siblingMeasurements("bstate.reflection.foo")
+        result = measureSiblings("bstate.reflection.foo")
         golden = (
             "bstate.measure.foo",
             "bstate.reflection.foo",
@@ -317,7 +317,7 @@ class Test_SiblingMeasurements(unittest.TestCase): # {{{
 
     def test_Bstate2(self):
         self.maxDiff = None
-        result = siblingMeasurements("bstate.rise.foo")
+        result = measureSiblings("bstate.rise.foo")
         golden = (
             "bstate.measure.foo",
             "bstate.reflection.foo",
@@ -328,7 +328,7 @@ class Test_SiblingMeasurements(unittest.TestCase): # {{{
 
     def test_Bstate3(self):
         self.maxDiff = None
-        result = siblingMeasurements("bstate.fall.foo")
+        result = measureSiblings("bstate.fall.foo")
         golden = (
             "bstate.measure.foo",
             "bstate.reflection.foo",
@@ -339,7 +339,7 @@ class Test_SiblingMeasurements(unittest.TestCase): # {{{
 
     def test_Threshold0(self):
         self.maxDiff = None
-        result = siblingMeasurements("threshold.measure.foo.bar.baz")
+        result = measureSiblings("threshold.measure.foo.bar.baz")
         golden = (
             "threshold.measure.foo.bar.baz",
             "threshold.reflection.foo.bar.baz",
@@ -350,7 +350,7 @@ class Test_SiblingMeasurements(unittest.TestCase): # {{{
 
     def test_Normal0(self):
         self.maxDiff = None
-        result = siblingMeasurements("normal.measure.foo.bar.baz")
+        result = measureSiblings("normal.measure.foo.bar.baz")
         golden = (
             "normal.clipnorm.foo.bar.baz",
         )

@@ -470,7 +470,36 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
     return (bNames, bEvs), (rNames, rEvs)
 # }}} def rdEvs
 
-def siblingMeasurements(nm): # {{{
+mapMeasureTypeToSiblingTypes = {
+    "event": ("measure",),
+    "bstate": ("measure", "reflection", "rise", "fall",),
+    "threshold": ("measure", "reflection", "rise", "fall",),
+    "normal": ("clipnorm",),
+}
+
+def measureNameParts(nm): # {{{
+    '''Take a measurement name and return the measure type and sibling type.
+
+    E.g: "bstate.reflection.foo" -> ("bstate", "reflection", "foo")
+    E.g: "event.measure.foo.bar" -> ("event", "measure", "foo.bar")
+    '''
+
+    nmParts = nm.split('.')
+    assert 3 <= len(nmParts), nmParts
+
+    (measureType, siblingType), measureName = nmParts[:2], nmParts[2:]
+
+    assert measureType in mapMeasureTypeToSiblingTypes.keys(), nm
+
+    if "normal" == measureType:
+        assert siblingType in ("clipnorm", "measure", "smooth"), nm
+    else:
+        assert siblingType in mapMeasureTypeToSiblingTypes[measureType], nm
+
+    return measureType, siblingType, '.'.join(measureName)
+# }}} def measureNameParts
+
+def measureSiblings(nm): # {{{
     '''Take a measurement name and return a tuple of sibling/related
        measurements which can be used with eva metrics.
 
@@ -481,24 +510,12 @@ def siblingMeasurements(nm): # {{{
 
     E.g: "event.measure.foo" -> ("event.measure.foo",)
     '''
-    siblingTypes = {
-        "event": ("measure",),
-        "bstate": ("measure", "reflection", "rise", "fall",),
-        "normal": ("clipnorm",),
-        "threshold": ("measure", "reflection", "rise", "fall",),
-    }
 
-    nmParts = nm.split('.')
+    measureType, siblingType, measureName = measureNameParts(nm)
 
-    (measureType, siblingType), measureName = nmParts[:2], nmParts[2:]
-    assert measureType in siblingTypes.keys(), nm
-    if "normal" == measureType:
-        assert siblingType in ("clipnorm", "measure", "smooth"), nm
-    else:
-        assert siblingType in siblingTypes[measureType], nm
+    siblings = tuple('.'.join([measureType, s, measureName]) \
+                     for s in mapMeasureTypeToSiblingTypes[measureType])
 
-    ret = tuple('.'.join([measureType, s] + measureName) \
-                for s in siblingTypes[measureType])
-    return ret
-# }}} def siblingMeasurements
+    return siblings
+# }}} def measureSiblings
 

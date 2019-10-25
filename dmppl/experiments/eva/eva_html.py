@@ -239,7 +239,7 @@ def tableTitleRow(f, g, u, x, y, measureNames, dsfDeltas, winStride): # {{{
                            escapeQuotes=True) \
                    for fNm in eva.metricNames \
                    for gNm in eva.metricNames \
-                   if fNm != f and gNm != g]
+                   if fNm != f and gNm != g and fNm != gNm]
     elif f:
         fnLinks = [evaLink(fNm, None, u, x, y,
                            evaTitleText(fNm, None, u, x, y),

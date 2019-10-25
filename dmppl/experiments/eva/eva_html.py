@@ -287,8 +287,6 @@ mapSiblingTypeToHtmlEntity = {
     "reflection":   "&#x00ac;", # NOT SIGN
     "rise":         "&#x2191;", # UPWARDS ARROW
     "fall":         "&#x2193;", # DOWNWARDS ARROW
-    "clipnorm":     "&#xb7;",   # MIDDLE DOT
-    "occur":        "&#xb7;",   # MIDDLE DOT
 }
 def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
     '''Return a string with HTML one or more <tr>.
@@ -297,7 +295,6 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
     assert rowVar in ['u', 'x', 'y'], rowVar
 
     sibThTxtFmt = "E[%s]<sub>%s</sub>" # symbol, x/y
-    sibTypes = ("measure", "reflection", "rise", "fall",)
 
     def sibHiThs(nm, xNotY, rowspan, values=None): # {{{
 
@@ -375,13 +372,13 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
         sibTxts = \
             [sibThTxtFmt % (mapSiblingTypeToHtmlEntity[st],
                             'x' if xNotY else 'y') \
-             for st in sibTypes]
+             for st in mapSiblingTypeToHtmlEntity.keys()]
 
         classes = ("th_d", "xsib" if xNotY else "ysib")
 
         attrClasses = \
             ['class="%s"' % ' '.join(c for c in classes)
-             for _ in sibTypes]
+             for _ in mapSiblingTypeToHtmlEntity.keys()]
 
         fmt = '<th {attrs}> {partA} </th>'
 

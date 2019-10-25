@@ -350,9 +350,9 @@ class Test_measureSiblings(unittest.TestCase): # {{{
 
     def test_Normal0(self):
         self.maxDiff = None
-        result = measureSiblings("normal.measure.foo.bar.baz")
+        result = measureSiblings("normal.raw.foo.bar.baz")
         golden = (
-            "normal.clipnorm.foo.bar.baz",
+            "normal.measure.foo.bar.baz",
         )
         self.assertEqual(golden, result)
 

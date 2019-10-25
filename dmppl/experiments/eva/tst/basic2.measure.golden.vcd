@@ -78,7 +78,7 @@ $var bit 1 . occurrerFromWireVecB  $end
 $upscope $end
 $upscope $end
 $scope module normal $end
-$scope module clipnorm $end
+$scope module measure $end
 $var real 64 "# normBitVecA [63:0] $end
 $var real 64 "& normBitVecB [63:0] $end
 $var real 64 ") normFromIntegerA [63:0] $end
@@ -88,7 +88,7 @@ $var real 64 "2 normFromRealB [63:0] $end
 $var real 64 "5 normWireVecA [63:0] $end
 $var real 64 "8 normWireVecB [63:0] $end
 $upscope $end
-$scope module measure $end
+$scope module raw $end
 $var real 64 "! normBitVecA [63:0] $end
 $var real 64 "$ normBitVecB [63:0] $end
 $var real 64 "' normFromIntegerA [63:0] $end

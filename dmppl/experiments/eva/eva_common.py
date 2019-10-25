@@ -225,11 +225,11 @@ def meaDbFromVcd(): # {{{
 
     def usableMeasure(name): # {{{
         '''All VCD::bit signals in measure.vcd are usable, but of the VCD::real
-           signals, only normal.clipnorm.* are usable.
+           signals, only normal.measure.* are usable.
 
         Other VCD::real signals are not guaranteed to be in [0, 1].
         '''
-        return name.startswith("normal.clipnorm.") \
+        return name.startswith("normal.measure.") \
             if name.startswith("normal.") else True
     # }}} def usableMeasure
 
@@ -474,7 +474,7 @@ mapMeasureTypeToSiblingTypes = {
     "event": ("measure",),
     "bstate": ("measure", "reflection", "rise", "fall",),
     "threshold": ("measure", "reflection", "rise", "fall",),
-    "normal": ("clipnorm",),
+    "normal": ("measure",),
 }
 
 def measureNameParts(nm): # {{{
@@ -492,7 +492,7 @@ def measureNameParts(nm): # {{{
     assert measureType in mapMeasureTypeToSiblingTypes.keys(), nm
 
     if "normal" == measureType:
-        assert siblingType in ("clipnorm", "measure", "smooth"), nm
+        assert siblingType in ("raw", "smooth", "measure"), nm
     else:
         assert siblingType in mapMeasureTypeToSiblingTypes[measureType], nm
 

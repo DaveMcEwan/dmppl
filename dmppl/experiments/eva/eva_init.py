@@ -526,7 +526,7 @@ def meaVcd(instream, evcx, cfg): # {{{
         # Sibling measurements denoted by prefix.
         prefixesEvent =  ("measure",)
         prefixesBstate = ("measure", "reflection", "rise", "fall",)
-        prefixesNormal = ("measure", "smooth", "clipnorm",)
+        prefixesNormal = ("raw", "smooth", "measure",)
         prefixesThreshold = ("measure", "reflection", "rise", "fall",)
 
         namesEvent = \
@@ -569,7 +569,7 @@ def meaVcd(instream, evcx, cfg): # {{{
             clipnormValue = clipNorm(smoothValue, geq, leq)
 
             bq_.append((t, "normal.smooth." + nm, smoothValue))
-            bq_.append((t, "normal.clipnorm." + nm, clipnormValue))
+            bq_.append((t, "normal.measure." + nm, clipnormValue))
 
         zs = [prevIpolValues_[0] if newValue is None else newValue] + prevIpolValues_
         mapVarIdToHistory_[iVarId] = (oTime, zs[:-1])
@@ -578,7 +578,7 @@ def meaVcd(instream, evcx, cfg): # {{{
         clipnormValue = clipNorm(smoothValue, geq, leq)
 
         nq_.append(("normal.smooth." + nm, smoothValue))
-        nq_.append(("normal.clipnorm." + nm, clipnormValue))
+        nq_.append(("normal.measure." + nm, clipnormValue))
 
     # }}} def interpolateNormal
 
@@ -773,9 +773,9 @@ def meaVcd(instream, evcx, cfg): # {{{
                                 if "real" == hookType else \
                                 float(int(newValueClean, 2))
 
-                            # NOTE: normal.measure values are not necessarily
+                            # NOTE: normal.raw values are not necessarily
                             # in [0, 1]; rather than (-inf, +inf).
-                            nq_.append(("normal.measure." + nm, newValue))
+                            nq_.append(("normal.raw." + nm, newValue))
 
                             interpolateNormal(iVarId, oTime, mea,
                                               mapVarIdToHistory_, nq_, bq_,
@@ -866,9 +866,9 @@ def evaInit(args): # {{{
         "bstate.reflection.twovalFromBitA",
         "bstate.rise.twovalFromBitA",
         "bstate.fall.twovalFromBitA",
-        "normal.clipnorm.normFromIntegerA",
-        "normal.clipnorm.normFromRealA",
-        "normal.clipnorm.normFromRealB",
+        "normal.measure.normFromIntegerA",
+        "normal.measure.normFromRealA",
+        "normal.measure.normFromRealB",
     ]
     (bNames, bEvs), (rNames, rEvs) = eva.rdEvs(names, 1, 7)
     print("bNames", bNames)

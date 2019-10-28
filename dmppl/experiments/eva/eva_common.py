@@ -40,6 +40,7 @@ def initPaths(argsEvcPath): # {{{
     paths.fname_cfg = joinP(outdir, "config.toml")
     paths.fname_cln = joinP(outdir, "clean.vcd")
     paths.fname_mea = joinP(outdir, "measure.vcd")
+    paths.fname_meainfo = joinP(outdir, "measure.info.toml")
     paths.dname_mea = joinP(outdir, "measure")
 
     #module = inspect.stack()[-1][1]

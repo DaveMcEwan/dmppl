@@ -881,7 +881,7 @@ def evaInit(args): # {{{
     # VCD-to-VCD: extract, interpolate, clean
     meaVcd(eva.paths.fname_cln, evcx, eva.cfg)
     #vcdClean(eva.paths.fname_mea) # Reduce size of varIds
-    saveToml(evaVcdInfo(eva.paths.fname_mea), eva.paths.fname_mea + ".info.toml")
+    saveToml(evaVcdInfo(eva.paths.fname_mea), eva.paths.fname_meainfo)
 
     # VCD-to-binaries
     eva.meaDbFromVcd()

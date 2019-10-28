@@ -299,7 +299,7 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
 
     def sibHiThs(nm, xNotY, rowspan, values=None): # {{{
 
-        measureType, siblingType, measureName = eva.measureNameParts(nm)
+        measureType, siblingType, baseName = eva.measureNameParts(nm)
 
         siblings = \
             [eva.measureNameParts(s) \
@@ -490,7 +490,22 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
     return '\n'.join(r.strip() for r in ret)
 # }}} def tableHeaderRows
 
-def calculateTableData(f, g, u, x, y, cfg): # {{{
+def calculateTableData(f, g, u, x, y, cfg, measureNames): # {{{
+    '''Read in relevant portion of EVS and calculate values for table cells.
+
+    Relevant names:
+      varying u, fixed x, fixed y:
+          x siblings
+          y siblings
+      varying x or y, fixed u:
+          all
+
+    Relevant times:
+      varying u, fixed x, fixed y:
+          all
+      varying x or y, fixed u:
+          [u-bkdelta, u+windowsize+fwdelta)
+    '''
 
     fMetric = eva.metric(f, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
     gMetric = eva.metric(g, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits) \
@@ -504,15 +519,15 @@ def calculateTableData(f, g, u, x, y, cfg): # {{{
     # TODO
     xExSibs = None
     yExSibs = None
-    fXY = None
-    gXY = None
+    fnUXY = None
 
-    return xExSibs, yExSibs, fXY, gXY
+    return xExSibs, yExSibs, fnUXY
 # }}} def calculateTableData
 
-def tableDataRows(f, g, u, x, y, cfg): # {{{
+def tableDataRows(f, g, u, x, y, cfg, measureNames): # {{{
 
-    xExSibs, yExSibs, fXY, gXY = calculateTableData(f, g, u, x, y, cfg)
+    xExSibs, yExSibs, fnUXY = \
+        calculateTableData(f, g, u, x, y, cfg, measureNames)
 
     if gXY is not None:
         assert fXY.shape == gXY.shape, (fXY.shape, gXY.shape)
@@ -652,7 +667,10 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
         assert False, "Invalid combination of u,x,y." \
                       " (u=%s, x=%s, y=%s)" % (u, x, y)
 
-    measureNames = evcx.keys()
+    vcdInfo = toml.load(eva.paths.fname_meainfo)
+    measureNames = vcdInfo["unitIntervalVarNames"]
+    assert vcdInfo["timechunkTimes"][0] == 0, vcdInfo
+    lastTime = vcdInfo["timechunkTimes"][-1]
 
     # Every view varies delta - tables by horizontal, networks by edges.
     dsfDeltas = eva.cfgDsfDeltas(cfg) # [(<downsample factor>, <delta>), ...]
@@ -674,7 +692,7 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
 
         # TODO: Data rows.
         #body_.append(tableDataRows(f, g, u, x, y,
-        #                           cfg))
+        #                           cfg, measureNames))
 
         body_.append("</table>")
     else:

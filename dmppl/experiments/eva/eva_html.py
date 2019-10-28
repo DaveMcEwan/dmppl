@@ -6,6 +6,7 @@ import sys
 import time
 
 # PyPI library imports
+import toml
 
 # Local library imports
 from dmppl.base import dbg, info, verb, joinP, tmdiff, rdTxt
@@ -490,7 +491,7 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
     return '\n'.join(r.strip() for r in ret)
 # }}} def tableHeaderRows
 
-def calculateTableData(f, g, u, x, y, cfg, measureNames): # {{{
+def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, measureNames, lastTime): # {{{
     '''Read in relevant portion of EVS and calculate values for table cells.
 
     Relevant names:
@@ -507,27 +508,74 @@ def calculateTableData(f, g, u, x, y, cfg, measureNames): # {{{
           [u-bkdelta, u+windowsize+fwdelta)
     '''
 
+    # Read in all relevant data to one structure.
+    _names = (measureSiblings(x) + measureSiblings(y)) \
+        if u is None else measureNames
+    _timeStart = 0 if u is None else (u - cfg.bkdelta)
+    _timeFinish = (lastTime if u is None else (u + cfg.fwdelta)) + 1
+    evs = rdEvs(_names, _timeStart, _timeFinish, cfg.fxbits)
+
+    # Each row in evs is guaranteed to be of the same correct length.
+    for nm,row in evs.items():
+        assert nm in measureNames, (nm, measureNames)
+        assert row.shape == (_timeFinish - _timeStart,), \
+            (row.shape, _timeStart, _timeFinish)
+
     fMetric = eva.metric(f, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
     gMetric = eva.metric(g, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits) \
         if g is not None else None
 
-    ((xBNames, xBEvs), (xRNames, xREvs)), \
-    ((yBNames, yBEvs), (yRNames, yREvs)) = \
-        rdEvs(measureSiblings(x), u, u+cfg.windowsize, cfg.fxbits), \
-        rdEvs(measureSiblings(y), u, u+cfg.windowsize, cfg.fxbits)
+
+    nRows = len(measureNames) if u is None else lastTime
+    nDeltas = len(dsfDeltas)
+    nSibsMax = len(mapSiblingTypeToHtmlEntity.keys())
+    nSibsX = len(measureSiblings(x))
+    nSibsY = len(measureSiblings(y))
+
+    xExShape = (1 if x else nRows, nSibsX if x and y else nSibsMax)
+    yExShape = (1 if y else nRows, nSibsY if x and y else nSibsMax)
+    fnUXYShape = (nRows, nDeltas, 2 if g else 1)
+
+    # Each element in the tables (xEx, yEx) will contain a result:
+    # calculation with a view of data [startIdx:finishIdx].
+    #   Ex ( evs[X][startIdxX:finishIdxX] )
+    # ... Or similar for y.
+    # Each element in the table fnUXY will contain a result of:
+    #   f ( evs[X][startIdxX:finishIdxX], evs[Y][startIdxY:finishIdxY] )
+    # ... Or similar for g.
+
+    # TODO: Construct tables of the start and finish EVS indexes
+    # TODO: xExIdxs, yExIdxs, fnUXYIdxs
+    # For xEx each cell (rowNum, colNum) needs 3 values:
+    #  - X string
+    #  - startIdxX integer
+    #  - finishIdxX integer
+    # ... And the same for yEx.
+    #
+    # For fnUXY each cell (rowNum, colNum) needs 6 values:
+    #  - XKey::String
+    #  - startIdxX::Integer
+    #  - finishIdxX::Integer
+    #  - YKey::String
+    #  - startIdxY::Integer
+    #  - finishIdxY::Integer
+
+    mainXKeys = [[(x if x else nm) for _ in range(nDeltas)] for nm in measureNames]
+    if x is None:
+        assert len(measureNames) == nRows
 
     # TODO
-    xExSibs = None
-    yExSibs = None
+    xEx = None
+    yEx = None
     fnUXY = None
 
-    return xExSibs, yExSibs, fnUXY
+    return xEx, yEx, fnUXY
 # }}} def calculateTableData
 
-def tableDataRows(f, g, u, x, y, cfg, measureNames): # {{{
+def tableDataRows(f, g, u, x, y, cfg, dsfDeltas, measureNames, lastTime): # {{{
 
-    xExSibs, yExSibs, fnUXY = \
-        calculateTableData(f, g, u, x, y, cfg, measureNames)
+    xEx, yEx, fnUXY = \
+        calculateTableData(f, g, u, x, y, cfg, dsfDeltas, measureNames, lastTime)
 
     if gXY is not None:
         assert fXY.shape == gXY.shape, (fXY.shape, gXY.shape)
@@ -692,7 +740,7 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
 
         # TODO: Data rows.
         #body_.append(tableDataRows(f, g, u, x, y,
-        #                           cfg, measureNames))
+        #                           cfg, dsfDeltas, measureNames, lastTime))
 
         body_.append("</table>")
     else:

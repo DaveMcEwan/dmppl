@@ -385,7 +385,7 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
     assert isinstance(startTime, int), type(startTime)
     assert isinstance(finishTime, int), type(finishTime)
     assert startTime < finishTime, (startTime, finishTime)
-    assert 0 <= startTime, startTime
+    #assert 0 <= startTime, startTime # Effectively zext with -ve startTime.
     assert 1 <= finishTime, finishTime
     sIdx, fIdx = 0, finishTime - startTime
 

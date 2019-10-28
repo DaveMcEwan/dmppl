@@ -870,11 +870,8 @@ def evaInit(args): # {{{
         "normal.measure.normFromRealA",
         "normal.measure.normFromRealB",
     ]
-    (bNames, bEvs), (rNames, rEvs) = eva.rdEvs(names, 1, 7)
-    print("bNames", bNames)
-    print("rNames", rNames)
-    np.savetxt(joinP(eva.paths.outdir, "bEvs.txt"), bEvs, fmt='%d')
-    np.savetxt(joinP(eva.paths.outdir, "rEvs.txt"), rEvs, fmt='%0.03f')
+    evs = eva.rdEvs(names, 1, 7)
+    print("evs", evs)
 
     return 0
 # }}} def evaInit

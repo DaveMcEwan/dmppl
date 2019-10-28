@@ -467,7 +467,12 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
             if fxbits == 0 else fxFromFloat(prevValue, nBits=fxbits)
     # }}} infer/copy/fill rEvs
 
-    return (bNames, bEvs), (rNames, rEvs)
+    mapNameToDatarow = {nm: (bEvs if bNotR else rEvs)[i]
+                        for bNotR,i,nm in \
+                         ([(True,  i, nm) for i, nm in enumerate(bNames)] + \
+                          [(False, i, nm) for i, nm in enumerate(rNames)])}
+
+    return mapNameToDatarow
 # }}} def rdEvs
 
 mapMeasureTypeToSiblingTypes = {

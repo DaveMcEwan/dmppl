@@ -15,7 +15,7 @@ from dmppl.base import dbg, info, verb, \
                        mkDirP, joinP
 from dmppl.math import dotp, clipNorm, saveNpy
 from dmppl.toml import loadToml, saveToml
-from dmppl.vcd import VcdReader, VcdWriter, oneBitTypes
+from dmppl.vcd import VcdReader, VcdWriter, oneBitTypes, detypeVarName
 from dmppl.scripts.vcd_utils import vcdClean
 
 # Project imports
@@ -835,6 +835,32 @@ def meaVcd(instream, evcx, cfg): # {{{
     return
 # }}} def meaVcd
 
+def evaVcdInfo(fname): # {{{
+    '''Read in a VCD and return a dict of metadata.
+    '''
+    ret = {}
+    with VcdReader(fname) as vcdi:
+        #ret["varIds"]   = vcdi.varIds
+        #ret["varNames"] = vcdi.varNames
+        #ret["varSizes"] = vcdi.varSizes
+        #ret["varTypes"] = vcdi.varTypes
+        #ret["comment"] = vcdi.vcdComment
+        #ret["date"]    = vcdi.vcdDate
+        #ret["version"] = vcdi.vcdVersion
+        #ret["timescale"] = ' '.join(vcdi.vcdTimescale)
+
+        varNames = [detypeVarName(nm) for nm in vcdi.varNames]
+        ret["unitIntervalVarNames"] = \
+            [nm for nm in varNames if eva.isUnitIntervalMeasure(nm)]
+
+        ret["timechunkTimes"] = []
+        for tc in vcdi.timechunks:
+            newTime, changedVarIds, newValues = tc
+            ret["timechunkTimes"].append(newTime)
+
+    return ret
+# }}} def evaVcdInfo
+
 def evaInit(args): # {{{
     '''Read in EVC and VCD to create result directory like ./foo.eva/
     '''
@@ -855,6 +881,7 @@ def evaInit(args): # {{{
     # VCD-to-VCD: extract, interpolate, clean
     meaVcd(eva.paths.fname_cln, evcx, eva.cfg)
     #vcdClean(eva.paths.fname_mea) # Reduce size of varIds
+    saveToml(evaVcdInfo(eva.paths.fname_mea), eva.paths.fname_mea + ".info.toml")
 
     # VCD-to-binaries
     eva.meaDbFromVcd()

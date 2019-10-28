@@ -208,6 +208,28 @@ def meaDtype(name): # {{{
     return tp, strideBytes, structFmt
 # }}} def meaDtype
 
+def isUnitIntervalMeasure(name): # {{{
+    '''All VCD::bit signals in measure.vcd are usable, but of the VCD::real
+       signals, only normal.measure.* are usable.
+
+    Other VCD::real signals are not guaranteed to be in [0, 1].
+    '''
+    unitEventSiblings = ("measure",)
+    unitBstateSiblings = ("measure", "reflection", "rise", "fall",)
+    unitThresholdSiblings = ("measure", "reflection", "rise", "fall",)
+    unitNormalSiblings = ("measure",)
+
+    measureType, siblingType, baseName = measureNameParts(name)
+
+    ret = \
+        ("event" == measureType and siblingType in unitEventSiblings) or \
+        ("bstate" == measureType and siblingType in unitBstateSiblings) or \
+        ("threshold" == measureType and siblingType in unitThresholdSiblings) or \
+        ("normal" == measureType and siblingType in unitNormalSiblings)
+
+    return ret
+# }}} def isUnitIntervalMeasure
+
 def meaDbFromVcd(): # {{{
     '''Apply post-processing steps to stage0.
 
@@ -222,17 +244,6 @@ def meaDbFromVcd(): # {{{
         real: Ordered sequence of (timestamp, value) pairs.
             All values are 32b IEEE754 floats, OR 32b(zext) fx.
     '''
-
-    def usableMeasure(name): # {{{
-        '''All VCD::bit signals in measure.vcd are usable, but of the VCD::real
-           signals, only normal.measure.* are usable.
-
-        Other VCD::real signals are not guaranteed to be in [0, 1].
-        '''
-        return name.startswith("normal.measure.") \
-            if name.startswith("normal.") else True
-    # }}} def usableMeasure
-
     mkDirP(paths.dname_mea)
 
     with VcdReader(paths.fname_mea) as vcdi:
@@ -243,7 +254,7 @@ def meaDbFromVcd(): # {{{
                            for varId,nms in vcdi.mapVarIdToNames.items()}
         mapVarIdToName = {varId: nm \
                           for varId,nm in _mapVarIdToName.items() \
-                          if usableMeasure(nm)}
+                          if isUnitIntervalMeasure(nm)}
 
         fds = {nm: open(joinP(paths.dname_mea, nm), 'wb') \
              for varId,nm in mapVarIdToName.items()}
@@ -385,7 +396,7 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
         (meaSearch(nm, startTime) for nm in bNames), \
         (meaSearch(nm, startTime) for nm in rNames)
 
-    # Axis0 corresponds to order of names, which are also returned.
+    # Axis0 corresponds to order of names.
     bShape, rShape = \
         (len(bNames), fIdx), \
         (len(rNames), fIdx)
@@ -472,6 +483,9 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
                          ([(True,  i, nm) for i, nm in enumerate(bNames)] + \
                           [(False, i, nm) for i, nm in enumerate(rNames)])}
 
+    assert sorted(names) == sorted(mapNameToDatarow.keys()), \
+        (names, mapNameToDatarow.keys())
+
     return mapNameToDatarow
 # }}} def rdEvs
 
@@ -492,7 +506,7 @@ def measureNameParts(nm): # {{{
     nmParts = nm.split('.')
     assert 3 <= len(nmParts), nmParts
 
-    (measureType, siblingType), measureName = nmParts[:2], nmParts[2:]
+    (measureType, siblingType), baseNameParts = nmParts[:2], nmParts[2:]
 
     assert measureType in mapMeasureTypeToSiblingTypes.keys(), nm
 
@@ -501,7 +515,9 @@ def measureNameParts(nm): # {{{
     else:
         assert siblingType in mapMeasureTypeToSiblingTypes[measureType], nm
 
-    return measureType, siblingType, '.'.join(measureName)
+    baseName = '.'.join(baseNameParts)
+
+    return measureType, siblingType, baseName
 # }}} def measureNameParts
 
 def measureSiblings(nm): # {{{
@@ -516,9 +532,9 @@ def measureSiblings(nm): # {{{
     E.g: "event.measure.foo" -> ("event.measure.foo",)
     '''
 
-    measureType, siblingType, measureName = measureNameParts(nm)
+    measureType, siblingType, baseName = measureNameParts(nm)
 
-    siblings = tuple('.'.join([measureType, s, measureName]) \
+    siblings = tuple('.'.join([measureType, s, baseName]) \
                      for s in mapMeasureTypeToSiblingTypes[measureType])
 
     return siblings

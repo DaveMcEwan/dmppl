@@ -87,6 +87,7 @@ def loadEvcx(): # {{{
 # }}} def loadEvcx
 
 metricNames = [
+    "Ex",
     "Cex",
     "Cls",
     "Cos",
@@ -100,11 +101,15 @@ def metric(name, winSize, winAlpha, nBits=0): # {{{
 
     E.g. Use like: metric("foo")(x, y)
     '''
+    if name is None:
+        return None
+
     w = powsineCoeffs(winSize, winAlpha)
 
     assert 0 == nBits, "TODO: Implement fx*()"
     assert name in metricNames, name
     fs = {
+        "Ex":  partial(fxEx  if 0 < nBits else ndEx,  w, nBits=nBits),
         "Cex": partial(fxCex if 0 < nBits else ndCex, w, nBits=nBits),
         "Cls": partial(fxCls if 0 < nBits else ndCls, w, nBits=nBits),
         "Cos": partial(fxCos if 0 < nBits else ndCos, w, nBits=nBits),
@@ -298,7 +303,7 @@ def meaSearch(name, targetTime, precNotSucc=True): # {{{
 
     assert isinstance(name, str), type(name)
     assert isinstance(targetTime, int), type(targetTime)
-    assert 0 <= targetTime, targetTime
+    #assert 0 <= targetTime, targetTime # Allow negative times.
     assert isinstance(precNotSucc, bool)
 
     _, strideBytes, structFmt = meaDtype(name)
@@ -337,7 +342,7 @@ def meaSearch(name, targetTime, precNotSucc=True): # {{{
                 assert t_ == targetTime
                 break # Exact match
 
-            stepSize_ = (stepSize_ >> 1) if bisect_ else (stepSize_ << 1)
+            stepSize_ = (stepSize_ // 2) if bisect_ else (stepSize_ * 2)
 
             if 0 == stepSize_:
                 # No exact match exists
@@ -484,7 +489,7 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
                          ([(True,  i, nm) for i, nm in enumerate(bNames)] + \
                           [(False, i, nm) for i, nm in enumerate(rNames)])}
 
-    assert sorted(names) == sorted(mapNameToDatarow.keys()), \
+    assert sorted(names) == sorted(list(mapNameToDatarow.keys())), \
         (names, mapNameToDatarow.keys())
 
     return mapNameToDatarow
@@ -540,4 +545,25 @@ def measureSiblings(nm): # {{{
 
     return siblings
 # }}} def measureSiblings
+
+def winStartTimes(startTime, finishTime, winSize, winOverlap): # {{{
+    return list(range(startTime, finishTime, winSize - winOverlap))
+# }}} def winStartTimes
+
+def timeToEvsIdx(t, evsStartTime): # {{{
+    '''
+    Time:
+        u-#δ_bk      u                 u+winSize    u+#δfw
+    <-- ...|---------|---------------------|-----------|... -->
+
+           |< #δ_bk >|<      winSize      >|<   #δfw  >|
+
+       evsStartTime                               evsFinishTime
+
+    EVS index:
+           0        #δ_bk            #δ_bk+winSize
+           |---------|---------------------|-----------|
+    '''
+    return t - evsStartTime
+# }}} def timeToEvsIdx
 

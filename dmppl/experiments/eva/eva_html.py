@@ -1,16 +1,17 @@
 
 # Standard library imports
-from itertools import chain
+from itertools import chain, product
 import os
 import sys
 import time
 
 # PyPI library imports
 import toml
+import numpy as np
 
 # Local library imports
 from dmppl.base import dbg, info, verb, joinP, tmdiff, rdTxt
-from dmppl.color import rgb1D
+from dmppl.color import rgb1D, rgb2D
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
@@ -70,7 +71,7 @@ def popoverUl(ulTitle, links): # {{{
     return fmt.format(ulTitle=ulTitle, lis=''.join(lis)).strip()
 # }}} def popoverUl
 
-def htmlTopFmt(inlineJs=True, inlineCss=True): # {{{
+def htmlTopFmt(body, inlineJs=True, inlineCss=True): # {{{
     '''Return a string with HTML headers for JS and CSS.
     '''
 
@@ -100,7 +101,7 @@ def htmlTopFmt(inlineJs=True, inlineCss=True): # {{{
         '\n'.join(chain(jsTxts, cssTxts)),
         '  </head>',
         '  <body>',
-        '    {}',
+        '\n'.join(body),
         '  </body>',
         '</html>',
     )
@@ -206,9 +207,11 @@ def evaTitleAny(fn, u, x, y): # {{{
     return evaTitleFmt.format(fn=fn, x=x, y=y, u=u)
 # }}} def evaTitleAny
 
-def tableTitleRow(f, g, u, x, y, measureNames, dsfDeltas, winStride): # {{{
+def tableTitleRow(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
     '''Return a string with HTML <tr>.
     '''
+    measureNames = vcdInfo["unitIntervalVarNames"]
+    winStride = cfg.windowsize - cfg.windowoverlap
     nDeltas = len(dsfDeltas)
 
     # NOTE: u may be 0 --> Cannot use "if u".
@@ -290,12 +293,9 @@ mapSiblingTypeToHtmlEntity = {
     "fall":         "&#x2193;", # DOWNWARDS ARROW
 }
 
-def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
+def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
     '''Return a string with HTML one or more <tr>.
     '''
-    assert isinstance(rowVar, str), type(rowVar)
-    assert rowVar in ['u', 'x', 'y'], rowVar
-
     sibThTxtFmt = "E[%s]<sub>%s</sub>" # symbol, x/y
 
     def sibHiThs(nm, xNotY, rowspan, values=None): # {{{
@@ -312,8 +312,7 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
 
         if values is not None:
             assert isinstance(values, (list, tuple)), type(values)
-            #assert len(values) == len(siblings) # TODO: uncomment
-
+            assert len(values) == len(siblings)
 
         possibleClasses = ("sibsel", "th_d", "xsib" if xNotY else "ysib")
 
@@ -389,13 +388,9 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
         return ret
     # }}} sibLoThs
 
-    # TODO: Use proper values
-    sibValuesTODO_rm = [0.1, 0.2, 0.3, 0.4, 0.5]
-    xSibValues = sibValuesTODO_rm
-    ySibValues = sibValuesTODO_rm
-
     if x and y:
-        assert u is None and rowVar == 'u', (u, rowVar)
+        assert u is None, u
+        rowVar = 'u'
         #     +--------+--------+--------+--------+--------+--------+--------+--------+
         # hi  |        |        |        |        |        |        |        |        |
         #     + E[.]_x + E[¬]_x + E[↑]_x + E[↓]_x + E[.]_y + E[¬]_y + E[↑]_y + E[↓]_y +
@@ -406,13 +401,14 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
         # Span both rows.
 
         xSibHiThs, ySibHiThs = \
-            sibHiThs(x, True,  2, xSibValues), \
-            sibHiThs(y, False, 2, ySibValues)
+            sibHiThs(x, True,  2, None), \
+            sibHiThs(y, False, 2, None)
         xSibLoThs, ySibLoThs = [], []
 
     elif x:
         # x is constant but y is varying
-        assert y is None and rowVar == 'y', (y, rowVar)
+        assert y is None, y
+        rowVar = 'y'
 
         # 1. CASE: x has max number of siblings.
         #     +--------+--------+--------+--------+
@@ -432,12 +428,13 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
         #
         # NOTE: Values of x sibling's expectation by number and bgcolor.
 
-        xSibHiThs, ySibHiThs = sibHiThs(x, True, 1, xSibValues), []
+        xSibHiThs, ySibHiThs = sibHiThs(x, True, 1, exSibRow), []
         xSibLoThs, ySibLoThs = [], sibLoThs(False)
 
     elif y:
         # y is constant but x is varying
-        assert x is None and rowVar == 'x', (x, rowVar)
+        assert x is None, x
+        rowVar = 'x'
 
         # 1. CASE: y has max number of siblings.
         #     +--------+--------+--------+--------+
@@ -457,7 +454,7 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
         #
         # NOTE: Values of y sibling's expectation by number and bgcolor.
 
-        xSibHiThs, ySibHiThs = [], sibHiThs(y, False, 1, ySibValues)
+        xSibHiThs, ySibHiThs = [], sibHiThs(y, False, 1, exSibRow)
         xSibLoThs, ySibLoThs = sibLoThs(True), []
 
     else:
@@ -491,7 +488,7 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, rowVar): # {{{
     return '\n'.join(r.strip() for r in ret)
 # }}} def tableHeaderRows
 
-def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, measureNames, lastTime): # {{{
+def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
     '''Read in relevant portion of EVS and calculate values for table cells.
 
     Relevant names:
@@ -505,134 +502,182 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, measureNames, lastTime): #
       varying u, fixed x, fixed y:
           all
       varying x or y, fixed u:
-          [u-bkdelta, u+windowsize+fwdelta)
+          [u-deltabk, u+windowsize+deltafw)
     '''
+    measureNames = vcdInfo["unitIntervalVarNames"]
+
+    firstTime = vcdInfo["timechunkTimes"][0]
+    lastTime = vcdInfo["timechunkTimes"][-1]
+    evsStartTime = (firstTime if u is None else u) - cfg.deltabk
+    evsFinishTime = (lastTime if u is None else u + cfg.windowsize) + cfg.deltafw + 1
+
+    winUs = eva.winStartTimes(firstTime, lastTime,
+                                  cfg.windowsize, cfg.windowoverlap) \
+                if u is None else None
 
     # Read in all relevant data to one structure.
-    _names = (measureSiblings(x) + measureSiblings(y)) \
+    evsNames = (eva.measureSiblings(x) + eva.measureSiblings(y)) \
         if u is None else measureNames
-    _timeStart = 0 if u is None else (u - cfg.bkdelta)
-    _timeFinish = (lastTime if u is None else (u + cfg.fwdelta)) + 1
-    evs = rdEvs(_names, _timeStart, _timeFinish, cfg.fxbits)
+    evs = eva.rdEvs(evsNames, evsStartTime, evsFinishTime, cfg.fxbits)
 
     # Each row in evs is guaranteed to be of the same correct length.
     for nm,row in evs.items():
         assert nm in measureNames, (nm, measureNames)
-        assert row.shape == (_timeFinish - _timeStart,), \
-            (row.shape, _timeStart, _timeFinish)
+        assert row.shape == (evsFinishTime - evsStartTime,), \
+            (row.shape, evsStartTime, evsFinishTime)
 
-    fMetric = eva.metric(f, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
-    gMetric = eva.metric(g, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits) \
-        if g is not None else None
+    fMetric, gMetric = \
+        eva.metric(f, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits), \
+        eva.metric(g, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
+    fns = (fMetric, gMetric,) if g else (fMetric,)
+    nFns = len(fns)
 
+    nRows = len(winUs) if u is None else len(measureNames)
+    nCols = len(dsfDeltas) # Columns in fnUXY, not the sibling sections.
+    fnUXYShape = (nFns, nRows, nCols)
 
-    nRows = len(measureNames) if u is None else lastTime
-    nDeltas = len(dsfDeltas)
-    nSibsMax = len(mapSiblingTypeToHtmlEntity.keys())
-    nSibsX = len(measureSiblings(x))
-    nSibsY = len(measureSiblings(y))
+    # All result arrays have the same dtype.
+    dtype = np.float32 if 0 == cfg.fxbits else fxDtype(cfg.fxbits)
 
-    xExShape = (1 if x else nRows, nSibsX if x and y else nSibsMax)
-    yExShape = (1 if y else nRows, nSibsY if x and y else nSibsMax)
-    fnUXYShape = (nRows, nDeltas, 2 if g else 1)
+    # Allocate then fill main result array.
+    # TODO: parallelize by n_jobs
+    fnUXY = np.empty(fnUXYShape, dtype=dtype)
+    fnUXYIter = product(range(nFns), range(nRows), range(nCols))
+    for fnNum,rowNum,colNum in fnUXYIter:
 
-    # Each element in the tables (xEx, yEx) will contain a result:
-    # calculation with a view of data [startIdx:finishIdx].
-    #   Ex ( evs[X][startIdxX:finishIdxX] )
-    # ... Or similar for y.
-    # Each element in the table fnUXY will contain a result of:
-    #   f ( evs[X][startIdxX:finishIdxX], evs[Y][startIdxY:finishIdxY] )
-    # ... Or similar for g.
+        dsf, delta = dsfDeltas[colNum]
 
-    # TODO: Construct tables of the start and finish EVS indexes
-    # TODO: xExIdxs, yExIdxs, fnUXYIdxs
-    # For xEx each cell (rowNum, colNum) needs 3 values:
-    #  - X string
-    #  - startIdxX integer
-    #  - finishIdxX integer
-    # ... And the same for yEx.
-    #
-    # For fnUXY each cell (rowNum, colNum) needs 6 values:
-    #  - XKey::String
-    #  - startIdxX::Integer
-    #  - finishIdxX::Integer
-    #  - YKey::String
-    #  - startIdxY::Integer
-    #  - finishIdxY::Integer
+        keyX, keyY = \
+            (x if x else measureNames[rowNum]), \
+            (y if y else measureNames[rowNum])
 
-    mainXKeys = [[(x if x else nm) for _ in range(nDeltas)] for nm in measureNames]
-    if x is None:
-        assert len(measureNames) == nRows
+        # When u is varying, each row selects a window.
+        # When u is fixed, evs only holds data for that window
+        startIdxX = eva.timeToEvsIdx(winUs[rowNum] if u is None else u,
+                                     evsStartTime)
+        startIdxY = startIdxX + delta
 
-    # TODO
-    xEx = None
-    yEx = None
-    fnUXY = None
+        finishIdxX, finishIdxY = \
+            (startIdxX + cfg.windowsize), \
+            (startIdxY + cfg.windowsize)
 
-    return xEx, yEx, fnUXY
+        evsX, evsY = \
+            evs[keyX][startIdxX:finishIdxX], \
+            evs[keyY][startIdxY:finishIdxY]
+
+        fnUXY[fnNum][rowNum][colNum] = fns[fnNum](evsX, evsY)
+
+    expectation = eva.metric("Ex", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
+
+    def sibEx(s): # {{{
+        '''Allocate then fill a sibling expectation array.
+
+        s should be either x or y
+        '''
+        assert s in [x, y], (s, x, y)
+
+        nRowsEx = 1 if s else nRows
+
+        nSibsMax = len(mapSiblingTypeToHtmlEntity.keys())
+        nColsEx = len(eva.measureSiblings(s)) if x and y else nSibsMax
+
+        arr = np.empty((nRowsEx, nColsEx), dtype=dtype)
+        sibExIter = product(range(nRowsEx), range(nColsEx))
+        for rowNum,colNum in sibExIter:
+
+            key = s if s else measureNames[rowNum]
+
+            startIdx = eva.timeToEvsIdx(winUs[rowNum] if u is None else u,
+                                        evsStartTime)
+            finishIdx = startIdx + cfg.windowsize
+
+            evsRow = evs[key][startIdx:finishIdx]
+
+            arr[rowNum][colNum] = expectation(evsRow)
+
+        return arr
+    # }}} def sibEx
+
+    xEx = sibEx(x)
+    yEx = sibEx(y)
+
+    varCol = winUs if u is None else measureNames
+
+    return xEx, yEx, fnUXY, varCol
 # }}} def calculateTableData
 
-def tableDataRows(f, g, u, x, y, cfg, dsfDeltas, measureNames, lastTime): # {{{
+def tdCellFnUXY(fnUXY, rowNum, colNum): # {{{
+    assert fnUXY.shape[0] in [1, 2], fnUXY.shape
+    is2D = fnUXY.shape[0] == 2
 
-    xEx, yEx, fnUXY = \
-        calculateTableData(f, g, u, x, y, cfg, dsfDeltas, measureNames, lastTime)
+    fValue = float(fnUXY[0][rowNum][colNum])
+    gValue = float(fnUXY[1][rowNum][colNum]) if is2D else None
 
-    if gXY is not None:
-        assert fXY.shape == gXY.shape, (fXY.shape, gXY.shape)
+    attrClass = 'class="%s"' % ' '.join(c for c in ("d",))
 
-    if x and y:
-        # x and y are constant, u is varying
-        assert u is None, (u,)
-        #     +--------+--------+--------+--------+--------+--------+--------+--------+
-        #     | E[.]_x | E[¬]_x | E[↑]_x | E[↓]_x | E[.]_y | E[¬]_y | E[↑]_y | E[↓]_y |
-        #     +--------+--------+--------+--------+--------+--------+--------+--------+
-        #
+    attrStyle = \
+        ('style="background-color:#%s"' % rgb2D(fValue, gValue)) \
+        if is2D else \
+        ('style="background-color:#%s"' % rgb1D(fValue))
 
-    elif x:
-        # x and u are constant, y is varying
-        assert y is None, (y,)
+    attrTitle = \
+        ('title="%0.02f,%0.02f"' % (fValue, gValue)) \
+        if is2D else \
+        ('title="%0.02f"' % (fValue))
 
-        # 1. CASE: y has max number of siblings.
-        #     +--------+--------+--------+--------+
-        #     | E[.]_y | E[¬]_y | E[↑]_y | E[↓]_y |
-        #     +--------+--------+--------+--------+
-        #
-        # 2. CASE: y has fewer siblings than max.
-        #     +--------+--------+--------+--------+
-        #     | E[.]_y |        |        |        |
-        #     +--------+--------+--------+--------+
+    attrs = ' '.join((attrClass, attrStyle, attrTitle))
 
-    elif y:
-        # y and u are constant, x is varying
-        assert x is None, (x,)
+    txt = \
+        ('%0.02f </br> %0.02f' % (fValue, gValue)) \
+        if is2D else \
+        ('%0.02f' % (fValue))
 
-        # 1. CASE: x has max number of siblings.
-        #     +--------+--------+--------+--------+
-        #     | E[.]_x | E[¬]_x | E[↑]_x | E[↓]_x |
-        #     +--------+--------+--------+--------+
-        #
-        # 2. CASE: x has fewer siblings than max.
-        #     +--------+--------+--------+--------+
-        #     | E[.]_x |        |        |        |
-        #     +--------+--------+--------+--------+
+    return '<td %s> %s </td>' % (attrs, txt)
+# }}} def tdCellFnUXY
 
-    else:
-        assert False
+def tdCellExSib(exSib, rowNum, colNum): # {{{
 
-    # TODO
+    value = float(exSib[rowNum][colNum])
 
-    def tableDataRow(row): # {{{
+    attrClass = 'class="%s"' % ' '.join(c for c in ("d",))
+    attrStyle = 'style="background-color:#%s"' % rgb1D(value)
+    attrTitle = 'title="%0.02f"' % value
+    attrs = ' '.join((attrClass, attrStyle, attrTitle))
+
+    txt = '%0.02f' % value
+
+    return '<td %s> %s </td>' % (attrs, txt)
+# }}} def tdCellExSib
+
+def tableDataRows(f, g, u, x, y, exSib, varCol, fnUXY): # {{{
+
+    assert exSib.shape[1] <= len(mapSiblingTypeToHtmlEntity.keys()), \
+        (exSib.shape, mapSiblingTypeToHtmlEntity)
+
+    assert fnUXY.shape[0] in [1, 2], \
+        fnUXY.shape
+
+    assert exSib.shape[0] == len(varCol) == fnUXY.shape[1], \
+        (exSib.shape, len(varCol), fnUXY.shape)
+    nRows = exSib.shape[0]
+
+    varTds = ['<td class="varying"> %s </td>' % str(v) for v in varCol]
+
+    def tableDataRow(rowNum): # {{{
+        sibTds = (tdCellExSib(exSib, rowNum, colNum) for colNum in range(exSib.shape[1]))
+        fnTds = (tdCellFnUXY(fnUXY, rowNum, colNum) for colNum in range(fnUXY.shape[2]))
+
         ret = (
             '<tr>',
-              '\n'.join(sibExTds),
-              varTd,
-              '\n'.join(fnTds),
+              ' '.join(sibTds),
+              varTds[rowNum],
+              ' '.join(fnTds),
             '</tr>',
         )
         return '\n'.join(ret)
     # }}} def tableDataRow
 
-    return '\n'.join(tableDataRow(row) for row in rows)
+    return '\n'.join(tableDataRow(rowNum) for rowNum in range(nRows))
 # }}} def tableDataRows
 
 def evaHtmlString(args, cfg, evcx, request): # {{{
@@ -677,12 +722,10 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     if u is None and isinstance(x, str) and isinstance(y, str):
         # Table varying u over rows, delta over columns
         tableNotNetwork = True
-        rowVar = 'u'
 
     elif isinstance(u, str) and x is None and y is None:
         # Network graph
         tableNotNetwork = False
-        rowVar = None # Not a table with rows.
 
         u = int(u)
         assert 0 <= u, u
@@ -690,7 +733,6 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     elif isinstance(u, str) and x is None and isinstance(y, str):
         # Table varying x over rows, delta over columns
         tableNotNetwork = True
-        rowVar = 'x'
 
         u = int(u)
         assert 0 <= u, u
@@ -698,7 +740,6 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     elif isinstance(u, str) and isinstance(x, str) and y is None:
         # Table varying y over rows, delta over columns
         tableNotNetwork = True
-        rowVar = 'y'
 
         u = int(u)
         assert 0 <= u, u
@@ -706,7 +747,6 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     elif isinstance(u, str) and isinstance(x, str) and isinstance(y, str):
         # Table row varying delta over columns
         tableNotNetwork = True
-        rowVar = None # Only one row.
 
         u = int(u)
         assert 0 <= u, u
@@ -716,31 +756,34 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
                       " (u=%s, x=%s, y=%s)" % (u, x, y)
 
     vcdInfo = toml.load(eva.paths.fname_meainfo)
-    measureNames = vcdInfo["unitIntervalVarNames"]
-    assert vcdInfo["timechunkTimes"][0] == 0, vcdInfo
-    lastTime = vcdInfo["timechunkTimes"][-1]
 
     # Every view varies delta - tables by horizontal, networks by edges.
     dsfDeltas = eva.cfgDsfDeltas(cfg) # [(<downsample factor>, <delta>), ...]
 
     body_ = []
     if tableNotNetwork:
-        winStride = cfg.windowsize - cfg.windowoverlap
+        xEx, yEx, fnUXY, varCol = \
+            calculateTableData(f, g, u, x, y,
+                               cfg, dsfDeltas, vcdInfo)
+
+        _exSibRow, exSib = (xEx, yEx) if x else (yEx, xEx)
+        assert _exSibRow.shape[0] == 1, _exSibRow.shape
+        exSibRow = [float(v) for v in _exSibRow[0]]
 
         body_.append(sliderControls())
         body_.append("<table>")
 
         # Top-most row with title (with nav popovers), and prev/next.
         body_.append(tableTitleRow(f, g, u, x, y,
-                                   measureNames, dsfDeltas, winStride))
+                                   cfg, dsfDeltas, vcdInfo))
 
         # Column headers with delta values. Both hi and lo rows.
         body_.append(tableHeaderRows(f, g, u, x, y,
-                                     dsfDeltas, rowVar))
+                                     dsfDeltas,
+                                     exSibRow))
 
-        # TODO: Data rows.
-        #body_.append(tableDataRows(f, g, u, x, y,
-        #                           cfg, dsfDeltas, measureNames, lastTime))
+        body_.append(tableDataRows(f, g, u, x, y,
+                                   exSib, varCol, fnUXY))
 
         body_.append("</table>")
     else:
@@ -749,7 +792,7 @@ def evaHtmlString(args, cfg, evcx, request): # {{{
     # Avoid inline JS or CSS for browser caching, but use for standalone files.
     inlineHead = (args.httpd_port == 0)
 
-    return htmlTopFmt(inlineHead, inlineHead).format('\n'.join(body_))
+    return htmlTopFmt(body_, inlineHead, inlineHead)
 # }}} def evaHtmlString
 
 class EvaHTMLException(Exception): # {{{

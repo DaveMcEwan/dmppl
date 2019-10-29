@@ -680,7 +680,7 @@ def tableDataRows(f, g, u, x, y, exSib, varCol, fnUXY): # {{{
     return '\n'.join(tableDataRow(rowNum) for rowNum in range(nRows))
 # }}} def tableDataRows
 
-def evaHtmlString(args, cfg, evcx, request): # {{{
+def evaHtmlString(args, cfg, request): # {{{
     '''Return a string of HTML.
 
     f     g     -->
@@ -800,17 +800,16 @@ class EvaHTMLException(Exception): # {{{
 # }}} class EvaHTMLException
 
 class EvaHTTPServer(HTTPServer): # {{{
-    def serve_forever(self, args, cfg, evcx):
+    def serve_forever(self, args, cfg):
         self.RequestHandlerClass.args = args
         self.RequestHandlerClass.cfg = cfg
-        self.RequestHandlerClass.evcx = evcx
         HTTPServer.serve_forever(self)
 # }}} class EvaHTTPServer
 
 class EvaHTTPRequestHandler(BaseHTTPRequestHandler): # {{{
 
     # These are initialized by EvaHTTPServer.serve_forever()
-    args, cfg, evcx = None, None, None
+    args, cfg = None, None
 
     def parseGetRequest(self, path): # {{{
         '''Parse and sanitize GET path.
@@ -873,7 +872,7 @@ class EvaHTTPRequestHandler(BaseHTTPRequestHandler): # {{{
 
             # Generate HTML string and send OK if inputs are valid.
             try:
-                response = evaHtmlString(self.args, self.cfg, self.evcx,
+                response = evaHtmlString(self.args, self.cfg,
                                          self.parseGetRequest(self.path))
 
                 self.send_response(200)
@@ -898,7 +897,7 @@ class EvaHTTPRequestHandler(BaseHTTPRequestHandler): # {{{
 
 # }}} class EvaHTTPRequestHandler
 
-def runHttpDaemon(args, cfg, evcx): # {{{
+def runHttpDaemon(args, cfg): # {{{
     '''Run local HTTP/HTML daemon serving data visualization pages on request.
     '''
 
@@ -910,7 +909,7 @@ def runHttpDaemon(args, cfg, evcx): # {{{
 
     try:
         tm_start = time.time()
-        httpd.serve_forever(args, cfg, evcx)
+        httpd.serve_forever(args, cfg)
     except KeyboardInterrupt:
         tm_stop = time.time()
         verb("Stopped HTTPD server [%s]" % \
@@ -926,17 +925,16 @@ def evaHtml(args): # {{{
 
     try:
         cfg = eva.loadCfg()
-        evcx = eva.loadEvcx()
 
         if 0 != args.httpd_port:
-            runHttpDaemon(args, cfg, evcx)
+            runHttpDaemon(args, cfg)
         else:
             request = {'f': args.f,
                        'g': args.g,
                        'u': args.u,
                        'x': args.x,
                        'y': args.y}
-            print(evaHtmlString(args, cfg, evcx, request))
+            print(evaHtmlString(args, cfg, request))
     except IOError as e:
         msg = "IOError: %s: %s\n" % (e.strerror, e.filename)
         sys.stderr.write(msg)

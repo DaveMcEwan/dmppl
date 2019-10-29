@@ -385,6 +385,7 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
     '''Read EVent Samples (sanitized data written by evaInit to
        foo.eva/measure/*) in [startTime, finishTime), and return as ndarrays.
     '''
+    names = set(names)
     assert initPathsDone
 
     assert isinstance(startTime, int), type(startTime)
@@ -489,7 +490,9 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
                          ([(True,  i, nm) for i, nm in enumerate(bNames)] + \
                           [(False, i, nm) for i, nm in enumerate(rNames)])}
 
-    assert sorted(names) == sorted(list(mapNameToDatarow.keys())), \
+    assert len(names) == len(mapNameToDatarow.keys()), \
+        (len(names), len(mapNameToDatarow.keys()))
+    assert sorted(list(names)) == sorted(list(mapNameToDatarow.keys())), \
         (names, mapNameToDatarow.keys())
 
     return mapNameToDatarow

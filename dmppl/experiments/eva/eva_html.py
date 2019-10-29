@@ -260,15 +260,15 @@ def tableTitleRow(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
         assert False # Checking already performed in evaHtmlString()
     fnPopover = popoverUl(fnDisplay(f, g), fnLinks)
 
-    xLinks = [evaLink(f, g, u, xNm, None,
-                      evaTitleText(f, g, u, xNm, None),
+    xLinks = [evaLink(f, g, u, xNm, y,
+                      evaTitleText(f, g, u, xNm, y),
                       escapeQuotes=True) \
               for xNm in measureNames \
               if xNm != x]
     xPopover = popoverUl(xDisplay(x), xLinks)
 
-    yLinks = [evaLink(f, g, u, None, yNm,
-                      evaTitleText(f, g, u, None, yNm),
+    yLinks = [evaLink(f, g, u, x, yNm,
+                      evaTitleText(f, g, u, x, yNm),
                       escapeQuotes=True) \
               for yNm in measureNames \
               if yNm != y]
@@ -463,10 +463,6 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
     hiSibThs = xSibHiThs + ySibHiThs
     loSibThs = xSibLoThs + ySibLoThs
 
-
-    # Sort by delta value, not by downsampling factor.
-    dsfDeltas.sort(key=lambda dsf_d: dsf_d[1])
-
     nDeltas = len(dsfDeltas)
     nLeftDeltas, nRightDeltas = nDeltas // 2, nDeltas // 2 - 1
     deltaThs = ('<th class="th_d">%d</th>' % d for dsf,d in dsfDeltas)
@@ -509,7 +505,9 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
     firstTime = vcdInfo["timechunkTimes"][0]
     lastTime = vcdInfo["timechunkTimes"][-1]
     evsStartTime = (firstTime if u is None else u) - cfg.deltabk
-    evsFinishTime = (lastTime if u is None else u + cfg.windowsize) + cfg.deltafw + 1
+    evsFinishTime = (max(lastTime, firstTime + cfg.windowsize) \
+                     if u is None else \
+                     u + cfg.windowsize) + cfg.deltafw + 1
 
     winUs = eva.winStartTimes(firstTime, lastTime,
                                   cfg.windowsize, cfg.windowoverlap) \
@@ -546,6 +544,8 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
     for fnNum,rowNum,colNum in fnUXYIter:
 
         dsf, delta = dsfDeltas[colNum]
+        assert isinstance(dsf, int), type(dsf)
+        assert isinstance(delta, int), type(delta)
 
         keyX, keyY = \
             (x if x else measureNames[rowNum]), \
@@ -556,14 +556,21 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
         startIdxX = eva.timeToEvsIdx(winUs[rowNum] if u is None else u,
                                      evsStartTime)
         startIdxY = startIdxX + delta
+        assert isinstance(startIdxX, int), type(startIdxX)
+        assert isinstance(startIdxY, int), type(startIdxY)
+        assert 0 <= startIdxX, startIdxX
+        assert 0 <= startIdxY, startIdxY
 
         finishIdxX, finishIdxY = \
             (startIdxX + cfg.windowsize), \
             (startIdxY + cfg.windowsize)
+        assert startIdxX < finishIdxX, (startIdxX, finishIdxX)
+        assert startIdxY < finishIdxY, (startIdxY, finishIdxY)
 
         evsX, evsY = \
             evs[keyX][startIdxX:finishIdxX], \
             evs[keyY][startIdxY:finishIdxY]
+        assert evsX.shape == evsY.shape, (evsX.shape, evsY.shape)
 
         fnUXY[fnNum][rowNum][colNum] = fns[fnNum](evsX, evsY)
 
@@ -651,8 +658,12 @@ def tdCellExSib(exSib, rowNum, colNum): # {{{
 
 def tableDataRows(f, g, u, x, y, exSib, varCol, fnUXY): # {{{
 
-    assert exSib.shape[1] <= len(mapSiblingTypeToHtmlEntity.keys()), \
-        (exSib.shape, mapSiblingTypeToHtmlEntity)
+    if x and y:
+      assert exSib.shape[1] <= 2*len(mapSiblingTypeToHtmlEntity.keys()), \
+          (exSib.shape, mapSiblingTypeToHtmlEntity)
+    else:
+      assert exSib.shape[1] <= len(mapSiblingTypeToHtmlEntity.keys()), \
+          (exSib.shape, mapSiblingTypeToHtmlEntity)
 
     assert fnUXY.shape[0] in [1, 2], \
         fnUXY.shape
@@ -668,7 +679,7 @@ def tableDataRows(f, g, u, x, y, exSib, varCol, fnUXY): # {{{
         fnTds = (tdCellFnUXY(fnUXY, rowNum, colNum) for colNum in range(fnUXY.shape[2]))
 
         ret = (
-            '<tr>',
+            '<tr class="data">',
               ' '.join(sibTds),
               varTds[rowNum],
               ' '.join(fnTds),
@@ -760,13 +771,21 @@ def evaHtmlString(args, cfg, request): # {{{
     # Every view varies delta - tables by horizontal, networks by edges.
     dsfDeltas = eva.cfgDsfDeltas(cfg) # [(<downsample factor>, <delta>), ...]
 
+    # Sort by delta value, not by downsampling factor.
+    dsfDeltas.sort(key=lambda dsf_d: dsf_d[1])
+
     body_ = []
     if tableNotNetwork:
         xEx, yEx, fnUXY, varCol = \
             calculateTableData(f, g, u, x, y,
                                cfg, dsfDeltas, vcdInfo)
 
-        _exSibRow, exSib = (xEx, yEx) if x else (yEx, xEx)
+        _exSibRow, exSib = \
+            (np.empty((1, 0)),
+             np.concatenate((xEx, yEx), axis=1)) if x and y else \
+            (xEx, yEx) if x else \
+            (yEx, xEx)
+
         assert _exSibRow.shape[0] == 1, _exSibRow.shape
         exSibRow = [float(v) for v in _exSibRow[0]]
 

@@ -87,7 +87,6 @@ def loadEvcx(): # {{{
 # }}} def loadEvcx
 
 metricNames = [
-    "Ex",
     "Cex",
     "Cls",
     "Cos",
@@ -100,6 +99,9 @@ def metric(name, winSize, winAlpha, nBits=0): # {{{
     '''Take attributes of a metric, return a callable implementation.
 
     E.g. Use like: metric("foo")(x, y)
+
+    NOTE: Ex isn't really a metric but it's a convenient place to choose between
+    implementations by nBits.
     '''
     if name is None:
         return None
@@ -107,7 +109,7 @@ def metric(name, winSize, winAlpha, nBits=0): # {{{
     w = powsineCoeffs(winSize, winAlpha)
 
     assert 0 == nBits, "TODO: Implement fx*()"
-    assert name in metricNames, name
+    assert name in metricNames or name in ["Ex"], name
     fs = {
         "Ex":  partial(fxEx  if 0 < nBits else ndEx,  w, nBits=nBits),
         "Cex": partial(fxCex if 0 < nBits else ndCex, w, nBits=nBits),

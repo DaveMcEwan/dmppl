@@ -732,11 +732,15 @@ def tableDataRows(f, g, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
 
         if timesNotNames:
             ret = ['<td class="varying"> %s </td>' % str(v) for v in values]
-        else: # TODO: Represent measureType.siblingType compactly.
-            ret = ['<td class="varying"> %s </td>' % str(v) for v in values]
+        else: # Represent measureType.siblingType compactly.
+            nmParts = [eva.measureNameParts(v) for v in values]
+            spanFmt = '<span class="%s">%s</span> %s'
+            compacts = [spanFmt % (mt, mapSiblingTypeToHtmlEntity[st], bn) \
+                        for mt,st,bn in nmParts]
+            ret = ['<td class="varying"> %s </td>' % c for c in compacts]
 
         return ret
-    # }}} def varColOfMeasureNames
+    # }}} def varColTds
 
     varTds = varColTds(varCol, (u is None))
 

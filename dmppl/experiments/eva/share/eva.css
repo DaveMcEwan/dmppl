@@ -68,7 +68,6 @@ td.sidelabel {
 tr.data > td {
     border-radius: 5px;
     border: 1px solid white;
-    text-align: center;
     padding: 0;
 }
 
@@ -95,6 +94,7 @@ td.d {
     width: 20px;
     max-width: 20px;
     */
+    text-align: center;
 }
 
 td.significant {
@@ -118,4 +118,20 @@ td.invisible {
 div.controls {
     float: right;
     width: 14em;
+}
+
+td.varying > span.event {
+    background-color: white;
+}
+
+td.varying > span.bstate {
+    background-color: blue;
+}
+
+td.varying > span.threshold {
+    background-color: red;
+}
+
+td.varying > span.normal {
+    background-color: black;
 }

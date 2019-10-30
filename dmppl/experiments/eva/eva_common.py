@@ -514,13 +514,6 @@ mapMeasureTypeToSiblingTypes = {
     "normal":    ("measure",),
 }
 
-mapMeasureTypeToColor = {
-    "event":     "white",
-    "bstate":    "blue",
-    "threshold": "red",
-    "normal":    "black",
-}
-
 def measureNameParts(nm): # {{{
     '''Take a measurement name and return the measure type and sibling type.
 

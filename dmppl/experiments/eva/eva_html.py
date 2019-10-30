@@ -718,7 +718,9 @@ def tableDataRows(f, g, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
     varTds = ['<td class="varying"> %s </td>' % str(v) for v in varCol]
 
     def tableDataRow(rowNum): # {{{
-        rowNSibs = len(eva.measureSiblings(measureNames[rowNum]))
+        rowNSibs = len(eva.measureSiblings(measureNames[rowNum])) \
+                   if u else 2*nSibsMax
+
         sibTds = (tdCellExSib(exSib, rowNum, colNum, rowNSibs) \
                   for colNum in range(exSib.shape[1]))
 

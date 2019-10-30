@@ -728,7 +728,17 @@ def tableDataRows(f, g, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
         (exSib.shape, len(varCol), fnUXY.shape)
     nRows = exSib.shape[0]
 
-    varTds = ['<td class="varying"> %s </td>' % str(v) for v in varCol]
+    def varColTds(values, timesNotNames): # {{{
+
+        if timesNotNames:
+            ret = ['<td class="varying"> %s </td>' % str(v) for v in values]
+        else: # TODO: Represent measureType.siblingType compactly.
+            ret = ['<td class="varying"> %s </td>' % str(v) for v in values]
+
+        return ret
+    # }}} def varColOfMeasureNames
+
+    varTds = varColTds(varCol, (u is None))
 
     def tableDataRow(rowNum): # {{{
         rowNSibs = 2*nSibsMax \

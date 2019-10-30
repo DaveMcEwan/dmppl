@@ -508,10 +508,17 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
 # }}} def rdEvs
 
 mapMeasureTypeToSiblingTypes = {
-    "event": ("measure",),
-    "bstate": ("measure", "reflection", "rise", "fall",),
+    "event":     ("measure",),
+    "bstate":    ("measure", "reflection", "rise", "fall",),
     "threshold": ("measure", "reflection", "rise", "fall",),
-    "normal": ("measure",),
+    "normal":    ("measure",),
+}
+
+mapMeasureTypeToColor = {
+    "event":     "white",
+    "bstate":    "blue",
+    "threshold": "red",
+    "normal":    "black",
 }
 
 def measureNameParts(nm): # {{{

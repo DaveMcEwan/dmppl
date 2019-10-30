@@ -764,20 +764,38 @@ def evaHtmlString(args, cfg, request): # {{{
 
     verb("{f,g}(x|y;u) <-- {%s,%s}(%s|%s;%s)" % (f, g, x, y, u))
 
+    # In debug mode (without `python -O`) assertions are caught before an
+    # Exception can be raised giving a 404.
     if f is None and isinstance(g, str):
         # 1D color
         assert g in eva.metricNames, g
+
+        if g not in eva.metricNames:
+            raise EvaHTMLException
+
         f, g = g, f
     elif isinstance(f, str) and g is None:
         # 1D color
         assert f in eva.metricNames, f
+
+        if f not in eva.metricNames:
+            raise EvaHTMLException
+
     elif isinstance(f, str) and isinstance(g, str):
         # 2D color
         assert f in eva.metricNames, f
         assert g in eva.metricNames, g
+
+        if f not in eva.metricNames:
+            raise EvaHTMLException
+
+        if g not in eva.metricNames:
+            raise EvaHTMLException
+
     else:
         assert False, "At least one of f,g must be string of function name." \
                       " (f%s=%s, g%s=%s)" % (type(f), f, type(g), g)
+        raise EvaHTMLException
 
     if u is None and isinstance(x, str) and isinstance(y, str):
         # Table varying u over rows, delta over columns
@@ -790,12 +808,18 @@ def evaHtmlString(args, cfg, request): # {{{
         u = int(u)
         assert 0 <= u, u
 
+        if 0 > u:
+            raise EvaHTMLException
+
     elif isinstance(u, str) and x is None and isinstance(y, str):
         # Table varying x over rows, delta over columns
         tableNotNetwork = True
 
         u = int(u)
         assert 0 <= u, u
+
+        if 0 > u:
+            raise EvaHTMLException
 
     elif isinstance(u, str) and isinstance(x, str) and y is None:
         # Table varying y over rows, delta over columns
@@ -804,16 +828,23 @@ def evaHtmlString(args, cfg, request): # {{{
         u = int(u)
         assert 0 <= u, u
 
-    elif isinstance(u, str) and isinstance(x, str) and isinstance(y, str):
-        # Table row varying delta over columns
-        tableNotNetwork = True
+        if 0 > u:
+            raise EvaHTMLException
 
-        u = int(u)
-        assert 0 <= u, u
+    #elif isinstance(u, str) and isinstance(x, str) and isinstance(y, str):
+    #    # Table row varying delta over columns
+    #    tableNotNetwork = True
+    #
+    #    u = int(u)
+    #    assert 0 <= u, u
+    #
+    #    if 0 > u:
+    #        raise EvaHTMLException
 
     else:
         assert False, "Invalid combination of u,x,y." \
                       " (u=%s, x=%s, y=%s)" % (u, x, y)
+        raise EvaHTMLException
 
     vcdInfo = toml.load(eva.paths.fname_meainfo)
 

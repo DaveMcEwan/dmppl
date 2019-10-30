@@ -499,6 +499,11 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
     assert sorted(list(names)) == sorted(list(mapNameToDatarow.keys())), \
         (names, mapNameToDatarow.keys())
 
+    expectedLen = finishTime - startTime
+    for nm,row in mapNameToDatarow.items():
+        assert 1 == len(row.shape), (nm, row.shape)
+        assert expectedLen == row.shape[0], (nm, expectedLen, row.shape)
+
     return mapNameToDatarow
 # }}} def rdEvs
 

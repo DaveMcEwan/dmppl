@@ -509,19 +509,25 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
 
     firstTime = vcdInfo["timechunkTimes"][0]
     lastTime = vcdInfo["timechunkTimes"][-1]
-    evsStartTime = (firstTime if u is None else u) - cfg.deltabk
-    evsFinishTime = (max(lastTime, firstTime + cfg.windowsize) \
-                     if u is None else \
-                     u + cfg.windowsize) + cfg.deltafw + 1
 
     winUs = eva.winStartTimes(firstTime, lastTime,
-                                  cfg.windowsize, cfg.windowoverlap) \
+                              cfg.windowsize, cfg.windowoverlap) \
                 if u is None else None
+
+    evsStartTime = (firstTime if u is None else u) - cfg.deltabk
+    evsFinishTime = ((max(winUs[-1], firstTime) + cfg.windowsize) \
+                      if u is None else \
+                      u + cfg.windowsize) + cfg.deltafw + 1
 
     # Read in all relevant data to one structure.
     evsNames = (eva.measureSiblings(x) + eva.measureSiblings(y)) \
         if u is None else measureNames
     evs = eva.rdEvs(evsNames, evsStartTime, evsFinishTime, cfg.fxbits)
+
+    evsExpectedLen = evsFinishTime - evsStartTime # debug only
+    for nm,row in evs.items():
+        assert 1 == len(row.shape), (nm, row.shape)
+        assert evsExpectedLen == row.shape[0], (nm, evsExpectedLen, row.shape)
 
     # Each row in evs is guaranteed to be of the same correct length.
     for nm,row in evs.items():
@@ -561,21 +567,28 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
         startIdxX = eva.timeToEvsIdx(winUs[rowNum] if u is None else u,
                                      evsStartTime)
         startIdxY = startIdxX + delta
-        assert isinstance(startIdxX, int), type(startIdxX)
-        assert isinstance(startIdxY, int), type(startIdxY)
-        assert 0 <= startIdxX, startIdxX
-        assert 0 <= startIdxY, startIdxY
-
         finishIdxX, finishIdxY = \
             (startIdxX + cfg.windowsize), \
             (startIdxY + cfg.windowsize)
-        assert startIdxX < finishIdxX, (startIdxX, finishIdxX)
-        assert startIdxY < finishIdxY, (startIdxY, finishIdxY)
+
+        _idxs = (startIdxX, startIdxY, finishIdxX, finishIdxY)
+        assert all(isinstance(i, int) for i in _idxs), \
+            tuple(type(i) for i in _idxs)
+        assert 0 <= startIdxX < finishIdxX < evsExpectedLen, \
+            (startIdxX, finishIdxX, evsExpectedLen)
+        assert 0 <= startIdxY < finishIdxY < evsExpectedLen, \
+            (startIdxY, finishIdxY, evsExpectedLen)
+        assert cfg.windowsize == (finishIdxX - startIdxX), \
+            (cfg.windowsize, startIdxX, finishIdxX)
+        assert cfg.windowsize == (finishIdxY - startIdxY), \
+            (cfg.windowsize, startIdxY, finishIdxY)
 
         evsX, evsY = \
             evs[keyX][startIdxX:finishIdxX], \
             evs[keyY][startIdxY:finishIdxY]
-        assert evsX.shape == evsY.shape, (evsX.shape, evsY.shape)
+        assert 1 == len(evsX.shape) == len(evsY.shape), \
+            (evsX.shape, evsY.shape)
+        assert evsX.shape == evsY.shape, (evsX.shape, evsY.shape, startIdxX, finishIdxX)
 
         fnUXY[fnNum][rowNum][colNum] = fns[fnNum](evsX, evsY)
 

@@ -798,7 +798,16 @@ def evaHtmlString(args, cfg, request): # {{{
                       " (f%s=%s, g%s=%s)" % (type(f), f, type(g), g)
         raise EvaHTMLException
 
-    if u is None and isinstance(x, str) and isinstance(y, str):
+
+    vcdInfo = toml.load(eva.paths.fname_meainfo)
+
+    if u is None and x is None and y is None:
+        # Default values
+        tableNotNetwork = True
+        u = 0
+        x = vcdInfo["unitIntervalVarNames"][0]
+
+    elif u is None and isinstance(x, str) and isinstance(y, str):
         # Table varying u over rows, delta over columns
         tableNotNetwork = True
 
@@ -846,8 +855,6 @@ def evaHtmlString(args, cfg, request): # {{{
         assert False, "Invalid combination of u,x,y." \
                       " (u=%s, x=%s, y=%s)" % (u, x, y)
         raise EvaHTMLException
-
-    vcdInfo = toml.load(eva.paths.fname_meainfo)
 
     # Every view varies delta - tables by horizontal, networks by edges.
     dsfDeltas = eva.cfgDsfDeltas(cfg) # [(<downsample factor>, <delta>), ...]

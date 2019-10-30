@@ -10,6 +10,7 @@ import toml
 import numpy as np
 
 # Local library imports
+from dmppl.math import l2Norm
 from dmppl.base import dbg, info, verb, joinP, tmdiff, rdTxt
 from dmppl.color import rgb1D, rgb2D
 
@@ -659,7 +660,13 @@ def tdCellFnUXY(fnUXY, rowNum, colNum): # {{{
         if is2D else \
         ('title="%0.02f"' % (fValue))
 
-    attrs = ' '.join((attrClass, attrStyle, attrTitle))
+    # NOTE: L2norm is just for the slider controls which require a scalar.
+    attrValue = \
+        ('value="%0.06f"' % l2Norm(fValue, gValue)) \
+        if is2D else \
+        ('value="%0.06f"' % (fValue))
+
+    attrs = ' '.join((attrClass, attrStyle, attrTitle, attrValue))
 
     txt = \
         ('%0.02f </br> %0.02f' % (fValue, gValue)) \
@@ -682,8 +689,9 @@ def tdCellExSib(exSib, rowNum, colNum, rowNSibs): # {{{
     value = float(exSib[rowNum][colNum])
 
     attrStyle = 'style="background-color:#%s"' % rgb1D(value)
-    attrTitle = 'title="%0.02f"' % value
-    attrs = ' '.join((attrClass, attrStyle, attrTitle))
+    attrTitle = 'title="%0.06f"' % value
+    attrValue = 'value="%0.06f"' % value
+    attrs = ' '.join((attrClass, attrStyle, attrTitle, attrValue))
 
     txt = '%0.02f' % value
 

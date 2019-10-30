@@ -74,6 +74,15 @@ def clipNorm(x, lo=0.0, hi=1.0): # {{{
     return ret
 # }}} def clipNorm
 
+def l2Norm(*args): # {{{
+    '''Return the l2norm of all args.
+    '''
+    for x in args:
+        assert isinstance(x, (int, long, float))
+
+    return math.sqrt(sum([x**2 for x in args]))
+# }}} def l2Norm
+
 def int2base(x, base): # {{{
     '''Print a non-negative integer in a base from 2 to 36.
 

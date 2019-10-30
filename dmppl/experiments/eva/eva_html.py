@@ -583,20 +583,31 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
     def sibEx(s): # {{{
         '''Allocate then fill a sibling expectation array.
 
-        s should be either x or y
+        s must be either x or y
         '''
         assert s in [x, y], (s, x, y)
 
-        nRowsEx = 1 if s else nRows
+        siblings = eva.measureSiblings(s) if s else None
 
-        nSibsMax = len(mapSiblingTypeToHtmlEntity.keys())
-        nColsEx = len(eva.measureSiblings(s)) if x and y else nSibsMax
+        nRowsEx = 1 if s and not (x and y) else nRows
+        nColsEx = len(siblings) if s else nSibsMax
 
         arr = np.empty((nRowsEx, nColsEx), dtype=dtype)
         sibExIter = product(range(nRowsEx), range(nColsEx))
+
         for rowNum,colNum in sibExIter:
 
-            key = s if s else measureNames[rowNum]
+            if s:
+                key = siblings[colNum]
+            else:
+                rowSiblings = eva.measureSiblings(measureNames[rowNum])
+
+                # Some measures have less siblings.
+                if colNum < len(rowSiblings):
+                    key = rowSiblings[colNum]
+                else:
+                    # NOTE: The uninitialized value should never be used.
+                    continue
 
             startIdx = eva.timeToEvsIdx(winUs[rowNum] if u is None else u,
                                         evsStartTime)
@@ -613,6 +624,18 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
     yEx = sibEx(y)
 
     varCol = winUs if u is None else measureNames
+
+    if x and y:
+        assert xEx.shape == (nRows, len(eva.measureSiblings(x))), xEx.shape
+        assert yEx.shape == (nRows, len(eva.measureSiblings(y))), yEx.shape
+    elif x:
+        assert xEx.shape == (1, len(eva.measureSiblings(x))), xEx.shape
+        assert yEx.shape == (nRows, nSibsMax), yEx.shape
+    elif y:
+        assert xEx.shape == (nRows, nSibsMax), xEx.shape
+        assert yEx.shape == (1, len(eva.measureSiblings(y))), yEx.shape
+    else:
+        assert False
 
     return xEx, yEx, fnUXY, varCol
 # }}} def calculateTableData
@@ -646,21 +669,29 @@ def tdCellFnUXY(fnUXY, rowNum, colNum): # {{{
     return '<td %s> %s </td>' % (attrs, txt)
 # }}} def tdCellFnUXY
 
-def tdCellExSib(exSib, rowNum, colNum): # {{{
+def tdCellExSib(exSib, rowNum, colNum, rowNSibs): # {{{
+
+    fmt = '<td %s> %s </td>'
+    attrClass = 'class="%s"' % ' '.join(c for c in ("d",))
+
+    # Just a padding cell as this measure doesn't have the max number of
+    # siblings.
+    if colNum >= rowNSibs:
+        return fmt % (attrClass, '-')
 
     value = float(exSib[rowNum][colNum])
 
-    attrClass = 'class="%s"' % ' '.join(c for c in ("d",))
     attrStyle = 'style="background-color:#%s"' % rgb1D(value)
     attrTitle = 'title="%0.02f"' % value
     attrs = ' '.join((attrClass, attrStyle, attrTitle))
 
     txt = '%0.02f' % value
 
-    return '<td %s> %s </td>' % (attrs, txt)
+    return fmt % (attrs, txt)
 # }}} def tdCellExSib
 
-def tableDataRows(f, g, u, x, y, exSib, varCol, fnUXY): # {{{
+def tableDataRows(f, g, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
+    measureNames = vcdInfo["unitIntervalVarNames"]
 
     if x and y:
       assert exSib.shape[1] <= 2*nSibsMax, \
@@ -679,8 +710,12 @@ def tableDataRows(f, g, u, x, y, exSib, varCol, fnUXY): # {{{
     varTds = ['<td class="varying"> %s </td>' % str(v) for v in varCol]
 
     def tableDataRow(rowNum): # {{{
-        sibTds = (tdCellExSib(exSib, rowNum, colNum) for colNum in range(exSib.shape[1]))
-        fnTds = (tdCellFnUXY(fnUXY, rowNum, colNum) for colNum in range(fnUXY.shape[2]))
+        rowNSibs = len(eva.measureSiblings(measureNames[rowNum]))
+        sibTds = (tdCellExSib(exSib, rowNum, colNum, rowNSibs) \
+                  for colNum in range(exSib.shape[1]))
+
+        fnTds = (tdCellFnUXY(fnUXY, rowNum, colNum) \
+                 for colNum in range(fnUXY.shape[2]))
 
         ret = (
             '<tr class="data">',
@@ -806,6 +841,7 @@ def evaHtmlString(args, cfg, request): # {{{
                                      exSibRow))
 
         body_.append(tableDataRows(f, g, u, x, y,
+                                   vcdInfo,
                                    exSib, varCol, fnUXY))
 
         body_.append("</table>")

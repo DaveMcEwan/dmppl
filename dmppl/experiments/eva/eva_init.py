@@ -826,11 +826,12 @@ def meaVcd(instream, evcx, cfg): # {{{
             # Forward queue is speculative so a proper value from the current
             # timechunk will take precedence.
             # I.e. Always use the last appended change.
-            dedupVars = []
-            for nm,v in nq_:
-                dedupVars = appendNonDuplicate(dedupVars, (nm,v), replace=True)
-            nqChangedVars, nqNewValues = zip(*dedupVars)
-            vcdo.wrTimechunk((oTime, nqChangedVars, nqNewValues))
+            if 0 < len(nq_):
+                dedupVars = []
+                for nm,v in nq_:
+                    dedupVars = appendNonDuplicate(dedupVars, (nm,v), replace=True)
+                nqChangedVars, nqNewValues = zip(*dedupVars)
+                vcdo.wrTimechunk((oTime, nqChangedVars, nqNewValues))
 
     return
 # }}} def meaVcd

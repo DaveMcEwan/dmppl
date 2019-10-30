@@ -57,7 +57,7 @@ windowoverlap = 0
 
 # Positive integer.
 # Number of cycles to attempt shifting backwards.
-deltabk = 64
+deltabk = 32
 
 # Non-negative integer.
 # Number of cycles to attempt shifting forwards.

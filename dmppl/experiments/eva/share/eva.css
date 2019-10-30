@@ -27,7 +27,11 @@ th.tabletitle {
     text-align: left;
 }
 
-th.th_d {
+tr.th_hi > th {
+    font-size: 9px;
+}
+
+tr.th_lo > th {
     font-size: 9px;
     min-width: 20px;
     /*
@@ -78,6 +82,10 @@ td.varying {
     color: lime;
     text-align: left;
     padding: 0 5px 0 5px !important;
+}
+
+th.th_d {
+    color: lime;
 }
 
 td.d {

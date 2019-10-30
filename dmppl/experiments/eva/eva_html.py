@@ -360,7 +360,7 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
             ['' for _ in siblings]
 
 
-        padThs = ['<th class="th_d"></th>' \
+        padThs = ['<th></th>' \
                   for _ in range(nSibsMax - len(siblings)) \
                   if values is not None]
 
@@ -380,7 +380,7 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
                             'x' if xNotY else 'y') \
              for st in mapSiblingTypeToHtmlEntity.keys()]
 
-        classes = ("th_d", "xsib" if xNotY else "ysib")
+        classes = ("xsib" if xNotY else "ysib",)
 
         attrClasses = \
             ['class="%s"' % ' '.join(c for c in classes)
@@ -470,17 +470,17 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
 
     nDeltas = len(dsfDeltas)
     nLeftDeltas, nRightDeltas = nDeltas // 2, nDeltas // 2 - 1
-    deltaThs = ('<th class="th_d">%d</th>' % d for dsf,d in dsfDeltas)
+    deltaThs = ('<th>%d</th>' % d for dsf,d in dsfDeltas)
 
     ret = (
-        '<tr>',
+        '<tr class="th_hi">',
           '\n'.join(hiSibThs),
           ' <th class="varying" rowspan="2">%s</th>' % rowVar,
           ' <th colspan="%d"></th>' % nLeftDeltas,
           ' <th>&delta;</th>',
           ' <th colspan="%d"></th>' % nRightDeltas,
         '</tr>',
-        '<tr>',
+        '<tr class="th_lo">',
           '\n'.join(loSibThs),
           # varying spans both rows
           ''.join(deltaThs),

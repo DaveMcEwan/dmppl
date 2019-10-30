@@ -1,4 +1,6 @@
 
+# -*- coding: utf8 -*-
+
 # Standard library imports
 from functools import partial
 import inspect

@@ -292,6 +292,7 @@ mapSiblingTypeToHtmlEntity = {
     "rise":         "&#x2191;", # UPWARDS ARROW
     "fall":         "&#x2193;", # DOWNWARDS ARROW
 }
+nSibsMax = len(mapSiblingTypeToHtmlEntity.keys())
 
 def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
     '''Return a string with HTML one or more <tr>.
@@ -353,18 +354,21 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
              for fnm,txt in zip(sibNames, sibLinkTxts)]
 
         sibValueTxts = \
-            ['<br/> %0.02f' % v \
-             for v in values] if values is not None else \
+            ['<br/> %0.02f' % v for v in values] \
+            if values is not None else \
             ['' for _ in siblings]
 
 
+        padThs = ['<th class="th_d"></th>' \
+                  for _ in range(nSibsMax - len(siblings)) \
+                  if values is not None]
 
         fmt = '<th {attrs}> {partA} {partB} </th>'
-
         ret = [fmt.format(attrs=attrsStr, partA=linkStr, partB=valueStr) \
                for attrsStr,linkStr,valueStr in zip(sibAttrs,
                                                     sibLinks,
-                                                    sibValueTxts)]
+                                                    sibValueTxts)] + padThs
+
         return ret
     # }}} sibHiThs
 
@@ -401,8 +405,8 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
         # Span both rows.
 
         xSibHiThs, ySibHiThs = \
-            sibHiThs(x, True,  2, None), \
-            sibHiThs(y, False, 2, None)
+            sibHiThs(x, True,  2), \
+            sibHiThs(y, False, 2)
         xSibLoThs, ySibLoThs = [], []
 
     elif x:
@@ -428,7 +432,7 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
         #
         # NOTE: Values of x sibling's expectation by number and bgcolor.
 
-        xSibHiThs, ySibHiThs = sibHiThs(x, True, 1, exSibRow), []
+        xSibHiThs, ySibHiThs = sibHiThs(x, True, 1, values=exSibRow), []
         xSibLoThs, ySibLoThs = [], sibLoThs(False)
 
     elif y:
@@ -454,7 +458,7 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
         #
         # NOTE: Values of y sibling's expectation by number and bgcolor.
 
-        xSibHiThs, ySibHiThs = [], sibHiThs(y, False, 1, exSibRow)
+        xSibHiThs, ySibHiThs = [], sibHiThs(y, False, 1, values=exSibRow)
         xSibLoThs, ySibLoThs = sibLoThs(True), []
 
     else:
@@ -659,10 +663,10 @@ def tdCellExSib(exSib, rowNum, colNum): # {{{
 def tableDataRows(f, g, u, x, y, exSib, varCol, fnUXY): # {{{
 
     if x and y:
-      assert exSib.shape[1] <= 2*len(mapSiblingTypeToHtmlEntity.keys()), \
+      assert exSib.shape[1] <= 2*nSibsMax, \
           (exSib.shape, mapSiblingTypeToHtmlEntity)
     else:
-      assert exSib.shape[1] <= len(mapSiblingTypeToHtmlEntity.keys()), \
+      assert exSib.shape[1] <= nSibsMax, \
           (exSib.shape, mapSiblingTypeToHtmlEntity)
 
     assert fnUXY.shape[0] in [1, 2], \

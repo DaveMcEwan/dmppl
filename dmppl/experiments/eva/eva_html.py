@@ -336,7 +336,7 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
             ['' for _ in siblings]
 
         attrTitles = \
-            ['title="%0.02f"' % v \
+            ['title="%0.05f"' % v \
              for v in values] if values is not None else \
             ['' for _ in siblings]
 
@@ -669,15 +669,15 @@ def tdCellFnUXY(fnUXY, rowNum, colNum): # {{{
         ('style="background-color:#%s"' % rgb1D(fValue))
 
     attrTitle = \
-        ('title="%0.02f,%0.02f"' % (fValue, gValue)) \
+        ('title="%0.05f,%0.05f"' % (fValue, gValue)) \
         if is2D else \
-        ('title="%0.02f"' % (fValue))
+        ('title="%0.05f"' % (fValue))
 
     # NOTE: L2norm is just for the slider controls which require a scalar.
     attrValue = \
-        ('value="%0.06f"' % l2Norm(fValue, gValue)) \
+        ('value="%0.05f"' % l2Norm(fValue, gValue)) \
         if is2D else \
-        ('value="%0.06f"' % (fValue))
+        ('value="%0.05f"' % (fValue))
 
     attrs = ' '.join((attrClass, attrStyle, attrTitle, attrValue))
 
@@ -702,8 +702,8 @@ def tdCellExSib(exSib, rowNum, colNum, rowNSibs): # {{{
     value = float(exSib[rowNum][colNum])
 
     attrStyle = 'style="background-color:#%s"' % rgb1D(value)
-    attrTitle = 'title="%0.06f"' % value
-    attrValue = 'value="%0.06f"' % value
+    attrTitle = 'title="%0.05f"' % value
+    attrValue = 'value="%0.05f"' % value
     attrs = ' '.join((attrClass, attrStyle, attrTitle, attrValue))
 
     txt = '%0.02f' % value

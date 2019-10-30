@@ -758,20 +758,20 @@ def evaHtmlString(args, cfg, request): # {{{
     '''Return a string of HTML.
 
     f     g     -->
-    None  None  invalid
+    None  None  Default values
     None  Func  1D color, swap f,g
     Func  None  1D color
     Func  Func  2D color
 
     u     x     y     -->
     None  None  None  Default values
-    None  None  Metr  invalid
-    None  Metr  None  invalid
+    None  None  Metr  Default u
+    None  Metr  None  Default u
     None  Metr  Metr  Table varying u over rows, delta over columns
     Int   None  None  Network graph
     Int   None  Metr  Table varying x over rows, delta over columns
     Int   Metr  None  Table varying y over rows, delta over columns
-    Int   Metr  Metr  Table row varying delta over columns
+    Int   Metr  Metr  Ignore u
     '''
     f, g, u, x, y = \
         request['f'], request['g'], request['u'], request['x'], request['y']
@@ -780,7 +780,11 @@ def evaHtmlString(args, cfg, request): # {{{
 
     # In debug mode (without `python -O`) assertions are caught before an
     # Exception can be raised giving a 404.
-    if f is None and isinstance(g, str):
+    if f is None and g is None:
+        # Default values
+        f = eva.metricNames[0]
+
+    elif f is None and isinstance(g, str):
         # 1D color
         assert g in eva.metricNames, g
 
@@ -807,9 +811,7 @@ def evaHtmlString(args, cfg, request): # {{{
             raise EvaHTMLException
 
     else:
-        assert False, "At least one of f,g must be string of function name." \
-                      " (f%s=%s, g%s=%s)" % (type(f), f, type(g), g)
-        raise EvaHTMLException
+        assert False
 
 
     vcdInfo = toml.load(eva.paths.fname_meainfo)
@@ -823,6 +825,16 @@ def evaHtmlString(args, cfg, request): # {{{
     elif u is None and isinstance(x, str) and isinstance(y, str):
         # Table varying u over rows, delta over columns
         tableNotNetwork = True
+
+    elif u is None and (isinstance(x, str) or isinstance(y, str)):
+        # Default u
+        tableNotNetwork = True
+        u = 0
+
+    elif isinstance(u, str) and isinstance(x, str) and isinstance(y, str):
+        # Ignore u
+        tableNotNetwork = True
+        u = None
 
     elif isinstance(u, str) and x is None and y is None:
         # Network graph
@@ -854,20 +866,8 @@ def evaHtmlString(args, cfg, request): # {{{
         if 0 > u:
             raise EvaHTMLException
 
-    #elif isinstance(u, str) and isinstance(x, str) and isinstance(y, str):
-    #    # Table row varying delta over columns
-    #    tableNotNetwork = True
-    #
-    #    u = int(u)
-    #    assert 0 <= u, u
-    #
-    #    if 0 > u:
-    #        raise EvaHTMLException
-
     else:
-        assert False, "Invalid combination of u,x,y." \
-                      " (u=%s, x=%s, y=%s)" % (u, x, y)
-        raise EvaHTMLException
+        assert False
 
     # Every view varies delta - tables by horizontal, networks by edges.
     dsfDeltas = eva.cfgDsfDeltas(cfg) # [(<downsample factor>, <delta>), ...]

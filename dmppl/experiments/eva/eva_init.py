@@ -1,4 +1,6 @@
 
+# -*- coding: utf8 -*-
+
 # Standard library imports
 from itertools import groupby, product
 import os

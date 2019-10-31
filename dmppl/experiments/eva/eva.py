@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf8 -*-
 
 # EVent Analysis
 #
@@ -18,7 +19,7 @@ import shutil
 import sys
 
 # Local library imports
-from dmppl.base import run, verb
+from dmppl.base import run
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.

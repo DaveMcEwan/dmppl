@@ -7,6 +7,10 @@
 # Write directory is ./foo.eva/
 
 # TODO: Description and running instructions.
+# python eva.py -v init -i tst/basic2.vcd tst/basic2.evc
+# python eva.py -v httpd tst/basic2.evc
+# python eva.py -v init -i tst/probsys0_7k.vcd tst/basic2.evc
+# python eva.py -v httpd tst/probsys0_7k.evc
 
 # Standard library imports
 import argparse
@@ -20,7 +24,7 @@ from dmppl.base import run, verb
 # NOTE: Roundabout import path for eva_common necessary for unittest.
 import dmppl.experiments.eva.eva_common as eva
 from eva_init import evaInit
-from eva_html import evaHtml
+from eva_httpd import evaHttpd
 
 __version__ = eva.__version__
 
@@ -65,13 +69,6 @@ argparser_init.add_argument("-i", "--input",
     default=None,
     help="Input VCD file, STDIN if not supplied.")
 
-argparser_cov = subparsers.add_parser("cov",
-    help=("Apply Cov(X,Y) to EVent Samples."))
-
-argparser_dep = subparsers.add_parser("dep",
-    help=("Apply Dep(X,Y) to EVent Samples."))
-
-
 def argparseHttpdPort(s): # {{{
     p = int(s)
     if not (2**10 <= p < 2**16 or 0 == p):
@@ -82,44 +79,38 @@ def argparseHttpdPort(s): # {{{
     return p
 # }}} def argparseHttpdPort
 
-argparser_html = subparsers.add_parser("html",
+argparser_httpd = subparsers.add_parser("httpd",
     help=("Read in EVS files and serve HTML."))
 
-argparser_html.add_argument("-p", "--httpd-port",
+argparser_httpd.add_argument("-p", "--httpd-port",
     type=argparseHttpdPort,
     default=8080,
     help="TCP port for server. Use 0 for STDOUT.")
 
-# TODO: required?
-#argparser_html.add_argument("--vary",
-#    default='u',
-#    choices=['u', 'x', 'y'],
-#    help="f(x|y;...) OR f(...|y;u) OR f(x|...;u)")
-
 fgChoices = ["Cex", "Dep", "Cov", "Ham", "Tmt", "Cls", "Cos"]
-argparser_html.add_argument("-f",
+argparser_httpd.add_argument("-f",
     type=str,
     default="Dep",
     choices=fgChoices,
     help="Function f(x|y;u)")
 
-argparser_html.add_argument("-g",
+argparser_httpd.add_argument("-g",
     type=str,
     default=None,
     choices=fgChoices,
     help="Function g(x|y;u) for 2D colorspace (f, g)")
 
-argparser_html.add_argument("-x",
+argparser_httpd.add_argument("-x",
     type=str,
     default=None,
     help="String measurement name in f(x|y;u), e.g: event.measure.cacheMiss")
 
-argparser_html.add_argument("-y",
+argparser_httpd.add_argument("-y",
     type=str,
     default=None,
     help="String measurement name in f(x|y;u), e.g: bstate.rise.cpuIdle")
 
-argparser_html.add_argument("-u",
+argparser_httpd.add_argument("-u",
     type=str, # Int conversion performed later for consistency with HTTPD.
     default=None,
     help="Non-negative integer time in f(x|y;u), e.g. 9876")
@@ -136,10 +127,7 @@ def main(args): # {{{
 
     ret = {
         "init": evaInit,
-        #"cov":  evaCov,
-        #"dep":  evaDep,
-        "html": evaHtml,
-        #"net":  evaNet,
+        "httpd": evaHttpd,
     }[args.command](args)
 
     return ret

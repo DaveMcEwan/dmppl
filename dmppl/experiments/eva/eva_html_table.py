@@ -10,7 +10,7 @@ import numpy as np
 # Local library imports
 from dmppl.math import l2Norm
 from dmppl.base import dbg, info, verb, joinP, rdTxt
-from dmppl.color import rgb1D, rgb2D
+from dmppl.color import rgb1D, rgb2D, identiconSpriteSvg
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
@@ -651,6 +651,18 @@ def tdCellExSib(exSib, rowNum, colNum, rowNSibs): # {{{
     return fmt % (attrs, txt)
 # }}} def tdCellExSib
 
+def measureCompactHtml(name): # {{{
+    '''Return a compact representation of a measure name.
+
+    Identicon and symbol on colored background.
+    '''
+    spanFmt = '<span class="compact %s">%s%s</span>'
+
+    mt, st, bn = eva.measureNameParts(name)
+
+    return spanFmt % (mt, identiconSpriteSvg(bn), mapSiblingTypeToHtmlEntity[st])
+# }}} def measureCompactHtml
+
 def tableDataRows(f, g, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
     measureNames = vcdInfo["unitIntervalVarNames"]
 
@@ -674,10 +686,10 @@ def tableDataRows(f, g, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
             ret = ['<td class="varying"> %s </td>' % str(v) for v in values]
         else: # Represent measureType.siblingType compactly.
             nmParts = [eva.measureNameParts(v) for v in values]
-            spanFmt = '<span class="%s">%s</span> %s'
-            compacts = [spanFmt % (mt, mapSiblingTypeToHtmlEntity[st], bn) \
-                        for mt,st,bn in nmParts]
-            ret = ['<td class="varying"> %s </td>' % c for c in compacts]
+            compacts = [measureCompactHtml(v) for v in values]
+
+            ret = ['<td class="varying"> %s %s </td>' % (c, bn) \
+                   for c,(_,_,bn) in zip(compacts, nmParts)]
 
         return ret
     # }}} def varColTds

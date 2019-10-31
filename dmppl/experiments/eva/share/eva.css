@@ -120,18 +120,40 @@ div.controls {
     width: 14em;
 }
 
-td.varying > span.event {
+td.varying > span.compact {
+    display: inline-block;
+    height: 18px;
+    border: 1px solid lightcoral;
+    border-radius: 3px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.event {
+    color: #404040;
     background-color: white;
 }
 
-td.varying > span.bstate {
+.bstate {
+    color: lime;
     background-color: blue;
 }
 
-td.varying > span.threshold {
+.threshold {
+    color: lime;
     background-color: red;
 }
 
-td.varying > span.normal {
+.normal {
+    color: lime;
     background-color: black;
+}
+
+svg.identicon {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    vertical-align: middle;
+    margin: 0px 0px 5px 3px;
+    fill: darkgray; /* This could be set by measureType above. */
 }

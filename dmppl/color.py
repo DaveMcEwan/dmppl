@@ -133,6 +133,50 @@ def asciiart2dBool(x, t='#', f=' '): # {{{
     return '\n'.join((''.join([(t if r else f) for r in row])) for row in x)
 # }}} def asciiart2dBool
 
+def identiconSpriteSvg(x, nRows=5, nCols=5, classList=["identicon"]): # {{{
+    '''Take a stringable object x and produce an SVG of a sprite identicon.
+
+    nRows, nCols set the arrangement of squares comprising the sprite.
+
+    NOTE: CSS can be used to set colors.
+    '''
+
+    viewBoxWidth, viewBoxHeight = 100, 100
+
+    # 0,0 is top-left of 100x100 box
+    viewBoxMinX, viewBoxMinY = 0, 0
+
+    svgFmt = ' '.join((
+        '<svg',
+          'xmlns="http://www.w3.org/2000/svg"',
+          'xmlns:xlink="http://www.w3.org/1999/xlink"',
+          'viewBox="%d %d %d %d"' % (viewBoxMinX, viewBoxMinY, viewBoxWidth, viewBoxHeight),
+          'class="%s"' % ' '.join(classList),
+          '>',
+          '%s',
+        '</svg>',
+    ))
+
+    bitWidth, bitHeight = (viewBoxWidth / nCols), (viewBoxHeight / nRows)
+    rectFmt = ' '.join((
+        '<rect',
+          'class="bit"',
+          'width="%f"' % bitWidth,
+          'height="%f"' % bitHeight,
+          'x="%f"',
+          'y="%f"',
+          '/>',
+    ))
+
+    bits = identiconSprite(x, nRows=nRows, nCols=nCols)
+    bitPositions = [(c*bitWidth, r*bitHeight) \
+                    for r,bitRow in enumerate(bits) \
+                    for c,b in enumerate(bitRow) \
+                    if b]
+
+    return svgFmt % ''.join(rectFmt % (x,y) for x,y in bitPositions)
+# }}} def identiconSpriteSvg
+
 
 if __name__ == "__main__":
     assert False, "Not a standalone script."

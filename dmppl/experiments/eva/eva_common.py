@@ -579,3 +579,49 @@ def timeToEvsIdx(t, evsStartTime): # {{{
     return t - evsStartTime
 # }}} def timeToEvsIdx
 
+def evaLink(f, g, u, x, y, txt, escapeQuotes=False): # {{{
+    '''Return the link to a data view.
+    '''
+    assert f is None or isinstance(f, str), type(f)
+    assert g is None or isinstance(g, str), type(g)
+    if f is not None:
+        assert f in metricNames, f
+    if g is not None:
+        assert g in metricNames, g
+    assert f or g
+    assert u is None or isinstance(u, int), type(u)
+    assert x is None or isinstance(x, str), type(x)
+    assert y is None or isinstance(y, str), type(y)
+
+    assert isinstance(txt, str), type(txt)
+
+    parts_ = []
+
+    if f is not None:
+        parts_.append("f=" + str(f))
+
+    if g is not None:
+        parts_.append("g=" + str(g))
+
+    if u is not None:
+        parts_.append("u=" + str(u))
+
+    if x is not None:
+        parts_.append("x=" + str(x))
+
+    if y is not None:
+        parts_.append("y=" + str(y))
+
+    ret = (
+        '<a href=',
+        '&quot;' if escapeQuotes else '"',
+        './?',
+        '&'.join(parts_),
+        '&quot;' if escapeQuotes else '"',
+        '>',
+        str(txt),
+        '</a>',
+    )
+    return ''.join(ret)
+# }}} def evaLink
+

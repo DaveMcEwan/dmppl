@@ -2,7 +2,7 @@
 # -*- coding: utf8 -*-
 
 # Standard library imports
-from itertools import chain, product
+from itertools import product
 
 # PyPI library imports
 import numpy as np
@@ -15,7 +15,6 @@ from dmppl.color import rgb1D, rgb2D, identiconSpriteSvg
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
 import dmppl.experiments.eva.eva_common as eva
-from dmppl.experiments.eva.eva_httpd import evaLink
 
 def sliderControls(): # {{{
     ret = '''\
@@ -57,43 +56,6 @@ def popoverUl(ulTitle, links): # {{{
 '''
     return fmt.format(ulTitle=ulTitle, lis=''.join(lis)).strip()
 # }}} def popoverUl
-
-def htmlTopFmt(body, inlineJs=True, inlineCss=True): # {{{
-    '''Return a string with HTML headers for JS and CSS.
-    '''
-
-    fnamesJs = (joinP(eva.appPaths.share, fname) for fname in \
-                ("jquery-3.3.1.slim.min.js",
-                 "bootstrap-3.3.7.min.js",
-                 "eva.js"))
-
-    fnamesCss = (joinP(eva.appPaths.share, fname) for fname in \
-                 ("bootstrap-3.3.7.min.css",
-                  "eva.css"))
-
-    jsTxts = (('<script> %s </script>' % rdTxt(fname)) \
-              if inlineJs else \
-              ('<script type="text/javascript" src="%s"></script>' % fname)
-              for fname in fnamesJs)
-
-    cssTxts = (('<style> %s </style>' % rdTxt(fname)) \
-               if inlineCss else \
-               ('<link rel="stylesheet" type="text/css" href="%s">' % fname)
-               for fname in fnamesCss)
-
-    ret = (
-        '<!DOCTYPE html>',
-        '<html>',
-        '  <head>',
-        '\n'.join(chain(jsTxts, cssTxts)),
-        '  </head>',
-        '  <body>',
-        '\n'.join(body),
-        '  </body>',
-        '</html>',
-    )
-    return '\n'.join(r.strip() for r in ret)
-# }}} def htmlTopFmt
 
 def fnDisplay(f, g): # {{{
     assert f is None or isinstance(f, str), type(f)
@@ -172,45 +134,45 @@ def tableTitleRow(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
 
         navPrevNext = ' '.join((
             '<th class="nav_u" colspan="5">',
-            evaLink(f, g, u - winStride, x, y, "prev"),
-            evaLink(f, g, u + winStride, x, y, "next"),
+            eva.evaLink(f, g, u - winStride, x, y, "prev"),
+            eva.evaLink(f, g, u + winStride, x, y, "next"),
             '</th>',
         ))
 
     # NOTE: f and g must be valid strings containing name of measurement.
     if f and g:
-        fnLinks = [evaLink(fNm, gNm, u, x, y,
-                           evaTitleText(fNm, gNm, u, x, y),
-                           escapeQuotes=True) \
+        fnLinks = [eva.evaLink(fNm, gNm, u, x, y,
+                               evaTitleText(fNm, gNm, u, x, y),
+                               escapeQuotes=True) \
                    for fNm in eva.metricNames \
                    for gNm in eva.metricNames \
                    if fNm != f and gNm != g and fNm != gNm]
     elif f:
-        fnLinks = [evaLink(fNm, None, u, x, y,
-                           evaTitleText(fNm, None, u, x, y),
-                           escapeQuotes=True) \
+        fnLinks = [eva.evaLink(fNm, None, u, x, y,
+                               evaTitleText(fNm, None, u, x, y),
+                               escapeQuotes=True) \
                    for fNm in eva.metricNames \
                    if fNm != f]
     elif g:
-        fnLinks = [evaLink(None, gNm, u, x, y,
-                           evaTitleText(None, gNm, u, x, y),
-                           escapeQuotes=True) \
+        fnLinks = [eva.evaLink(None, gNm, u, x, y,
+                               evaTitleText(None, gNm, u, x, y),
+                               escapeQuotes=True) \
                    for gNm in eva.metricNames \
                    if gNm != g]
     else:
         assert False # Checking already performed in evaHtmlString()
     fnPopover = popoverUl(fnDisplay(f, g), fnLinks)
 
-    xLinks = [evaLink(f, g, u, xNm, y,
-                      evaTitleText(f, g, u, xNm, y),
-                      escapeQuotes=True) \
+    xLinks = [eva.evaLink(f, g, u, xNm, y,
+                          evaTitleText(f, g, u, xNm, y),
+                          escapeQuotes=True) \
               for xNm in measureNames \
               if xNm != x]
     xPopover = popoverUl(xDisplay(x), xLinks)
 
-    yLinks = [evaLink(f, g, u, x, yNm,
-                      evaTitleText(f, g, u, x, yNm),
-                      escapeQuotes=True) \
+    yLinks = [eva.evaLink(f, g, u, x, yNm,
+                          evaTitleText(f, g, u, x, yNm),
+                          escapeQuotes=True) \
               for yNm in measureNames \
               if yNm != y]
     yPopover = popoverUl(yDisplay(y), yLinks)
@@ -290,8 +252,8 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
              for mt,st,mn in siblings]
 
         sibLinks = \
-            [evaLink(f, g, u, fnm, y, txt) if xNotY else \
-             evaLink(f, g, u, x, fnm, txt) \
+            [eva.evaLink(f, g, u, fnm, y, txt) if xNotY else \
+             eva.evaLink(f, g, u, x, fnm, txt) \
              for fnm,txt in zip(sibNames, sibLinkTxts)]
 
         sibValueTxts = \
@@ -719,6 +681,32 @@ def tableDataRows(f, g, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
 
     return '\n'.join(tableDataRow(rowNum) for rowNum in range(nRows))
 # }}} def tableDataRows
+
+def htmlTable(f, g, u, x, y,
+              cfg, dsfDeltas, vcdInfo,
+              exSibRow, exSib, varCol, fnUXY): # {{{
+    ret_ = []
+    ret_.append(sliderControls())
+    ret_.append('<table>')
+
+    # Top-most row with title (with nav popovers), and prev/next.
+    ret_.append(tableTitleRow(f, g, u, x, y,
+                               cfg, dsfDeltas, vcdInfo))
+
+    # Column headers with delta values. Both hi and lo rows.
+    ret_.append(tableHeaderRows(f, g, u, x, y,
+                                 dsfDeltas,
+                                 exSibRow))
+
+    # Main data rows.
+    ret_.append(tableDataRows(f, g, u, x, y,
+                               vcdInfo,
+                               exSib, varCol, fnUXY))
+
+    ret_.append('</table>')
+
+    return ret_
+# }}} def htmlTable
 
 if __name__ == "__main__":
     assert False, "Not a standalone script."

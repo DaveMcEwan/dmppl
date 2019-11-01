@@ -2,6 +2,7 @@
 # -*- coding: utf8 -*-
 
 # Standard library imports
+from itertools import chain
 import os
 import sys
 import time
@@ -16,7 +17,8 @@ from dmppl.base import dbg, info, verb, joinP, tmdiff, rdTxt
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
 import dmppl.experiments.eva.eva_common as eva
-from dmppl.experiments.eva.eva_html_table import *
+from dmppl.experiments.eva.eva_html_table import calculateTableData, htmlTable
+from dmppl.experiments.eva.eva_svg_netgraph import calculateEdges, svgNetgraph
 
 # Version-specific imports
 version_help = "Python 2.7 or 3.4+ required."
@@ -35,51 +37,42 @@ class EvaHTMLException(Exception): # {{{
     pass
 # }}} class EvaHTMLException
 
-def evaLink(f, g, u, x, y, txt, escapeQuotes=False): # {{{
-    '''Return the link to a data view.
+def htmlTopFmt(body, inlineJs=True, inlineCss=True): # {{{
+    '''Return a string with HTML headers for JS and CSS.
     '''
-    assert f is None or isinstance(f, str), type(f)
-    assert g is None or isinstance(g, str), type(g)
-    if f is not None:
-        assert f in eva.metricNames, f
-    if g is not None:
-        assert g in eva.metricNames, g
-    assert f or g
-    assert u is None or isinstance(u, int), type(u)
-    assert x is None or isinstance(x, str), type(x)
-    assert y is None or isinstance(y, str), type(y)
 
-    assert isinstance(txt, str), type(txt)
+    fnamesJs = (joinP(eva.appPaths.share, fname) for fname in \
+                ("jquery-3.3.1.slim.min.js",
+                 "bootstrap-3.3.7.min.js",
+                 "eva.js"))
 
-    parts_ = []
+    fnamesCss = (joinP(eva.appPaths.share, fname) for fname in \
+                 ("bootstrap-3.3.7.min.css",
+                  "eva.css"))
 
-    if f is not None:
-        parts_.append("f=" + str(f))
+    jsTxts = (('<script> %s </script>' % rdTxt(fname)) \
+              if inlineJs else \
+              ('<script type="text/javascript" src="%s"></script>' % fname)
+              for fname in fnamesJs)
 
-    if g is not None:
-        parts_.append("g=" + str(g))
-
-    if u is not None:
-        parts_.append("u=" + str(u))
-
-    if x is not None:
-        parts_.append("x=" + str(x))
-
-    if y is not None:
-        parts_.append("y=" + str(y))
+    cssTxts = (('<style> %s </style>' % rdTxt(fname)) \
+               if inlineCss else \
+               ('<link rel="stylesheet" type="text/css" href="%s">' % fname)
+               for fname in fnamesCss)
 
     ret = (
-        '<a href=',
-        '&quot;' if escapeQuotes else '"',
-        './?',
-        '&'.join(parts_),
-        '&quot;' if escapeQuotes else '"',
-        '>',
-        str(txt),
-        '</a>',
+        '<!DOCTYPE html>',
+        '<html>',
+        '  <head>',
+        '\n'.join(chain(jsTxts, cssTxts)),
+        '  </head>',
+        '  <body>',
+        '\n'.join(body),
+        '  </body>',
+        '</html>',
     )
-    return ''.join(ret)
-# }}} def evaLink
+    return '\n'.join(r.strip() for r in ret)
+# }}} def htmlTopFmt
 
 def evaHtmlString(args, cfg, request): # {{{
     '''Return a string of HTML.
@@ -202,7 +195,6 @@ def evaHtmlString(args, cfg, request): # {{{
     # Sort by delta value, not by downsampling factor.
     dsfDeltas.sort(key=lambda dsf_d: dsf_d[1])
 
-    body_ = []
     if tableNotNetwork:
         xEx, yEx, fnUXY, varCol = \
             calculateTableData(f, g, u, x, y,
@@ -217,30 +209,19 @@ def evaHtmlString(args, cfg, request): # {{{
         assert _exSibRow.shape[0] == 1, _exSibRow.shape
         exSibRow = [float(v) for v in _exSibRow[0]]
 
-        body_.append(sliderControls())
-        body_.append("<table>")
+        body = htmlTable(f, g, u, x, y,
+                         cfg, dsfDeltas, vcdInfo,
+                         exSibRow, exSib, varCol, fnUXY)
 
-        # Top-most row with title (with nav popovers), and prev/next.
-        body_.append(tableTitleRow(f, g, u, x, y,
-                                   cfg, dsfDeltas, vcdInfo))
-
-        # Column headers with delta values. Both hi and lo rows.
-        body_.append(tableHeaderRows(f, g, u, x, y,
-                                     dsfDeltas,
-                                     exSibRow))
-
-        body_.append(tableDataRows(f, g, u, x, y,
-                                   vcdInfo,
-                                   exSib, varCol, fnUXY))
-
-        body_.append("</table>")
     else:
-        body_.append("TODO: networkNotTable") # TODO: Holder for SVG
+        edges = calculateEdges(f, g, u, x, y,
+                               cfg, dsfDeltas, vcdInfo)
+        body = svgNetgraph(u, cfg, vcdInfo, edges)
 
     # Avoid inline JS or CSS for browser caching, but use for standalone files.
     inlineHead = (args.httpd_port == 0)
 
-    return htmlTopFmt(body_, inlineHead, inlineHead)
+    return htmlTopFmt(body, inlineHead, inlineHead)
 # }}} def evaHtmlString
 
 class EvaHTTPServer(HTTPServer): # {{{

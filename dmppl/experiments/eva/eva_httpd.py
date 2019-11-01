@@ -339,6 +339,11 @@ class EvaHTTPRequestHandler(BaseHTTPRequestHandler): # {{{
         return
     # }}} def do_GET
 
+    def log_message(self, *fnArgs): # {{{
+        if self.args.info:
+            BaseHTTPRequestHandler.log_message(self, *fnArgs)
+    # }}} def log_message
+
 # }}} class EvaHTTPRequestHandler
 
 def runHttpDaemon(args, cfg): # {{{

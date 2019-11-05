@@ -254,6 +254,8 @@ def meaDbFromVcd(): # {{{
         real: Ordered sequence of (timestamp, value) pairs.
             All values are 32b IEEE754 floats, OR 32b(zext) fx.
     '''
+    verb("Creating binary database from VCD... ", end='')
+
     mkDirP(paths.dname_mea)
 
     with VcdReader(paths.fname_mea) as vcdi:
@@ -288,6 +290,8 @@ def meaDbFromVcd(): # {{{
 
         for _,fd in fds.items():
             fd.close()
+
+    verb("Done")
 
     return
 # }}} def meaDbFromVcd

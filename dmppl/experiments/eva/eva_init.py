@@ -588,6 +588,8 @@ def meaVcd(instream, evcx, cfg): # {{{
     with VcdReader(instream) as vcdi, VcdWriter(eva.paths.fname_mea) as vcdo:
         evcxx = checkEvcxWithVcd(evcx, vcdi)
 
+        verb("Extracting measurements to VCD ... ", end='')
+
         evcxVarIds = tuple(sorted(list(set(v["hookVarId"] \
                                            for nm,v in evcxx.items()))))
 
@@ -835,6 +837,8 @@ def meaVcd(instream, evcx, cfg): # {{{
                 nqChangedVars, nqNewValues = zip(*dedupVars)
                 vcdo.wrTimechunk((oTime, nqChangedVars, nqNewValues))
 
+        verb("Done") # with
+
     return
 # }}} def meaVcd
 
@@ -879,7 +883,9 @@ def evaInit(args): # {{{
     evcx = expandEvc(evc, eva.cfg)
 
     # Fully read in and copy then clean input data.
+    verb("Cleaning input VCD... ", end='')
     vcdClean(args.input, eva.paths.fname_cln)
+    verb("Done")
 
     # VCD-to-VCD: extract, interpolate, clean
     meaVcd(eva.paths.fname_cln, evcx, eva.cfg)

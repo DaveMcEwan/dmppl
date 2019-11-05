@@ -133,7 +133,7 @@ def asciiart2dBool(x, t='#', f=' '): # {{{
     return '\n'.join((''.join([(t if r else f) for r in row])) for row in x)
 # }}} def asciiart2dBool
 
-def identiconSpriteSvg(x, nRows=5, nCols=5, classList=["identicon"]): # {{{
+def identiconSpriteSvg(x, **kwargs): # {{{
     '''Take a stringable object x and produce an SVG of a sprite identicon.
 
     nRows, nCols set the arrangement of squares comprising the sprite.
@@ -141,40 +141,55 @@ def identiconSpriteSvg(x, nRows=5, nCols=5, classList=["identicon"]): # {{{
     NOTE: CSS can be used to set colors.
     '''
 
-    viewBoxWidth, viewBoxHeight = 100, 100
+    nRows = kwargs.get("nRows", 5)
+    nCols = kwargs.get("nCols", 5)
+    classList = kwargs.get("classList", ["identicon"])
+    unitSize = kwargs.get("unitSize", 10)
+    cssProps = kwargs.get("cssProps", True)
 
-    # 0,0 is top-left of 100x100 box
-    viewBoxMinX, viewBoxMinY = 0, 0
-
-    svgFmt = ' '.join((
-        '<svg',
-          'xmlns="http://www.w3.org/2000/svg"',
-          'xmlns:xlink="http://www.w3.org/1999/xlink"',
-          'viewBox="%d %d %d %d"' % (viewBoxMinX, viewBoxMinY, viewBoxWidth, viewBoxHeight),
-          'class="%s"' % ' '.join(classList),
-          '>',
-          '%s',
-        '</svg>',
-    ))
-
-    bitWidth, bitHeight = (viewBoxWidth / nCols), (viewBoxHeight / nRows)
-    rectFmt = ' '.join((
+    bitFmtParts_ = [
         '<rect',
           'class="bit"',
-          'width="%f"' % bitWidth,
-          'height="%f"' % bitHeight,
-          'x="%f"',
-          'y="%f"',
-          '/>',
-    ))
+          'x="%d"',
+          'y="%d"',
+    ]
+    if not cssProps:
+        bitFmtParts_ += [
+            'width="%dpx"' % unitSize,
+            'height="%dpx"' % unitSize,
+        ]
+    bitFmtParts_.append('/>')
+    bitFmt = ' '.join(bitFmtParts_)
 
     bits = identiconSprite(x, nRows=nRows, nCols=nCols)
-    bitPositions = [(c*bitWidth, r*bitHeight) \
+    bitPositions = [(c*unitSize, r*unitSize) \
                     for r,bitRow in enumerate(bits) \
                     for c,b in enumerate(bitRow) \
                     if b]
 
-    return svgFmt % ''.join(rectFmt % (x,y) for x,y in bitPositions)
+    # 0,0 is top-left
+    viewBoxMinX, viewBoxMinY = 0, 0
+    viewBoxWidth, viewBoxHeight = nRows*unitSize, nCols*unitSize
+
+    ret_ = []
+    ret_ += [
+      '<svg',
+        'xmlns="http://www.w3.org/2000/svg"',
+        'xmlns:xlink="http://www.w3.org/1999/xlink"',
+        'viewBox="%d %d %d %d"' % (viewBoxMinX, viewBoxMinY, viewBoxWidth, viewBoxHeight),
+        'class="%s"' % ' '.join(classList),
+        '>',
+    ]
+    if cssProps:
+        ret_ += [
+            '<style>',
+            'rect.bit { width:%dpx; height:%dpx; }' % (unitSize, unitSize),
+            '</style>',
+        ]
+    ret_ += [bitFmt % (x,y) for x,y in bitPositions]
+    ret_.append('</svg>')
+
+    return '\n'.join(ret_)
 # }}} def identiconSpriteSvg
 
 

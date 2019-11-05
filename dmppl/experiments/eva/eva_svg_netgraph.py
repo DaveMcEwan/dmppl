@@ -103,7 +103,6 @@ def svgNetgraph(u, cfg, vcdInfo, edges): # {{{
         svgWidth, svgHeight
 
     ret_ = []
-    ret_.append('<div class="netgraph">')
     ret_.append(' '.join((
       '<svg',
         'xmlns="http://www.w3.org/2000/svg"',
@@ -177,7 +176,6 @@ def svgNetgraph(u, cfg, vcdInfo, edges): # {{{
     # TODO: Layer of edge/connections.
 
     ret_.append('</svg>')
-    ret_.append('</div>')
     return ret_
 # }}} def svgNetgraph
 

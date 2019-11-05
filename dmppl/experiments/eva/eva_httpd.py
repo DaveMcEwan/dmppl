@@ -38,7 +38,7 @@ class EvaHTMLException(Exception): # {{{
     pass
 # }}} class EvaHTMLException
 
-def htmlTopFmt(body, inlineJs=True, inlineCss=True): # {{{
+def htmlTopFmt(body, inlineJs=True, inlineCss=True, bodyOnly=False): # {{{
     '''Return a string with HTML headers for JS and CSS.
     '''
 
@@ -61,18 +61,20 @@ def htmlTopFmt(body, inlineJs=True, inlineCss=True): # {{{
                ('<link rel="stylesheet" type="text/css" href="%s">' % fname)
                for fname in fnamesCss)
 
-    ret = (
-        '<!DOCTYPE html>',
-        '<html>',
-        '  <head>',
-        '\n'.join(chain(jsTxts, cssTxts)),
-        '  </head>',
-        '  <body>',
-        '\n'.join(body),
-        '  </body>',
-        '</html>',
-    )
-    return '\n'.join(r.strip() for r in ret)
+    ret = '\n'.join(body) \
+        if bodyOnly else \
+        '\n'.join(r.strip() for r in (
+          '<!DOCTYPE html>',
+          '<html>',
+          '  <head>',
+          '\n'.join(chain(jsTxts, cssTxts)),
+          '  </head>',
+          '  <body>',
+          '\n'.join(body),
+          '  </body>',
+          '</html>',
+        ))
+    return ret
 # }}} def htmlTopFmt
 
 def evaHtmlString(args, cfg, request): # {{{
@@ -196,6 +198,12 @@ def evaHtmlString(args, cfg, request): # {{{
     # Sort by delta value, not by downsampling factor.
     dsfDeltas.sort(key=lambda dsf_d: dsf_d[1])
 
+    # Avoid inline JS or CSS for browser caching, but use for standalone files.
+    inlineHead = (args.httpd_port == 0)
+
+    # Specific case for returning standalone SVG.
+    bodyOnly = (args.httpd_port == 0) and not tableNotNetwork
+
     if tableNotNetwork:
         xEx, yEx, fnUXY, varCol = \
             calculateTableData(f, g, u, x, y,
@@ -217,12 +225,12 @@ def evaHtmlString(args, cfg, request): # {{{
     else:
         edges = calculateEdges(f, g, u, x, y,
                                cfg, dsfDeltas, vcdInfo)
-        body = svgNetgraph(u, cfg, vcdInfo, edges)
+        bodySvg = svgNetgraph(u, cfg, vcdInfo, edges)
+        body = bodySvg \
+            if bodyOnly else \
+            (['<div class="netgraph">'] + bodySvg + ['</div>'])
 
-    # Avoid inline JS or CSS for browser caching, but use for standalone files.
-    inlineHead = (args.httpd_port == 0)
-
-    return htmlTopFmt(body, inlineHead, inlineHead)
+    return htmlTopFmt(body, inlineHead, inlineHead, bodyOnly)
 # }}} def evaHtmlString
 
 class EvaHTTPServer(HTTPServer): # {{{

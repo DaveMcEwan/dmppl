@@ -12,13 +12,13 @@ import sys
 import toml
 
 # Local library imports
-from dmppl.base import dbg, info, verb, \
-                       Bunch, appendNonDuplicate, indexDefault, \
-                       mkDirP, joinP
+from dmppl.base import dbg, info, verb, appendNonDuplicate, Bunch, \
+    indexDefault, mkDirP, joinP
 from dmppl.math import dotp, clipNorm, saveNpy
 from dmppl.toml import loadToml, saveToml
 from dmppl.vcd import VcdReader, VcdWriter, oneBitTypes, detypeVarName
 from dmppl.scripts.vcd_utils import vcdClean
+from dmppl.color import identiconSpriteSvg
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
@@ -868,6 +868,29 @@ def evaVcdInfo(fname): # {{{
     return ret
 # }}} def evaVcdInfo
 
+def createIdenticons(vcdInfo): # {{{
+    '''Produce an identicon for each signal in VCD.
+    '''
+    verb("Creating identicons... ", end='')
+
+    mkDirP(eva.paths.dname_identicon)
+
+    measureNames = vcdInfo["unitIntervalVarNames"]
+
+    for nm in measureNames:
+        measureType, siblingType, baseName = eva.measureNameParts(nm)
+
+        svgStr = identiconSpriteSvg(baseName)
+
+        fname = joinP(eva.paths.dname_identicon, baseName + ".svg")
+        with open(fname, 'w') as fd:
+            fd.write(svgStr)
+
+    verb("Done")
+
+    return
+# }}} def createIdenticons
+
 def evaInit(args): # {{{
     '''Read in EVC and VCD to create result directory like ./foo.eva/
     '''
@@ -890,10 +913,14 @@ def evaInit(args): # {{{
     # VCD-to-VCD: extract, interpolate, clean
     meaVcd(eva.paths.fname_cln, evcx, eva.cfg)
     #vcdClean(eva.paths.fname_mea) # Reduce size of varIds
-    saveToml(evaVcdInfo(eva.paths.fname_mea), eva.paths.fname_meainfo)
+    vcdInfo = evaVcdInfo(eva.paths.fname_mea)
+    saveToml(vcdInfo, eva.paths.fname_meainfo)
 
     # VCD-to-binaries
     eva.meaDbFromVcd()
+
+    # Identicons
+    createIdenticons(vcdInfo)
 
     return 0
 # }}} def evaInit

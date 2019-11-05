@@ -16,9 +16,10 @@ from dmppl.base import dbg, info, verb, joinP, tmdiff, rdTxt
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
-import dmppl.experiments.eva.eva_common as eva
-from dmppl.experiments.eva.eva_html_table import calculateTableData, htmlTable
-from dmppl.experiments.eva.eva_svg_netgraph import calculateEdges, svgNetgraph
+from dmppl.experiments.eva.eva_common import appPaths, paths, \
+    metricNames, cfgDsfDeltas, loadCfg
+from eva_html_table import calculateTableData, htmlTable
+from eva_svg_netgraph import calculateEdges, svgNetgraph
 
 # Version-specific imports
 version_help = "Python 2.7 or 3.4+ required."
@@ -41,12 +42,12 @@ def htmlTopFmt(body, inlineJs=True, inlineCss=True): # {{{
     '''Return a string with HTML headers for JS and CSS.
     '''
 
-    fnamesJs = (joinP(eva.appPaths.share, fname) for fname in \
+    fnamesJs = (joinP(appPaths.share, fname) for fname in \
                 ("jquery-3.3.1.slim.min.js",
                  "bootstrap-3.3.7.min.js",
                  "eva.js"))
 
-    fnamesCss = (joinP(eva.appPaths.share, fname) for fname in \
+    fnamesCss = (joinP(appPaths.share, fname) for fname in \
                  ("bootstrap-3.3.7.min.css",
                   "eva.css"))
 
@@ -102,39 +103,39 @@ def evaHtmlString(args, cfg, request): # {{{
     # Exception can be raised giving a 404.
     if f is None and g is None:
         # Default values
-        f = eva.metricNames[0]
+        f = metricNames[0]
 
     elif f is None and isinstance(g, str):
         # 1D color
-        assert g in eva.metricNames, g
+        assert g in metricNames, g
 
-        if g not in eva.metricNames:
+        if g not in metricNames:
             raise EvaHTMLException
 
         f, g = g, f
     elif isinstance(f, str) and g is None:
         # 1D color
-        assert f in eva.metricNames, f
+        assert f in metricNames, f
 
-        if f not in eva.metricNames:
+        if f not in metricNames:
             raise EvaHTMLException
 
     elif isinstance(f, str) and isinstance(g, str):
         # 2D color
-        assert f in eva.metricNames, f
-        assert g in eva.metricNames, g
+        assert f in metricNames, f
+        assert g in metricNames, g
 
-        if f not in eva.metricNames:
+        if f not in metricNames:
             raise EvaHTMLException
 
-        if g not in eva.metricNames:
+        if g not in metricNames:
             raise EvaHTMLException
 
     else:
         assert False
 
 
-    vcdInfo = toml.load(eva.paths.fname_meainfo)
+    vcdInfo = toml.load(paths.fname_meainfo)
 
     if u is None and x is None and y is None:
         # Default values
@@ -190,7 +191,7 @@ def evaHtmlString(args, cfg, request): # {{{
         assert False
 
     # Every view varies delta - tables by horizontal, networks by edges.
-    dsfDeltas = eva.cfgDsfDeltas(cfg) # [(<downsample factor>, <delta>), ...]
+    dsfDeltas = cfgDsfDeltas(cfg) # [(<downsample factor>, <delta>), ...]
 
     # Sort by delta value, not by downsampling factor.
     dsfDeltas.sort(key=lambda dsf_d: dsf_d[1])
@@ -255,7 +256,7 @@ class EvaHTTPRequestHandler(BaseHTTPRequestHandler): # {{{
             (self.path.endswith(".css") or self.path.endswith(".js")):
 
             # Strip off any relative paths to only find CSS and JS files.
-            fname = joinP(eva.appPaths.share, os.path.basename(self.path))
+            fname = joinP(appPaths.share, os.path.basename(self.path))
 
             try:
                 response = rdTxt(fname)
@@ -280,7 +281,7 @@ class EvaHTTPRequestHandler(BaseHTTPRequestHandler): # {{{
             # gets 404'd.
             # https://bugs.chromium.org/p/chromium/issues/detail?id=39402
             try:
-                faviconFpath = joinP(eva.appPaths.share, "eva_logo.png")
+                faviconFpath = joinP(appPaths.share, "eva_logo.png")
                 responseBytes = open(faviconFpath, 'rb').read()
 
                 self.send_response(200)
@@ -351,10 +352,10 @@ def runHttpDaemon(args, cfg): # {{{
 def evaHttpd(args): # {{{
     '''Read in result directory like ./foo.eva/ and serve HTML visualizations.
     '''
-    assert eva.initPathsDone
+    assert paths._INITIALIZED
 
     try:
-        cfg = eva.loadCfg()
+        cfg = loadCfg()
 
         if 0 != args.httpd_port:
             runHttpDaemon(args, cfg)

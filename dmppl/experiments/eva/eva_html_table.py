@@ -10,11 +10,15 @@ import numpy as np
 # Local library imports
 from dmppl.math import l2Norm
 from dmppl.base import dbg, info, verb, joinP, rdTxt
-from dmppl.color import rgb1D, rgb2D, identiconSpriteSvg
+from dmppl.color import rgb1D, rgb2D
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
-import dmppl.experiments.eva.eva_common as eva
+from dmppl.experiments.eva.eva_common import paths, \
+    measureNameParts, measureSiblings, nSibsMax, mapSiblingTypeToHtmlEntity, \
+    metricNames, metric, evaLink, \
+    winStartTimes, rdEvs, timeToEvsIdx
+
 
 def sliderControls(): # {{{
     ret = '''\
@@ -61,9 +65,9 @@ def fnDisplay(f, g): # {{{
     assert f is None or isinstance(f, str), type(f)
     assert g is None or isinstance(g, str), type(g)
     if f is not None:
-        assert f in eva.metricNames, f
+        assert f in metricNames, f
     if g is not None:
-        assert g in eva.metricNames, g
+        assert g in metricNames, g
     assert f or g, (f, g)
     return ("{%s,%s}" % (f, g)) if f and g else (f if f else g)
 # }}} def fnDisplay
@@ -134,45 +138,45 @@ def tableTitleRow(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
 
         navPrevNext = ' '.join((
             '<th class="nav_u" colspan="5">',
-            eva.evaLink(f, g, u - winStride, x, y, "prev"),
-            eva.evaLink(f, g, u + winStride, x, y, "next"),
+            evaLink(f, g, u - winStride, x, y, "prev"),
+            evaLink(f, g, u + winStride, x, y, "next"),
             '</th>',
         ))
 
     # NOTE: f and g must be valid strings containing name of measurement.
     if f and g:
-        fnLinks = [eva.evaLink(fNm, gNm, u, x, y,
-                               evaTitleText(fNm, gNm, u, x, y),
-                               escapeQuotes=True) \
-                   for fNm in eva.metricNames \
-                   for gNm in eva.metricNames \
+        fnLinks = [evaLink(fNm, gNm, u, x, y,
+                           evaTitleText(fNm, gNm, u, x, y),
+                           escapeQuotes=True) \
+                   for fNm in metricNames \
+                   for gNm in metricNames \
                    if fNm != f and gNm != g and fNm != gNm]
     elif f:
-        fnLinks = [eva.evaLink(fNm, None, u, x, y,
-                               evaTitleText(fNm, None, u, x, y),
-                               escapeQuotes=True) \
-                   for fNm in eva.metricNames \
+        fnLinks = [evaLink(fNm, None, u, x, y,
+                           evaTitleText(fNm, None, u, x, y),
+                           escapeQuotes=True) \
+                   for fNm in metricNames \
                    if fNm != f]
     elif g:
-        fnLinks = [eva.evaLink(None, gNm, u, x, y,
-                               evaTitleText(None, gNm, u, x, y),
-                               escapeQuotes=True) \
-                   for gNm in eva.metricNames \
+        fnLinks = [evaLink(None, gNm, u, x, y,
+                           evaTitleText(None, gNm, u, x, y),
+                           escapeQuotes=True) \
+                   for gNm in metricNames \
                    if gNm != g]
     else:
         assert False # Checking already performed in evaHtmlString()
     fnPopover = popoverUl(fnDisplay(f, g), fnLinks)
 
-    xLinks = [eva.evaLink(f, g, u, xNm, y,
-                          evaTitleText(f, g, u, xNm, y),
-                          escapeQuotes=True) \
+    xLinks = [evaLink(f, g, u, xNm, y,
+                      evaTitleText(f, g, u, xNm, y),
+                      escapeQuotes=True) \
               for xNm in measureNames \
               if xNm != x]
     xPopover = popoverUl(xDisplay(x), xLinks)
 
-    yLinks = [eva.evaLink(f, g, u, x, yNm,
-                          evaTitleText(f, g, u, x, yNm),
-                          escapeQuotes=True) \
+    yLinks = [evaLink(f, g, u, x, yNm,
+                      evaTitleText(f, g, u, x, yNm),
+                      escapeQuotes=True) \
               for yNm in measureNames \
               if yNm != y]
     yPopover = popoverUl(yDisplay(y), yLinks)
@@ -189,14 +193,6 @@ def tableTitleRow(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
     return ''.join(r.strip() for r in ret)
 # }}} def tableTitleRow
 
-mapSiblingTypeToHtmlEntity = {
-    "measure":      "&#xb7;",   # MIDDLE DOT
-    "reflection":   "&#x00ac;", # NOT SIGN
-    "rise":         "&#x2191;", # UPWARDS ARROW
-    "fall":         "&#x2193;", # DOWNWARDS ARROW
-}
-nSibsMax = len(mapSiblingTypeToHtmlEntity.keys())
-
 def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
     '''Return a string with HTML one or more <tr>.
     '''
@@ -204,11 +200,11 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
 
     def sibHiThs(nm, xNotY, rowspan, values=None): # {{{
 
-        measureType, siblingType, baseName = eva.measureNameParts(nm)
+        measureType, siblingType, baseName = measureNameParts(nm)
 
         siblings = \
-            [eva.measureNameParts(s) \
-             for s in eva.measureSiblings(nm)]
+            [measureNameParts(s) \
+             for s in measureSiblings(nm)]
 
         sibNames = \
             ['.'.join((mt,st,mn)) \
@@ -252,8 +248,8 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
              for mt,st,mn in siblings]
 
         sibLinks = \
-            [eva.evaLink(f, g, u, fnm, y, txt) if xNotY else \
-             eva.evaLink(f, g, u, x, fnm, txt) \
+            [evaLink(f, g, u, fnm, y, txt) if xNotY else \
+             evaLink(f, g, u, x, fnm, txt) \
              for fnm,txt in zip(sibNames, sibLinkTxts)]
 
         sibValueTxts = \
@@ -412,8 +408,8 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
     firstTime = vcdInfo["timechunkTimes"][0]
     lastTime = vcdInfo["timechunkTimes"][-1]
 
-    winUs = eva.winStartTimes(firstTime, lastTime,
-                              cfg.windowsize, cfg.windowoverlap) \
+    winUs = winStartTimes(firstTime, lastTime,
+                          cfg.windowsize, cfg.windowoverlap) \
                 if u is None else None
 
     evsStartTime = (firstTime if u is None else u) - cfg.deltabk
@@ -422,9 +418,9 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
                       u + cfg.windowsize) + cfg.deltafw + 1
 
     # Read in all relevant data to one structure.
-    evsNames = (eva.measureSiblings(x) + eva.measureSiblings(y)) \
+    evsNames = (measureSiblings(x) + measureSiblings(y)) \
         if u is None else measureNames
-    evs = eva.rdEvs(evsNames, evsStartTime, evsFinishTime, cfg.fxbits)
+    evs = rdEvs(evsNames, evsStartTime, evsFinishTime, cfg.fxbits)
 
     evsExpectedLen = evsFinishTime - evsStartTime # debug only
     for nm,row in evs.items():
@@ -438,8 +434,8 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
             (row.shape, evsStartTime, evsFinishTime)
 
     fMetric, gMetric = \
-        eva.metric(f, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits), \
-        eva.metric(g, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
+        metric(f, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits), \
+        metric(g, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
     fns = (fMetric, gMetric,) if g else (fMetric,)
     nFns = len(fns)
 
@@ -466,7 +462,7 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
 
         # When u is varying, each row selects a window.
         # When u is fixed, evs only holds data for that window
-        startIdxX = eva.timeToEvsIdx(winUs[rowNum] if u is None else u,
+        startIdxX = timeToEvsIdx(winUs[rowNum] if u is None else u,
                                      evsStartTime)
         startIdxY = startIdxX + delta
         finishIdxX, finishIdxY = \
@@ -494,7 +490,7 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
 
         fnUXY[fnNum][rowNum][colNum] = fns[fnNum](evsX, evsY)
 
-    expectation = eva.metric("Ex", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
+    expectation = metric("Ex", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
 
     def sibEx(s): # {{{
         '''Allocate then fill a sibling expectation array.
@@ -503,7 +499,7 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
         '''
         assert s in [x, y], (s, x, y)
 
-        siblings = eva.measureSiblings(s) if s else None
+        siblings = measureSiblings(s) if s else None
 
         nRowsEx = 1 if s and not (x and y) else nRows
         nColsEx = len(siblings) if s else nSibsMax
@@ -516,7 +512,7 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
             if s:
                 key = siblings[colNum]
             else:
-                rowSiblings = eva.measureSiblings(measureNames[rowNum])
+                rowSiblings = measureSiblings(measureNames[rowNum])
 
                 # Some measures have less siblings.
                 if colNum < len(rowSiblings):
@@ -525,7 +521,7 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
                     # NOTE: The uninitialized value should never be used.
                     continue
 
-            startIdx = eva.timeToEvsIdx(winUs[rowNum] if u is None else u,
+            startIdx = timeToEvsIdx(winUs[rowNum] if u is None else u,
                                         evsStartTime)
             finishIdx = startIdx + cfg.windowsize
 
@@ -542,14 +538,14 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
     varCol = winUs if u is None else measureNames
 
     if x and y:
-        assert xEx.shape == (nRows, len(eva.measureSiblings(x))), xEx.shape
-        assert yEx.shape == (nRows, len(eva.measureSiblings(y))), yEx.shape
+        assert xEx.shape == (nRows, len(measureSiblings(x))), xEx.shape
+        assert yEx.shape == (nRows, len(measureSiblings(y))), yEx.shape
     elif x:
-        assert xEx.shape == (1, len(eva.measureSiblings(x))), xEx.shape
+        assert xEx.shape == (1, len(measureSiblings(x))), xEx.shape
         assert yEx.shape == (nRows, nSibsMax), yEx.shape
     elif y:
         assert xEx.shape == (nRows, nSibsMax), xEx.shape
-        assert yEx.shape == (1, len(eva.measureSiblings(y))), yEx.shape
+        assert yEx.shape == (1, len(measureSiblings(y))), yEx.shape
     else:
         assert False
 
@@ -620,9 +616,10 @@ def measureCompactHtml(name): # {{{
     '''
     spanFmt = '<span class="compact %s">%s%s</span>'
 
-    mt, st, bn = eva.measureNameParts(name)
+    mt, st, bn = measureNameParts(name)
+    icon = rdTxt(joinP(paths.dname_identicon, bn + ".svg"))
 
-    return spanFmt % (mt, identiconSpriteSvg(bn), mapSiblingTypeToHtmlEntity[st])
+    return spanFmt % (mt, icon, mapSiblingTypeToHtmlEntity[st])
 # }}} def measureCompactHtml
 
 def tableDataRows(f, g, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
@@ -647,7 +644,7 @@ def tableDataRows(f, g, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
         if timesNotNames:
             ret = ['<td class="varying"> %s </td>' % str(v) for v in values]
         else: # Represent measureType.siblingType compactly.
-            nmParts = [eva.measureNameParts(v) for v in values]
+            nmParts = [measureNameParts(v) for v in values]
             compacts = [measureCompactHtml(v) for v in values]
 
             ret = ['<td class="varying"> %s %s </td>' % (c, bn) \
@@ -661,7 +658,7 @@ def tableDataRows(f, g, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
     def tableDataRow(rowNum): # {{{
         rowNSibs = 2*nSibsMax \
                    if x and y else \
-                   len(eva.measureSiblings(measureNames[rowNum]))
+                   len(measureSiblings(measureNames[rowNum]))
 
         sibTds = (tdCellExSib(exSib, rowNum, colNum, rowNSibs) \
                   for colNum in range(exSib.shape[1]))

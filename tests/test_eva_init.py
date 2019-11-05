@@ -1,4 +1,4 @@
-from dmppl.experiments.eva import eva_common as eva
+from dmppl.experiments.eva.eva_common import paths, initPaths
 from dmppl.experiments.eva.eva_init import *
 from dmppl.base import rdTxt, Bunch
 from dmppl.test import runEntryPoint
@@ -13,11 +13,13 @@ _curd = path.abspath(path.dirname(__file__)) # dmppl/tests
 _topd = path.dirname(_curd)
 _tstd = path.join(_topd, "dmppl", "experiments", "eva", "tst")
 
+@unittest.skipIf(sys.version_info[0] == 2, "Import confusion before Python3")
 class Test_LoadEvc(unittest.TestCase): # {{{
 
     def test_Basic0(self):
         self.maxDiff = None
-        eva.initPaths(path.join(_tstd, "basic0"))
+        initPaths(path.join(_tstd, "basic0"))
+        assert paths._INITIALIZED
 
         # TODO: threshold and geq,leq
         obj0 = {
@@ -51,7 +53,8 @@ class Test_LoadEvc(unittest.TestCase): # {{{
             ],
         }
 
-        evc = loadEvc()
+        infoFlag = False
+        evc = loadEvc(infoFlag)
         self.assertDictEqual(obj0, evc)
 
 # }}} class Test_LoadEvc
@@ -140,7 +143,8 @@ class Test_ExpandEvc(unittest.TestCase): # {{{
             },
         }
 
-        evcx0 = expandEvc(evc0, cfg0)
+        infoFlag = False
+        evcx0 = expandEvc(evc0, cfg0, infoFlag)
 
         self.assertDictEqual(obj0, evcx0)
 
@@ -168,7 +172,8 @@ class Test_ExpandEvc(unittest.TestCase): # {{{
             },
         }
 
-        evcx1 = expandEvc(evc1, cfg1)
+        infoFlag = False
+        evcx1 = expandEvc(evc1, cfg1, infoFlag)
 
         self.assertDictEqual(obj1, evcx1)
 
@@ -176,13 +181,16 @@ class Test_ExpandEvc(unittest.TestCase): # {{{
 
 # }}} class Test_ExpandEvc
 
+@unittest.skipIf(sys.version_info[0] == 2, "Import confusion before Python3")
 class Test_EvaInit(unittest.TestCase): # {{{
 
     @unittest.skipIf(sys.version_info[0] == 2, "Unicode mess before Python3")
     def test_Basic0(self):
         self.maxDiff = None
-        eva.initPaths(path.join(_tstd, "basic2"))
+        initPaths(path.join(_tstd, "basic2"))
+        assert paths._INITIALIZED
         args = Bunch()
+        args.info = False
         args.input = path.join(_tstd, "basic2.vcd")
 
         evaInit(args)

@@ -23,11 +23,9 @@ from dmppl.base import run
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
-import dmppl.experiments.eva.eva_common as eva
+from dmppl.experiments.eva.eva_common import __version__, paths, initPaths
 from eva_init import evaInit
 from eva_httpd import evaHttpd
-
-__version__ = eva.__version__
 
 # {{{ argparser
 
@@ -120,11 +118,11 @@ argparser_httpd.add_argument("-u",
 
 def main(args): # {{{
 
-    eva.infoFlag = args.info
-    eva.initPaths(args.evc)
+    initPaths(args.evc)
 
     if args.purge:
-        shutil.rmtree(eva.paths.outdir)
+        assert paths._INITIALIZED
+        shutil.rmtree(paths.outdir)
 
     ret = {
         "init": evaInit,

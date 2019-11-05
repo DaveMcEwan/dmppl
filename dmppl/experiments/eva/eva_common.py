@@ -24,14 +24,18 @@ __version__ = "0.1.0"
 if int(__version__.split('.')[-1]) != 0:
     sys.dont_write_bytecode = True
 
-initPathsDone = False # Only expect paths.* etc to exist if this is True.
 appPaths = Bunch()
 paths = Bunch()
-infoFlag = False
 
 def initPaths(argsEvcPath): # {{{
     '''Populate some convenient variables from args.
     '''
+
+    #module = inspect.stack()[-1][1]
+    appPaths.basemodule = os.path.basename(os.path.realpath(__file__))
+    appPaths.directory = os.path.dirname(os.path.realpath(__file__))
+    appPaths.share = joinP(appPaths.directory, "share")
+    appPaths.configDefault = joinP(appPaths.share, "configDefault.toml")
 
     paths.fname_evc = fnameAppendExt(argsEvcPath, "evc")
 
@@ -46,14 +50,7 @@ def initPaths(argsEvcPath): # {{{
     paths.dname_mea = joinP(outdir, "measure")
     paths.dname_identicon = joinP(outdir, "identicon")
 
-    #module = inspect.stack()[-1][1]
-    appPaths.basemodule = os.path.basename(os.path.realpath(__file__))
-    appPaths.directory = os.path.dirname(os.path.realpath(__file__))
-    appPaths.share = joinP(appPaths.directory, "share")
-    appPaths.configDefault = joinP(appPaths.share, "configDefault.toml")
-
-    global initPathsDone
-    initPathsDone = True
+    paths._INITIALIZED = True
 
     return
 # }}} def initPaths
@@ -63,7 +60,7 @@ def loadCfg(): # {{{
 
     CFG is assumed to be sane, written by initCfg().
     '''
-    assert initPathsDone
+    assert paths._INITIALIZED
 
     verb("Loading CFG... ", end='')
 
@@ -78,7 +75,7 @@ def loadCfg(): # {{{
 def loadEvcx(): # {{{
     '''Return dict of measurement names to VCD hook names.
     '''
-    assert initPathsDone
+    assert paths._INITIALIZED
 
     verb("Loading EVCX... ", end='')
 
@@ -395,7 +392,7 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
        foo.eva/measure/*) in [startTime, finishTime), and return as ndarrays.
     '''
     names = set(names)
-    assert initPathsDone
+    assert paths._INITIALIZED
 
     assert isinstance(startTime, int), type(startTime)
     assert isinstance(finishTime, int), type(finishTime)
@@ -511,6 +508,14 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
 
     return mapNameToDatarow
 # }}} def rdEvs
+
+mapSiblingTypeToHtmlEntity = {
+    "measure":      "&#xb7;",   # MIDDLE DOT
+    "reflection":   "&#x00ac;", # NOT SIGN
+    "rise":         "&#x2191;", # UPWARDS ARROW
+    "fall":         "&#x2193;", # DOWNWARDS ARROW
+}
+nSibsMax = len(mapSiblingTypeToHtmlEntity.keys())
 
 mapMeasureTypeToSiblingTypes = {
     "event":     ("measure",),

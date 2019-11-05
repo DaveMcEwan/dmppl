@@ -22,7 +22,8 @@ from dmppl.color import identiconSpriteSvg
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
-import dmppl.experiments.eva.eva_common as eva
+from dmppl.experiments.eva.eva_common import appPaths, paths, \
+    isUnitIntervalMeasure, measureNameParts, meaDbFromVcd
 
 if sys.version_info[0] == 3:
     unicode = str # Compatability with Python2
@@ -102,14 +103,14 @@ which cannot be found in the VCD.
 
 # }}} EVCError
 
-def loadEvc(): # {{{
+def loadEvc(infoFlag): # {{{
     '''Read EVC file with only basic checking.
     '''
 
     def infoEvc(evc): # {{{
         '''Print information about EVC.
         '''
-        if not eva.infoFlag:
+        if not infoFlag:
             return
 
         for k,v in evc.get("config", {}).items():
@@ -126,7 +127,8 @@ def loadEvc(): # {{{
 
     try:
         # NOTE: loadToml() appends ".toml" to fname.
-        evc = toml.load(eva.paths.fname_evc)
+        assert paths._INITIALIZED
+        evc = toml.load(paths.fname_evc)
     except toml.decoder.TomlDecodeError as e:
         raise EVCError_TomlLoad(e)
 
@@ -137,14 +139,14 @@ def loadEvc(): # {{{
     return evc
 # }}} def loadEvc
 
-def initCfg(evcConfig): # {{{
+def initCfg(evcConfig, infoFlag): # {{{
     '''Fill in and save CFG.
     '''
 
     def infoCfg(cfg): # {{{
         '''Print information about CFG.
         '''
-        if not eva.infoFlag:
+        if not infoFlag:
             return
 
         for k,v in cfg.__dict__.items():
@@ -156,11 +158,11 @@ def initCfg(evcConfig): # {{{
     verb("Initializing CFG... ", end='')
 
     cfg = Bunch()
-    cfg.__dict__.update(loadToml(eva.appPaths.configDefault))
+    cfg.__dict__.update(loadToml(appPaths.configDefault))
     cfg.__dict__.update(evcConfig)
 
     verb("Saving... ", end='')
-    saveToml(cfg.__dict__, eva.paths.fname_cfg)
+    saveToml(cfg.__dict__, paths.fname_cfg)
     verb("Done")
 
     infoCfg(cfg)
@@ -201,7 +203,7 @@ def checkEvc(evc): # {{{
     '''
 
     # All supported config keys have a default entry of the correct type.
-    defaultConfig = loadToml(eva.appPaths.configDefault)
+    defaultConfig = loadToml(appPaths.configDefault)
     defaultConfigKeys = list(defaultConfig.keys())
     for k,v in evc.get("config", {}).items():
         evcCheckValue(k, defaultConfigKeys)
@@ -259,7 +261,7 @@ def checkEvc(evc): # {{{
     return
 # }}} def checkEvc
 
-def expandEvc(evc, cfg): # {{{
+def expandEvc(evc, cfg, infoFlag): # {{{
     '''Perform substitutions in EVC to create and save EVCX.
 
     Does not include config since that goes into a separate file.
@@ -268,7 +270,7 @@ def expandEvc(evc, cfg): # {{{
     def infoEvcx(evcx): # {{{
         '''Print information about EVCX.
         '''
-        if not eva.infoFlag:
+        if not infoFlag:
             return
 
         for nm,v in evcx.items():
@@ -407,8 +409,11 @@ def expandEvc(evc, cfg): # {{{
                 evcx[fullName]["leq"] = leq
 
     verb("Saving... ", end='')
-    if eva.initPathsDone: # Unittests don't setup everything.
-        saveToml(evcx, eva.paths.fname_evcx)
+    # Unittests don't setup everything.
+    try:
+        saveToml(evcx, paths.fname_evcx)
+    except AttributeError:
+        pass
     verb("Done")
 
     infoEvcx(evcx)
@@ -416,14 +421,14 @@ def expandEvc(evc, cfg): # {{{
     return evcx
 # }}} def expandEvc
 
-def checkEvcxWithVcd(evcx, vcd): # {{{
+def checkEvcxWithVcd(evcx, vcd, infoFlag): # {{{
     '''Check hooks exist in VCD.
     '''
 
     def infoEvcxWithVcd(evcx): # {{{
         '''Print information about EVCX.
         '''
-        if not eva.infoFlag:
+        if not infoFlag:
             return
 
         for nm,v in evcx.items():
@@ -477,13 +482,7 @@ def checkEvcxWithVcd(evcx, vcd): # {{{
 
 # }}} def checkEvcxWithVcd
 
-def firFilter(zs): # {{{
-    coeffs = eva.cfg.fir
-    assert len(zs) == len(coeffs), zs
-    return dotp(zs, coeffs)
-# }}} def firFilter
-
-def meaVcd(instream, evcx, cfg): # {{{
+def meaVcd(instream, evcx, cfg, infoFlag): # {{{
     '''Filter input data to sanitized VCD (measure.vcd).
 
     Extract measurements of interest, at times of interest.
@@ -494,7 +493,7 @@ def meaVcd(instream, evcx, cfg): # {{{
     NOTE: This initial extraction to filter/clean the dataset is probably the
     most complex part of eva!
     '''
-    assert eva.initPathsDone
+    assert paths._INITIALIZED
 
     def twoStateBool(v, hookbit): # {{{
         if isinstance(v, int):
@@ -567,7 +566,8 @@ def meaVcd(instream, evcx, cfg): # {{{
             zs = [prevIpolValues_[0]] + prevIpolValues_
             prevIpolValues_ = zs[:-1]
 
-            smoothValue = firFilter(zs)
+            assert len(zs) == len(cfg.fir), zs
+            smoothValue = dotp(zs, cfg.fir)
             clipnormValue = clipNorm(smoothValue, geq, leq)
 
             bq_.append((t, "normal.smooth." + nm, smoothValue))
@@ -576,7 +576,8 @@ def meaVcd(instream, evcx, cfg): # {{{
         zs = [prevIpolValues_[0] if newValue is None else newValue] + prevIpolValues_
         mapVarIdToHistory_[iVarId] = (oTime, zs[:-1])
 
-        smoothValue = firFilter(zs)
+        assert len(zs) == len(cfg.fir), zs
+        smoothValue = dotp(zs, cfg.fir)
         clipnormValue = clipNorm(smoothValue, geq, leq)
 
         nq_.append(("normal.smooth." + nm, smoothValue))
@@ -585,8 +586,8 @@ def meaVcd(instream, evcx, cfg): # {{{
     # }}} def interpolateNormal
 
     # NOTE: VCD input may come from STDIN ==> only read once.
-    with VcdReader(instream) as vcdi, VcdWriter(eva.paths.fname_mea) as vcdo:
-        evcxx = checkEvcxWithVcd(evcx, vcdi)
+    with VcdReader(instream) as vcdi, VcdWriter(paths.fname_mea) as vcdo:
+        evcxx = checkEvcxWithVcd(evcx, vcdi, infoFlag)
 
         verb("Extracting measurements to VCD ... ", end='')
 
@@ -858,7 +859,7 @@ def evaVcdInfo(fname): # {{{
 
         varNames = [detypeVarName(nm) for nm in vcdi.varNames]
         ret["unitIntervalVarNames"] = \
-            [nm for nm in varNames if eva.isUnitIntervalMeasure(nm)]
+            [nm for nm in varNames if isUnitIntervalMeasure(nm)]
 
         ret["timechunkTimes"] = []
         for tc in vcdi.timechunks:
@@ -873,16 +874,16 @@ def createIdenticons(vcdInfo): # {{{
     '''
     verb("Creating identicons... ", end='')
 
-    mkDirP(eva.paths.dname_identicon)
+    mkDirP(paths.dname_identicon)
 
     measureNames = vcdInfo["unitIntervalVarNames"]
 
     for nm in measureNames:
-        measureType, siblingType, baseName = eva.measureNameParts(nm)
+        measureType, siblingType, baseName = measureNameParts(nm)
 
         svgStr = identiconSpriteSvg(baseName, cssProps=False)
 
-        fname = joinP(eva.paths.dname_identicon, baseName + ".svg")
+        fname = joinP(paths.dname_identicon, baseName + ".svg")
         with open(fname, 'w') as fd:
             fd.write(svgStr)
 
@@ -894,30 +895,30 @@ def createIdenticons(vcdInfo): # {{{
 def evaInit(args): # {{{
     '''Read in EVC and VCD to create result directory like ./foo.eva/
     '''
-    assert eva.initPathsDone
+    assert paths._INITIALIZED
 
-    evc = loadEvc()
+    evc = loadEvc(args.info)
     checkEvc(evc)
 
-    mkDirP(eva.paths.outdir)
+    mkDirP(paths.outdir)
 
-    eva.cfg = initCfg(evc["config"])
+    cfg = initCfg(evc["config"], args.info)
 
-    evcx = expandEvc(evc, eva.cfg)
+    evcx = expandEvc(evc, cfg, args.info)
 
     # Fully read in and copy then clean input data.
     verb("Cleaning input VCD... ", end='')
-    vcdClean(args.input, eva.paths.fname_cln)
+    vcdClean(args.input, paths.fname_cln)
     verb("Done")
 
     # VCD-to-VCD: extract, interpolate, clean
-    meaVcd(eva.paths.fname_cln, evcx, eva.cfg)
-    #vcdClean(eva.paths.fname_mea) # Reduce size of varIds
-    vcdInfo = evaVcdInfo(eva.paths.fname_mea)
-    saveToml(vcdInfo, eva.paths.fname_meainfo)
+    meaVcd(paths.fname_cln, evcx, cfg, args.info)
+    #vcdClean(paths.fname_mea) # Reduce size of varIds
+    vcdInfo = evaVcdInfo(paths.fname_mea)
+    saveToml(vcdInfo, paths.fname_meainfo)
 
     # VCD-to-binaries
-    eva.meaDbFromVcd()
+    meaDbFromVcd()
 
     # Identicons
     createIdenticons(vcdInfo)

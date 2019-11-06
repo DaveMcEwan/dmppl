@@ -310,8 +310,9 @@ def svgNetgraph(u, cfg, vcdInfo, edges): # {{{
     ret_.append(topStyle)
 
     # Force background to white
-    ret_.append('<rect width="100%%" height="100%%" fill="white" x="%d" y="%d"/>' \
-        % (viewBoxMinX, viewBoxMinY))
+    #ret_.append('<rect fill="white" width="100%%" height="100%%" x="%d" y="%d"/>' \
+    #    % (viewBoxMinX, viewBoxMinY))
+    ret_.append('<circle fill="white" r="50%" cx="0%" cy="0%"/>')
 
     # Layer of vertice/nodes
     ret_.append(' '.join((

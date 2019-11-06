@@ -881,7 +881,7 @@ def createIdenticons(vcdInfo): # {{{
     for nm in measureNames:
         measureType, siblingType, baseName = measureNameParts(nm)
 
-        svgStr = identiconSpriteSvg(baseName, cssProps=False)
+        svgStr = identiconSpriteSvg(baseName)
 
         fname = joinP(paths.dname_identicon, baseName + ".svg")
         with open(fname, 'w') as fd:

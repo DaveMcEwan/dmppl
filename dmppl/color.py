@@ -144,8 +144,9 @@ def identiconSpriteSvg(x, **kwargs): # {{{
     nRows = kwargs.get("nRows", 5)
     nCols = kwargs.get("nCols", 5)
     classList = kwargs.get("classList", ["identicon"])
-    unitSize = kwargs.get("unitSize", 10)
-    cssProps = kwargs.get("cssProps", True)
+    unitSize = kwargs.get("unitSize", 1)
+    sizeUnit = kwargs.get("sizeUnit", "mm") # {"mm", "px", "%", '', ...}
+    cssProps = kwargs.get("cssProps", False)
 
     bitFmtParts_ = [
         '<rect',
@@ -155,8 +156,8 @@ def identiconSpriteSvg(x, **kwargs): # {{{
     ]
     if not cssProps:
         bitFmtParts_ += [
-            'width="%dpx"' % unitSize,
-            'height="%dpx"' % unitSize,
+            'width="%d"' % unitSize,
+            'height="%d"' % unitSize,
         ]
     bitFmtParts_.append('/>')
     bitFmt = ' '.join(bitFmtParts_)
@@ -178,6 +179,8 @@ def identiconSpriteSvg(x, **kwargs): # {{{
         'xmlns:xlink="http://www.w3.org/1999/xlink"',
         'viewBox="%d %d %d %d"' % (viewBoxMinX, viewBoxMinY, viewBoxWidth, viewBoxHeight),
         'class="%s"' % ' '.join(classList),
+        'width="%d%s"' % (nCols, sizeUnit),
+        'height="%d%s"' % (nRows, sizeUnit),
         '>',
     ]
     if cssProps:

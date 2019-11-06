@@ -115,8 +115,8 @@ mapMeasureTypeToSymbolFill = {
 }
 
 
-identiconOffsetX, identiconOffsetY = 0, 0 # HEURISTIC
-identiconScale = 0.025
+identiconX, identiconY = -7.5, -7.5 # HEURISTIC
+identiconScale = 3.0 # 3*5=15
 identiconFmt = \
     ('<g transform="translate({centerX},{centerY}) scale(%0.03f)">'
      '{identiconSvg}'
@@ -157,10 +157,12 @@ svgRootFmt = ' '.join((
     'xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"',
     'class="netgraph"',
     'viewBox="{viewBoxMinX} {viewBoxMinY} {viewBoxWidth} {viewBoxHeight}"',
-    'width="{svgWidth}mm"',
-    'height="{svgHeight}mm"',
+    'width="{svgWidth}"',
+    'height="{svgHeight}"',
+    #'transform="{svgTransform}"',
   '>',
 ))
+
 sodipodiNamedview = ' '.join((
   '<sodipodi:namedview',
     'id="base"',
@@ -198,17 +200,17 @@ def svgNodes(exs): # {{{
     measureNames = list(exs.keys())
     nameParts = [measureNameParts(nm) for nm in measureNames]
 
-    _baseNames = set(bn for mt,st,bn in nameParts) # One sibgrp per base name.
+    baseNames = set(bn for mt,st,bn in nameParts) # One sibgrp per base name.
 
     mapBaseNameToSibgrpIdx = \
-        {bn: i for i,bn in enumerate(sorted(list(_baseNames)))}
+        {bn: i for i,bn in enumerate(sorted(list(baseNames)))}
 
     # {{{ nodes
 
     sibgrpRadius = (len(measureNames) * sibgrpSeparation) / (2 * pi)
 
     sibgrpCenters = \
-        list(ptsMkPolygon(nPts=len(_baseNames), radius=[sibgrpRadius]))
+        list(ptsMkPolygon(nPts=len(baseNames), radius=[sibgrpRadius]))
 
     nodeSibgrpCenters = \
         {nm: sibgrpCenters[mapBaseNameToSibgrpIdx[bn]] \
@@ -243,25 +245,34 @@ def svgNodes(exs): # {{{
     identiconRadius = sibgrpRadius + 1.5*sibgrpSeparation
 
     _identiconCenters = \
-        list(ptsMkPolygon(nPts=len(_baseNames), radius=[identiconRadius]))
+        list(ptsMkPolygon(nPts=len(baseNames), radius=[identiconRadius]))
     identiconCenters = \
-        {bn: _identiconCenters[mapBaseNameToSibgrpIdx[bn]] \
-         for bn in _baseNames}
+        {bn: ptShift(_identiconCenters[mapBaseNameToSibgrpIdx[bn]],
+                     (identiconX, identiconY))\
+         for bn in baseNames}
 
     # Identicons are embedded SVGs scaled and translated into place.
     identiconSvgs = \
         {bn: rdTxt(joinP(paths.dname_identicon, bn + ".svg")) \
-         for bn in _baseNames}
+         for bn in baseNames}
+    # Uncomment to regenerate/experiment.
+    #identiconSvgs = \
+    #    {bn: identiconSpriteSvg(bn) \
+    #     for bn in baseNames}
 
     identicons = \
         (identiconFmt.format(identiconSvg=identiconSvgs[bn],
                              centerX=identiconCenters[bn][0],
                              centerY=identiconCenters[bn][1])
-         for bn in _baseNames)
+         for bn in baseNames)
 
     # }}} identicons
 
-    return chain(nodes, identicons), sibgrpRadius, sibgrpSeparation
+    canvasWidth, canvasHeight = \
+        2*identiconRadius + 2*sibgrpSeparation, \
+        2*identiconRadius + 2*sibgrpSeparation
+
+    return chain(nodes, identicons), (canvasWidth, canvasHeight)
 # }}} def svgNodes
 
 def svgNetgraph(u, cfg, vcdInfo, edges): # {{{
@@ -271,25 +282,28 @@ def svgNetgraph(u, cfg, vcdInfo, edges): # {{{
     expectation = metric("Ex", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
     exs = {nm: expectation(evs[nm]) for nm in measureNames}
 
-    nodes, sibgrpRadius, sibgrpSeparation = svgNodes(exs)
+    nodes, (canvasWidth, canvasHeight) = svgNodes(exs)
 
-    svgWidth, svgHeight = \
-        2*sibgrpRadius + 2*sibgrpSeparation + 35, \
-        2*sibgrpRadius + 2*sibgrpSeparation + 35
+    # Clip the max dimensions to for zooming to work with browsers.
+    # 300 is just a reasonable value for 1080p screen.
+    svgWidth, svgHeight = min(canvasWidth, 300), min(canvasHeight, 300)
 
     viewBoxMinX, viewBoxMinY = \
-        svgWidth / -2, svgHeight / -2
+        canvasWidth / -2, canvasHeight / -2
 
     viewBoxWidth, viewBoxHeight = \
-        svgWidth, svgHeight
+        canvasWidth, canvasHeight
 
     ret_ = []
-    ret_.append(svgRootFmt.format(svgWidth=svgWidth,
-                               svgHeight=svgHeight,
-                               viewBoxMinX=viewBoxMinX,
-                               viewBoxMinY=viewBoxMinY,
-                               viewBoxWidth=viewBoxWidth,
-                               viewBoxHeight=viewBoxHeight))
+    ret_.append(svgRootFmt.format(
+        svgWidth="%dmm" % svgWidth,
+        svgHeight="%dmm" % svgHeight,
+        viewBoxMinX=viewBoxMinX,
+        viewBoxMinY=viewBoxMinY,
+        viewBoxWidth=viewBoxWidth,
+        viewBoxHeight=viewBoxHeight,
+        #svgTransform='',#"translate(-30 -30) scale(1.0)",
+    ))
 
     ret_.append(sodipodiNamedview)
 

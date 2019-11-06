@@ -2,6 +2,7 @@
 # -*- coding: utf8 -*-
 
 # Standard library imports
+from itertools import chain
 from math import pi
 
 # PyPI library imports
@@ -17,6 +18,8 @@ from dmppl.color import rgb1D, rgb2D, identiconSpriteSvg
 from dmppl.experiments.eva.eva_common import paths, measureNameParts, metric, rdEvs, \
     mapSiblingTypeToHtmlEntity
 
+cssProps = False
+
 def calculateEdges(f, g, u, x, y,
                    cfg, dsfDeltas, vcdInfo): # {{{
     return None
@@ -28,59 +31,168 @@ def svgNodes(exs): # {{{
     nameParts = [measureNameParts(nm) for nm in measureNames]
 
     _baseNames = set(bn for mt,st,bn in nameParts) # One sibgrp per base name.
-    mapBaseNameToSibgrpIdx = {bn: i for i,bn in \
-                              enumerate(sorted(list(_baseNames)))}
 
-    # Identicons are embedded SVGs scaled and translated into place.
-    identicons = {bn: '<g transform="translate(-18 -8) scale(0.005)">%s</g>' % \
-                      rdTxt(joinP(paths.dname_identicon, bn + ".svg")) \
-                  for bn in _baseNames}
+    mapBaseNameToSibgrpIdx = \
+        {bn: i for i,bn in enumerate(sorted(list(_baseNames)))}
 
-    sibgrpSeparation = 100 # heuristic
+    # {{{ nodes
+
+    sibgrpSeparation = 100 # Space between groups of sibling nodes. HEURISTIC
     sibgrpRadius = (len(measureNames) * sibgrpSeparation) / (2 * pi)
-    sibgrpCenters = list(ptsMkPolygon(nPts=len(_baseNames), radius=[sibgrpRadius]))
-    #sibgrpCenters = list(ptsMkPolygon(nPts=len(_baseNames), radius=[sibgrpRadius, 0.66*sibgrpRadius]))
-    globalCenters = {nm: sibgrpCenters[mapBaseNameToSibgrpIdx[bn]] \
-                     for nm,(mt,st,bn) in zip(measureNames, nameParts)}
+
+    sibgrpCenters = \
+        list(ptsMkPolygon(nPts=len(_baseNames), radius=[sibgrpRadius]))
+
+    nodeSibgrpCenters = \
+        {nm: sibgrpCenters[mapBaseNameToSibgrpIdx[bn]] \
+         for nm,(mt,st,bn) in zip(measureNames, nameParts)}
 
 
+    sibSeparation = 60 # Space between sibling nodes. HEURISTIC
     mapSiblingTypeToLocalCenter = { # heuristic
         "measure":    (0, 0),
-        "reflection": (0, 60),
-        "rise":       (60, 0),
-        "fall":       (60, 60),
+        "reflection": (0, sibSeparation),
+        "rise":       (sibSeparation, 0),
+        "fall":       (sibSeparation, sibSeparation),
     }
-    localCenters = {nm: mapSiblingTypeToLocalCenter[st] \
-                     for nm,(mt,st,bn) in zip(measureNames, nameParts)}
 
-    nodeCenters = {nm: ptShift(globalCenters[nm], localCenters[nm]) \
-                   for nm in measureNames}
+    nodeLocalCenters = \
+        {nm: mapSiblingTypeToLocalCenter[st] \
+         for nm,(mt,st,bn) in zip(measureNames, nameParts)}
 
+    nodeCenters = \
+        {nm: ptShift(nodeSibgrpCenters[nm], nodeLocalCenters[nm]) \
+         for nm in measureNames}
+
+
+    # Title provides mouseover information and should apply to all elements
+    # representing a node.
+    titleFmt = '''\
+<title>{measureName}
+
+E&#x0307; = {exValue}
+</title>'''
+
+    # Blob (circular container) has background color representing E[x].
+    blobX, blobY = 0, 0
+    blobRadius = 25
+    if cssProps:
+        blobFmt = '<circle class="node" fill="#{exRgb}"/>'
+    else:
+        blobFmt = ('<circle'
+            ' class="node"'
+            ' cx="%d" cy="%d"'
+            ' r="%d"'
+            ' style="stroke:lime; stroke-width:0.2; stroke-opacity:1;"'
+            ' fill="#{exRgb}"'
+            '/>') % \
+            (blobX, blobY, blobRadius)
+
+    # Tombstone (colored rectangle) is quick to recognise measurement type.
+    tombstoneWidth, tombstoneHeight = 20, 20
+    tombstoneX, tombstoneY = tombstoneWidth / -2, tombstoneHeight / -2
+    if cssProps:
+        tombstoneFmt = '<rect class="node {measureType}"/>'
+    else:
+        tombstoneFmt = ('<rect'
+            ' class="node {measureType}"'
+            ' rx="3px" ry="3px"'
+            ' width="%d" height="%d"'
+            ' x="%d" y="%d"'
+            ' style="fill:{tombstoneFill}"'
+            '/>') % \
+            (tombstoneWidth, tombstoneHeight, tombstoneX, tombstoneY)
+
+    # Symbol (text) to be vertically centered in RHS of tombstone.
+    symbolOffsetX, symbolOffsetY = -4, 4 # HEURISTIC
+    if cssProps:
+        symbolFmt = '<text class="sym" x="%d" y="%d">{symbol}</text>' % \
+              (symbolOffsetX, symbolOffsetY)
+    else:
+        symbolFmt = ('<text'
+            ' class="sym"'
+            ' x="%d" y="%d"'
+            ' style="font-size:15px;font-family:sans-serif;fill:{symbolFill};">'
+            '{symbol}'
+            '</text>') % \
+            (symbolOffsetX, symbolOffsetY)
+
+    # Node is the collection of all elements representing a measure.
     nodeFmt = ' '.join((
         '<g',
             'id="{measureName}"',
             'class="node {siblingType}"',
             'transform="translate({centerX},{centerY})"',
         '>',
-          '<title>{measureName}</title>',
-          '<circle class="node" fill="#{rgbValue}"/>',
-          '<rect class="node {measureType}"/>',
-          '<text class="sym">{symbol}</text>',
-          '{identicon}',
+          titleFmt,
+          blobFmt,
+          tombstoneFmt, # Tombstone
+          symbolFmt,
         '</g>',
     ))
 
-    ret = (nodeFmt.format(measureName=nm,
+    mapMeasureTypeToTombstoneFill = {
+        "event":     "white",
+        "bstate":    "blue",
+        "threshold": "red",
+        "normal":    "black",
+    }
+
+    mapMeasureTypeToSymbolFill = {
+        "event":     "#404040",
+        "bstate":    "lime",
+        "threshold": "lime",
+        "normal":    "lime",
+    }
+
+    nodes = (nodeFmt.format(measureName=nm,
                           siblingType=st,
                           measureType=mt,
+                          baseName=bn,
                           centerX=nodeCenters[nm][0],
                           centerY=nodeCenters[nm][1],
-                          rgbValue=rgb1D(exs[nm]),
-                          symbol=mapSiblingTypeToHtmlEntity[st],
-                          identicon=identicons[bn]) \
-             for nm,(mt,st,bn) in zip(measureNames, nameParts))
+                          symbolFill=mapMeasureTypeToSymbolFill[mt],
+                          tombstoneFill=mapMeasureTypeToTombstoneFill[mt],
+                          exRgb=rgb1D(exs[nm]),
+                          exValue=exs[nm],
+                          symbol=mapSiblingTypeToHtmlEntity[st]) \
+           for nm,(mt,st,bn) in zip(measureNames, nameParts))
 
-    return ret, sibgrpRadius, sibgrpSeparation
+    # }}} nodes
+
+    # {{{ identicons
+    # One per sibling group.
+
+    identiconRadius = sibgrpRadius + 1.5*sibgrpSeparation
+
+    _identiconCenters = \
+        list(ptsMkPolygon(nPts=len(_baseNames), radius=[identiconRadius]))
+    identiconCenters = \
+        {bn: _identiconCenters[mapBaseNameToSibgrpIdx[bn]] \
+         for bn in _baseNames}
+
+    # Identicon to be vertically centered in LHS of tombstone.
+    identiconOffsetX, identiconOffsetY = 0, 0 # HEURISTIC
+    identiconScale = 0.025
+    identiconFmt = \
+        ('<g transform="translate({centerX},{centerY}) scale(%0.03f)">'
+         '{identiconSvg}'
+         '</g>') % identiconScale
+
+    # Identicons are embedded SVGs scaled and translated into place.
+    identiconSvgs = \
+        {bn: rdTxt(joinP(paths.dname_identicon, bn + ".svg")) \
+         for bn in _baseNames}
+
+    identicons = \
+        (identiconFmt.format(identiconSvg=identiconSvgs[bn],
+                             centerX=identiconCenters[bn][0],
+                             centerY=identiconCenters[bn][1])
+         for bn in _baseNames)
+
+    # }}} identicons
+
+    return chain(nodes, identicons), sibgrpRadius, sibgrpSeparation
 # }}} def svgNodes
 
 def svgNetgraph(u, cfg, vcdInfo, edges): # {{{
@@ -139,22 +251,24 @@ def svgNetgraph(u, cfg, vcdInfo, edges): # {{{
         '/>',
       '</sodipodi:namedview>',
     )))
-    ret_.append(' '.join((
-      '<style>',
-        'g.node > circle.node { cx:0; cy:0; r:25; stroke:lime; stroke-width:0.2; stroke-opacity:1; }',
-        'g.node > text.sym { x:0; y:0; font-size:10px; font-family:sans-serif; }',
-        'g.node > rect.node { x:-20; y:-10; height:20px; width:40px; rx:3px; ry:3px; }',
-        'g.node > rect.event { fill:white; }',
-        'g.node > rect.bstate { fill:blue; }',
-        'g.node > rect.threshold { fill:red; }',
-        'g.node > rect.normal { fill:black; }',
-        'g.node > text.sym.measure { fill:lime; }',
-        'rect.event ~ text.sym { fill:#404040; }',
-        'rect.bstate ~ text.sym { fill:lime; }',
-        'rect.threshold ~ text.sym { fill:lime; }',
-        'rect.normal ~ text.sym { fill:lime; }',
-      '</style>',
-    )))
+
+    if cssProps:
+        ret_.append(' '.join((
+          '<style>',
+            'g.node > circle.node { cx:0; cy:0; r:25; stroke:lime; stroke-width:0.2; stroke-opacity:1; }',
+            'g.node > text.sym { x:0; y:0; font-size:15px; font-family:sans-serif; }',
+            'g.node > rect.node { x:-10; y:-10; height:20px; width:20px; rx:3px; ry:3px; }',
+            'g.node > rect.event { fill:white; }',
+            'g.node > rect.bstate { fill:blue; }',
+            'g.node > rect.threshold { fill:red; }',
+            'g.node > rect.normal { fill:black; }',
+            'g.node > text.sym.measure { fill:lime; }',
+            'rect.event ~ text.sym { fill:#404040; }',
+            'rect.bstate ~ text.sym { fill:lime; }',
+            'rect.threshold ~ text.sym { fill:lime; }',
+            'rect.normal ~ text.sym { fill:lime; }',
+          '</style>',
+        )))
 
     # Force background to white
     ret_.append('<rect width="100%%" height="100%%" fill="white" x="%d" y="%d"/>' \

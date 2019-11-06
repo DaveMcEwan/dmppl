@@ -225,7 +225,9 @@ def evaHtmlString(args, cfg, request): # {{{
     else:
         edges = calculateEdges(f, g, u, x, y,
                                cfg, dsfDeltas, vcdInfo)
+
         bodySvg = svgNetgraph(u, cfg, vcdInfo, edges)
+
         body = bodySvg \
             if bodyOnly else \
             (['<div class="netgraph">'] + bodySvg + ['</div>'])

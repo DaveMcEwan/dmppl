@@ -159,7 +159,6 @@ svgRootFmt = ' '.join((
     'viewBox="{viewBoxMinX} {viewBoxMinY} {viewBoxWidth} {viewBoxHeight}"',
     'width="{svgWidth}"',
     'height="{svgHeight}"',
-    #'transform="{svgTransform}"',
   '>',
 ))
 
@@ -188,6 +187,35 @@ sodipodiNamedview = ' '.join((
   '</sodipodi:namedview>',
 ))
 
+edgeFmt = ' '.join((
+  '<path',
+    'class="edge"',
+    'id="{srcName}__{srcDelta}__{dstName}"',
+    'd="M {srcX},{srcY} {dstX},{dstY}"'
+    'style="{style}"',
+    'inkscape:connector-curvature="0"',
+  '>',
+'''<title>{srcName}&#x27e8;{srcDelta}&#x27e9; &#x27f6; {dstName}
+
+X = {srcName}
+Y = {srcDelta}&#x27e8;{srcDelta}&#x27e9;
+
+E&#x0307;(X) = {Ex_X}
+E&#x0307;(Y) = {Ex_Y}
+E&#x0307;(X&#x2229;Y) = {Ex_XconvY}
+E&#x0307;(|X-Y|) = {Ex_XabsdiffY}
+E&#x0307;(X|Y) = {Cex_XY}
+E&#x0307;(Y|X) = {Cex_YX}
+D&#x0307;ep(X,Y) = {Dep}
+C&#x0307;ov(X,Y) = {Cov}
+J&#x0307;ac(X,Y) = {Jac}
+T&#x0307;mt(X,Y) = {Tmt}
+C&#x0307;os(X,Y) = {Cos}
+C&#x0307;ls(X,Y) = {Cls}
+H&#x0307;am(X,Y) = {Ham}
+</title>''',
+  '</path>',
+))
 # }}} Static format strings
 
 def calculateEdges(f, g, u, x, y,
@@ -302,7 +330,6 @@ def svgNetgraph(u, cfg, vcdInfo, edges): # {{{
         viewBoxMinY=viewBoxMinY,
         viewBoxWidth=viewBoxWidth,
         viewBoxHeight=viewBoxHeight,
-        #svgTransform='',#"translate(-30 -30) scale(1.0)",
     ))
 
     ret_.append(sodipodiNamedview)

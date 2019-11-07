@@ -218,9 +218,44 @@ H&#x0307;am(X,Y) = {Ham}
 ))
 # }}} Static format strings
 
-def calculateEdges(f, g, u, x, y,
-                   cfg, dsfDeltas, vcdInfo): # {{{
-    return None
+def calculateEdges(f, g, u,
+                   cfg, sfDeltas, vcdInfo): # {{{
+
+    measureNames = vcdInfo["unitIntervalVarNames"]
+
+    assert isinstance(u, int), type(u)
+    v = u + cfg.windowsize
+    evsStartTime = u - cfg.deltabk
+    evsFinishTime = v + cfg.deltafw + 1
+
+    # Keep relevant samples in memory.
+    evs = rdEvs(measureNames, evsStartTime, evsFinishTime, cfg.fxbits)
+
+    nDeltas = len(sfDeltas)
+    m = len(measureNames)
+    nPossibleEdges = nDeltas * (m**2 - m) / 2
+
+    ret = []
+
+    # Track downsample factor changes in order to perform the sampling only once.
+    sfPrev = 0
+
+    for dIdx, (sf, d) in enumerate(sfDeltas):
+        d_u, d_v = u+d, v+d
+        ds_d = d // sf
+
+        # Ignore negative deltas where relationship can't exist yet.
+        if 0 > d_u: continue
+
+        # Downsample EVS to get X and Y.
+        if sf != sfPrev:
+            sfPrev = sf
+
+            # TODO: Perform downsampling and Ex.
+
+        # TODO: For each x, for each y
+
+    return ret
 # }}} def calculateEdges
 
 def svgNodes(exs): # {{{

@@ -223,7 +223,7 @@ def evaHtmlString(args, cfg, request): # {{{
                          exSibRow, exSib, varCol, fnUXY)
 
     else:
-        edges = calculateEdges(f, g, u, x, y,
+        edges = calculateEdges(f, g, u,
                                cfg, dsfDeltas, vcdInfo)
 
         bodySvg = svgNetgraph(u, cfg, vcdInfo, edges)

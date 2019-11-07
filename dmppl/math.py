@@ -6,10 +6,11 @@ import functools
 import gzip
 import math
 import numpy as np
-import sys
+import random
+from sys import version_info
 from .base import stripSuffix
 
-if sys.version_info[0] > 2:
+if version_info[0] > 2:
     long = int
 
 def isEven(x): # {{{
@@ -399,6 +400,171 @@ ptPairsDistance = functools.partial(_ptPairsOp, ptPairDistance)
 # TODO: arcLength, arcIsBig, arcEndpoint
 # TODO: bezPt, bezPts, bezAngle, bezLength
 # TODO: Support NumPy arrays as points.
+
+def subsample(x, factor, algorithm="xor", padding="reflect", prng=None): # {{{
+    '''Subsample axis0 of a NumPy ndarray `x` by an integer `factor`.
+
+    Subsampling is where the value of a chosen element is used to represent the
+    surrounding region.
+    NOTE: Different from downsampling which uses an average of the surrounding
+    region.
+
+    Each result element is chosen from a base+offset where base defines the
+    surrounding region.
+    `algorithm` in {uniform, xor} specifies how the offset is chosen.
+      uniform:
+        A uniform random offset is chosen for each region.
+      xor:
+        A single random number is chosen, and XOR'd with the region index.
+        This is faster to calculate than uniform.
+        NOTE: `factor` must be a power of 2.
+
+    `prng` may supply a pseudo-random number generator which must have a
+    '.next()' method.
+    If none is given then the standard library random.random() is used.
+
+    Axis0 of `x` is padded to a multiple of `factor` in length using one of the
+    NumPy-supported modes.
+      reflect:
+        Pads with the reflection of the vector mirrored on the first and
+        last values of the vector along each axis.
+      edge:
+        Pads with the edge values of array.
+      wrap:
+        Pads with the wrap of the vector along the axis.
+        The first values are used to pad the end and the end values are used to
+        pad the beginning.
+      minimum/maximum/mean/median:
+        Pads with the minimum/maximum/mean/median value of the vector along
+        each axis.
+    '''
+    l = x.shape[0]
+    assert 0 < l, "x must contain at least one data point, length=%d." % l
+
+    assert algorithm in ["uniform", "xor"], algorithm
+
+    allowedPadding = [
+        "reflect",
+        "minimum",
+        "maximum",
+        "mean",
+        "median",
+        "wrap",
+    ]
+    assert padding in allowedPadding, padding
+
+    assert isinstance(factor, (int, long)), type(factor)
+    assert 0 < factor, factor
+    if factor == 1: return x
+
+    if prng is None:
+        prng = random
+        prng.next = prng.random
+
+    # Pad x to multiple of factor in length.
+    nMissing = factor - (l % factor)
+    xPadded = np.pad(x, (0, nMissing), padding)
+    assert 0 == (l % factor), (l, x.shape, factor, nMissing)
+
+    k = l // factor # Length of result.
+    assert 0 < k, k
+    retShape = [k] + list(x.shape[1:])
+
+    # Allocate uninitialized row in memory.
+    ret_ = np.empty(retShape, dtype=x.dtype)
+
+    # Select and copy elements from x.
+    if algorithm == "uniform":
+        for i in range(k):
+            offset = prng.next() % factor
+            assert 0 <= offset < factor
+            ret_[i] = x[i*factor + offset]
+    elif algorithm == "xor":
+        assert isPow2(factor), factor
+        r = prng.next() & (factor - 1)
+        for i in range(k):
+            offset = i ^ r
+            assert 0 <= offset < factor
+            ret_[i] = x[i*factor + offset]
+    else:
+        assert False, "Unsupported algorithm: %s" % algorithm
+
+    return ret_
+# }}} def subsample
+
+def downsample(x, factor, algorithm="mean", padding="reflect"): # {{{
+    '''Downsample axis0 of a NumPy ndarray `x` by an integer `factor`.
+
+    Downsampling is where some sort of average is used to represent a region.
+    NOTE: Different from subsampling which selects and copies an element to
+    represent each region.
+
+    `algorithm` in {mean, median, min, max} specifies the type of average used
+    to represent each region.
+
+    Axis0 of `x` is padded to a multiple of `factor` in length using one of the
+    NumPy-supported modes.
+      reflect:
+        Pads with the reflection of the vector mirrored on the first and
+        last values of the vector along each axis.
+      edge:
+        Pads with the edge values of array.
+      wrap:
+        Pads with the wrap of the vector along the axis.
+        The first values are used to pad the end and the end values are used to
+        pad the beginning.
+      minimum/maximum/mean/median:
+        Pads with the minimum/maximum/mean/median value of the vector along
+        each axis.
+    '''
+    l = x.shape[0]
+    assert 0 < l, "x must contain at least one data point, length=%d." % l
+
+    assert algorithm in ["mean", "median", "min", "max"], algorithm
+
+    allowedPadding = [
+        "reflect",
+        "minimum",
+        "maximum",
+        "mean",
+        "median",
+        "wrap",
+    ]
+    assert padding in allowedPadding, padding
+
+    assert isinstance(factor, (int, long)), type(factor)
+    assert 0 < factor, factor
+    if factor == 1: return x
+
+    # Pad x to multiple of factor in length.
+    nMissing = factor - (l % factor)
+    xPadded = np.pad(x, (0, nMissing), padding)
+    assert 0 == (l % factor), (l, x.shape, factor, nMissing)
+
+    k = l // factor # Length of result.
+    assert 0 < k, k
+    retShape = [k] + list(x.shape[1:])
+
+    # Allocate uninitialized row in memory.
+    ret_ = np.empty(retShape, dtype=x.dtype)
+
+    # Calculate averages from x to fill in result.
+    if algorithm in ["mean", "median", "min", "max"]:
+        f = {
+            "mean": np.mean,
+            "median": np.median,
+            "min": np.min,
+            "max": np.max,
+        }[algorithm]
+
+        for i in range(ds_l):
+            base = i * factor
+            ret[i] = f(X[base:base+factor])
+    else:
+        assert False, "Unsupported algorithm: %s" % algorithm
+
+    return ret_
+# }}} def downsample
 
 if __name__ == "__main__":
     assert False, "Not a standalone script."

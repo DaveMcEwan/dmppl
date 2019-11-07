@@ -459,7 +459,7 @@ def subsample(x, factor, algorithm="xor", padding="reflect", prng=None): # {{{
 
     if prng is None:
         prng = random
-        prng.next = prng.random
+        prng.next = functools.partial(prng.randrange, 0, factor)
 
     # Pad x to multiple of factor in length.
     nMissing = factor - (l % factor)

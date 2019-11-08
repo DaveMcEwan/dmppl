@@ -61,3 +61,12 @@ deltafw = 1
 # When time-shifting by this many, apply downsampling.
 deltazoom = 0
 
+# Floats in unit interval.
+# Thresholds for significance for metrics.
+epsilon.Cex = 0.10
+epsilon.Cls = 0.11
+epsilon.Cov = 0.12
+epsilon.Cos = 0.13
+epsilon.Dep = 0.14
+epsilon.Ham = 0.15
+epsilon.Tmt = 0.16

@@ -10,13 +10,14 @@ import numpy as np
 
 # Local library imports
 from dmppl.base import dbg, info, verb, rdTxt, joinP
-from dmppl.math import ptShift, ptsMkPolygon
+from dmppl.math import ptShift, ptsMkPolygon, subsample, downsample
+from dmppl.fx import fxFromFloat
 from dmppl.color import rgb1D, rgb2D, identiconSpriteSvg
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
-from dmppl.experiments.eva.eva_common import paths, measureNameParts, metric, rdEvs, \
-    mapSiblingTypeToHtmlEntity
+from dmppl.experiments.eva.eva_common import paths, measureNameParts, rdEvs, \
+    mapSiblingTypeToHtmlEntity, metricNames, metric
 
 # {{{ Static format strings
 
@@ -223,6 +224,16 @@ def calculateEdges(f, g, u,
 
     measureNames = vcdInfo["unitIntervalVarNames"]
 
+    # Helper function to implement floats as floats or fixed point.
+    implFloat = \
+        (lambda x: x) \
+        if 0 == cfg.fxbits else \
+        functools.partial(fxFromFloat, nBits=cfg.fxbits)
+
+    epsilonF, epsilonG = \
+        implFloat(cfg.epsilon[f]), \
+        implFloat(cfg.epsilon[g]) if g else None
+
     assert isinstance(u, int), type(u)
     v = u + cfg.windowsize
     evsStartTime = u - cfg.deltabk
@@ -233,29 +244,80 @@ def calculateEdges(f, g, u,
 
     nDeltas = len(sfDeltas)
     m = len(measureNames)
-    nPossibleEdges = nDeltas * (m**2 - m) / 2
-
-    ret = []
+    nPossibleEdges = nDeltas * (m**2 - m) / 2 # TODO: Report progress.
 
     # Track downsample factor changes in order to perform the sampling only once.
-    sfPrev = 0
+    sfPrev = -1 # non-init
 
+    ret_ = []
     for dIdx, (sf, d) in enumerate(sfDeltas):
-        d_u, d_v = u+d, v+d
-        ds_d = d // sf
+        dU, dV = u+d, v+d
 
         # Ignore negative deltas where relationship can't exist yet.
-        if 0 > d_u: continue
+        if 0 > dU:
+            continue
 
         # Downsample EVS to get X and Y.
         if sf != sfPrev:
             sfPrev = sf
 
-            # TODO: Perform downsampling and Ex.
+            # Each X,Y window requires exactly 3 pieces of information which are
+            # derived from an integer floor division in sub/down-sampling.
+            # 1. Where X starts = u -> sfU
+            # 2. Where Y starts = u+d -> sfU+sfD
+            # 3. Size of window = v-u -> sfV-sfU
+            sfWinSize = cfg.windowsize // sf
+            sfD = d // sf
+            sfU= u // sf
+            sfV = sfU + sfWinSize
 
-        # TODO: For each x, for each y
+            # Sub/downsample entire EVS since it will all be used.
+            sfEvs = {nm: subsample(evs[nm], sf) for nm in measureNames}
 
-    return ret
+            # Get metric implementations for this window.
+            # TODO: LRU cache wrappers for fnEx.
+            fnEx = metric("Ex", sfWinSize, cfg.windowalpha, nBits=cfg.fxbits)
+            fnF = metric(f, sfWinSize, cfg.windowalpha, nBits=cfg.fxbits)
+            fnG = metric(g, sfWinSize, cfg.windowalpha, nBits=cfg.fxbits) \
+                if g is not None else None
+            fnMetrics = \
+                {nm: metric(nm, sfWinSize, cfg.windowalpha, nBits=cfg.fxbits) \
+                 for nm in metricNames}
+
+            xs = {nm: sfEvs[nm][sfU:sfV] for nm in measureNames}
+            # Pre-calculate (with LRU cache).
+            xsEx = {nm: fnEx(xs[nm]) for nm in measureNames}
+
+        ys = {nm: sfEvs[nm][sfU+sfD:sfV+sfD] for nm in measureNames}
+        # Pre-calculate (with LRU cache).
+        ysEx = {nm: fnEx(ys[nm]) for nm in measureNames}
+
+        for nmX in measureNames:
+            mtX, stX, bnX = measureNameParts(nmX)
+
+            for nmY in measureNames:
+                mtY, stY, bnY = measureNameParts(nmY)
+
+                if bnX == bnY:
+                    continue
+
+                metF = fnF(xs[nmX], ys[nmY])
+                if g is None:
+                    isSignificant = epsilonF < metF
+                elif epsilonF < metF:
+                    metG = fnG(xs[nmX], ys[nmY])
+                    isSignificant = epsilonG < metG
+
+                if not isSignificant:
+                    continue
+
+                edge = {nm: fnMetrics[nm](xs[nmX], ys[nmY]) \
+                        for nm in metricNames}
+
+                ret_.append(edge)
+                # TODO: yield edge?
+
+    return ret_
 # }}} def calculateEdges
 
 def svgNodes(exs): # {{{

@@ -29,14 +29,6 @@ timestep = 1
 fir = [0.25, 0.25, 0.25, 0.25] # 4-tap FIR, groupDelay=0.25.
 
 # Non-negative integer.
-# EVS is stored in a series of array blocks, restricted to this number of
-# elements in length to bound/predict memory usage.
-# Too large may overrun RAM, too small may have terrible performance.
-# Rounded down to closest multiple of 64.
-#evsblocksize = 4096 # 4KiB/measurement/block
-evsblocksize = 1048576 # 1MiB/measurement/block
-
-# Non-negative integer.
 # 0 means use floats for correlation operations.
 # +ve means use that number of fixed point bits for correlation operations.
 # At least 4. At most 31.

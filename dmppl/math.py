@@ -79,7 +79,7 @@ def l2Norm(*args): # {{{
     '''Return the l2norm of all args.
     '''
     for x in args:
-        assert isinstance(x, (int, long, float))
+        assert isinstance(x, (int, long, float)), x
 
     return math.sqrt(sum([x**2 for x in args]))
 # }}} def l2Norm

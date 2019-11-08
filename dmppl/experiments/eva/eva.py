@@ -23,7 +23,8 @@ from dmppl.base import run
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
-from dmppl.experiments.eva.eva_common import __version__, paths, initPaths
+from dmppl.experiments.eva.eva_common import __version__, paths, initPaths, \
+    metricNames
 from eva_init import evaInit
 from eva_httpd import evaHttpd
 
@@ -86,17 +87,16 @@ argparser_httpd.add_argument("-p", "--httpd-port",
     default=8080,
     help="TCP port for server. Use 0 for STDOUT.")
 
-fgChoices = ["Cex", "Dep", "Cov", "Ham", "Tmt", "Cls", "Cos"]
 argparser_httpd.add_argument("-f",
     type=str,
-    default="Dep",
-    choices=fgChoices,
+    default=metricNames[0],
+    choices=metricNames,
     help="Function f(x|y;u)")
 
 argparser_httpd.add_argument("-g",
     type=str,
     default=None,
-    choices=fgChoices,
+    choices=metricNames,
     help="Function g(x|y;u) for 2D colorspace (f, g)")
 
 argparser_httpd.add_argument("-x",

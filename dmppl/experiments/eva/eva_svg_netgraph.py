@@ -10,7 +10,7 @@ import numpy as np
 
 # Local library imports
 from dmppl.base import dbg, info, verb, rdTxt, joinP
-from dmppl.math import ptShift, ptsMkPolygon, subsample, downsample
+from dmppl.math import ptShift, ptsMkPolygon, subsample, downsample, l2Norm
 from dmppl.fx import fxFromFloat
 from dmppl.color import rgb1D, rgb2D, identiconSpriteSvg
 
@@ -38,24 +38,26 @@ mapSiblingTypeToLocalCenter = { # heuristic
 
 # Title provides mouseover information and should apply to all elements
 # representing a node.
-titleFmt = '''\
-<title>{measureName}
-
-E&#x0307; = {exValue}
-</title>'''
+nodeTitleFmt = '\n'.join((
+  '<title>{measureName}',
+  '',
+  'E&#x0307; = {exValue:.2%}',
+  '</title>',
+))
 
 # Blob (circular container) has background color representing E[x].
 blobX, blobY = 0, 0
 blobRadius = 25
+blobStroke = 'style="stroke:black; stroke-width:0.2; stroke-opacity:1;"'
 if cssProps:
     blobFmt = '<circle class="node" fill="#{exRgb}"/>'
 else:
     blobFmt = ' '.join((
       '<circle',
-        ' class="node"',
-        ' cx="%d" cy="%d"' % (blobX, blobY),
-        ' r="%d"' % blobRadius,
-        ' style="stroke:lime; stroke-width:0.2; stroke-opacity:1;"',
+        'class="node"',
+        'cx="%d" cy="%d"' % (blobX, blobY),
+        'r="%d"' % blobRadius,
+        blobStroke,
         ' fill="#{exRgb}"',
       '/>'))
 
@@ -92,9 +94,9 @@ nodeFmt = ' '.join((
     '<g',
         'id="{measureName}"',
         'class="node {siblingType}"',
-        'transform="translate({centerX},{centerY})"',
+        'transform="translate({centerX:.3f},{centerY:.3f})"',
     '>',
-      titleFmt,
+      nodeTitleFmt,
       blobFmt,
       tombstoneFmt, # Tombstone
       symbolFmt,
@@ -118,15 +120,20 @@ mapMeasureTypeToSymbolFill = {
 
 identiconX, identiconY = -7.5, -7.5 # HEURISTIC
 identiconScale = 3.0 # 3*5=15
-identiconFmt = \
-    ('<g transform="translate({centerX},{centerY}) scale(%0.03f)">'
-     '{identiconSvg}'
-     '</g>') % identiconScale
+identiconFmt = ' '.join((
+  '<g',
+    'transform="translate({centerX:.3f},{centerY:.3f}) scale(%0.03f)"' % \
+        identiconScale,
+  '>',
+  '<title>{baseName}</title>',
+  '{identiconSvg}',
+  '</g>',
+))\
 
 topStyle = '' if not cssProps else ' '.join((
   '<style>',
     'g.node > circle.node {',
-        'stroke:lime; stroke-width:0.2; stroke-opacity:1;',
+        blobStroke,
         'cx:%d; cy:%d;' % (blobX, blobY),
         'r:%d;' % blobRadius,
     '}',
@@ -188,33 +195,45 @@ sodipodiNamedview = ' '.join((
   '</sodipodi:namedview>',
 ))
 
+# 0x00b7 MIDDLE DOT
+# 0x00ac NOT SIGN
+# 0x0307 COMBINING DOT ABOVE
+# 0x2191 UPWARDS ARROW
+# 0x2193 DOWNWARDS ARROW
+# 0x2229 INTERSECTION
+# 0x27e8 MATHEMATICAL LEFT ANGLE BRACKET
+# 0x27e9 MATHEMATICAL RIGHT ANGLE BRACKET
+# 0x27f6 LONG RIGHTWARDS ARROW
 edgeFmt = ' '.join((
   '<path',
     'class="edge"',
     'id="{srcName}__{srcDelta}__{dstName}"',
-    'd="M {srcX},{srcY} {dstX},{dstY}"'
+    'd="M {srcX:.3f},{srcY:.3f} {dstX:.3f},{dstY:.3f}"',
     'style="{style}"',
     'inkscape:connector-curvature="0"',
   '>',
-'''<title>{srcName}&#x27e8;{srcDelta}&#x27e9; &#x27f6; {dstName}
-
-X = {srcName}
-Y = {srcDelta}&#x27e8;{srcDelta}&#x27e9;
-
-E&#x0307;(X) = {Ex_X}
-E&#x0307;(Y) = {Ex_Y}
-E&#x0307;(X&#x2229;Y) = {Ex_XconvY}
-E&#x0307;(|X-Y|) = {Ex_XabsdiffY}
-E&#x0307;(X|Y) = {Cex_XY}
-E&#x0307;(Y|X) = {Cex_YX}
-D&#x0307;ep(X,Y) = {Dep}
-C&#x0307;ov(X,Y) = {Cov}
-J&#x0307;ac(X,Y) = {Jac}
-T&#x0307;mt(X,Y) = {Tmt}
-C&#x0307;os(X,Y) = {Cos}
-C&#x0307;ls(X,Y) = {Cls}
-H&#x0307;am(X,Y) = {Ham}
-</title>''',
+    '\n'.join((
+      '<title>{srcName}&#x27e8;{srcDelta}&#x27e9; &#x27f6; {dstName}',
+      '',
+      'X = {dstName}',
+      'Y = {srcName}&#x27e8;{srcDelta}&#x27e9;',
+      'sampleFactor = {sampleFactor:d}',
+      'f = {f}',
+      'g = {g}',
+      '',
+      'E&#x0307;(X) = {dstEx:.2%}',
+      'E&#x0307;(Y) = {srcEx:.2%}',
+      #'E&#x0307;(X&#x2229;Y) = {Ex_XconvY:.2%}',
+      #'E&#x0307;(|X-Y|) = {Ex_XabsdiffY:.2%}',
+      'E&#x0307;[X|Y] = {Cex:.2%}',
+      'C&#x0307;ls(X,Y) = {Cls:.2%}',
+      'C&#x0307;os(X,Y) = {Cos:.2%}',
+      'C&#x0307;ov(X,Y) = {Cov:.2%}',
+      'D&#x0307;ep(X,Y) = {Dep:.2%}',
+      'H&#x0307;am(X,Y) = {Ham:.2%}',
+      'T&#x0307;mt(X,Y) = {Tmt:.2%}',
+      '</title>',
+    )),
   '</path>',
 ))
 # }}} Static format strings
@@ -249,7 +268,6 @@ def calculateEdges(f, g, u,
     # Track downsample factor changes in order to perform the sampling only once.
     sfPrev = -1 # non-init
 
-    ret_ = []
     for dIdx, (sf, d) in enumerate(sfDeltas):
         dU, dV = u+d, v+d
 
@@ -301,23 +319,35 @@ def calculateEdges(f, g, u,
                 if bnX == bnY:
                     continue
 
+                # Unusual structure only executes fnG() where it has a chance
+                # of producing an overall significant result.
                 metF = fnF(xs[nmX], ys[nmY])
                 if g is None:
                     isSignificant = epsilonF < metF
                 elif epsilonF < metF:
                     metG = fnG(xs[nmX], ys[nmY])
                     isSignificant = epsilonG < metG
+                else:
+                    isSignificant = False
 
                 if not isSignificant:
                     continue
 
                 edge = {nm: fnMetrics[nm](xs[nmX], ys[nmY]) \
                         for nm in metricNames}
+                edge.update({
+                    'f': f,
+                    'g': g,
+                    "dstName": nmX,
+                    "srcName": nmY,
+                    "srcDelta": d,
+                    "sampleFactor": sf,
+                    "dstEx": xsEx[nmX],
+                    "srcEx": ysEx[nmY],
+                })
 
-                ret_.append(edge)
-                # TODO: yield edge?
+                yield edge
 
-    return ret_
 # }}} def calculateEdges
 
 def svgNodes(exs): # {{{
@@ -386,10 +416,12 @@ def svgNodes(exs): # {{{
     #     for bn in baseNames}
 
     identicons = \
-        (identiconFmt.format(identiconSvg=identiconSvgs[bn],
-                             centerX=identiconCenters[bn][0],
-                             centerY=identiconCenters[bn][1])
-         for bn in baseNames)
+        (identiconFmt.format(
+            identiconSvg=identiconSvgs[bn],
+            centerX=identiconCenters[bn][0],
+            centerY=identiconCenters[bn][1],
+            baseName=bn,
+         ) for bn in baseNames)
 
     # }}} identicons
 
@@ -397,8 +429,32 @@ def svgNodes(exs): # {{{
         2*identiconRadius + 2*sibgrpSeparation, \
         2*identiconRadius + 2*sibgrpSeparation
 
-    return chain(nodes, identicons), (canvasWidth, canvasHeight)
+    return chain(nodes, identicons), (canvasWidth, canvasHeight), nodeCenters
 # }}} def svgNodes
+
+def svgEdges(edges, nodeCenters): # {{{
+
+    for edge in edges:
+        f, g = edge['f'], edge['g']
+        metF, metG = edge[f], edge[g] if g else None
+
+        normFG = l2Norm(metF, metG) if g else metF
+
+        style = ';'.join((
+            'stroke: #%s' % (rgb2D(metF, metG) if g else rgb1D(metF)),
+            'stroke-width: %0.2f' % normFG * 1,
+            'stroke-opacity: %0.2f' % normFG * 1,
+        ))
+
+        yield edgeFmt.format(
+           srcX=nodeCenters[edge["srcName"]][0],
+           srcY=nodeCenters[edge["srcName"]][1],
+           dstX=nodeCenters[edge["dstName"]][0],
+           dstY=nodeCenters[edge["dstName"]][1],
+           style=style,
+           **edge,
+        )
+# }}} def svgEdges
 
 def svgNetgraph(u, cfg, vcdInfo, edges): # {{{
     measureNames = vcdInfo["unitIntervalVarNames"]
@@ -407,7 +463,7 @@ def svgNetgraph(u, cfg, vcdInfo, edges): # {{{
     expectation = metric("Ex", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
     exs = {nm: expectation(evs[nm]) for nm in measureNames}
 
-    nodes, (canvasWidth, canvasHeight) = svgNodes(exs)
+    nodeStrs, (canvasWidth, canvasHeight), nodeCenters = svgNodes(exs)
 
     # Clip the max dimensions to for zooming to work with browsers.
     # 300 is just a reasonable value for 1080p screen.
@@ -446,12 +502,21 @@ def svgNetgraph(u, cfg, vcdInfo, edges): # {{{
         'inkscape:groupmode="layer"',
       '>',
     )))
-    ret_ += list(nodes)
+    ret_ += list(nodeStrs)
+    ret_.append('</g>')
+
+    # Layer of edge/connections.
+    ret_.append(' '.join((
+      '<g',
+        'id="layer2"',
+        'inkscape:label="Edges"',
+        'inkscape:groupmode="layer"',
+      '>',
+    )))
+    ret_ += list(svgEdges(edges, nodeCenters))
     ret_.append('</g>')
 
     # TODO: Layer of self-duty for multi-sibling measures.
-
-    # TODO: Layer of edge/connections.
 
     ret_.append('</svg>')
     return ret_

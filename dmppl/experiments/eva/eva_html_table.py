@@ -95,23 +95,39 @@ def yDisplay(y): # {{{
     return "..." if y is None else y
 # }}} def yDisplay
 
-evaTitleFmt = "{fn}(x={x} | y={y}<sub>" + \
-    utf8NameToHtml("MATHEMATICAL LEFT ANGLE BRACKET") + \
-    utf8NameToHtml("GREEK SMALL LETTER DELTA") + \
-    utf8NameToHtml("MATHEMATICAL RIGHT ANGLE BRACKET") + \
-    "</sub> ; u={u})"
+def evaTitleFmt(fnIsEx): # {{{
+    ob, sep, cb = ('[', '|', ']') if fnIsEx else ('(', ',', ')')
+
+    ret = ''.join((
+        "{fn}",
+        ob,
+        "x={x} ",
+        sep,
+        " y={y}<sub>",
+        utf8NameToHtml("MATHEMATICAL LEFT ANGLE BRACKET"),
+        utf8NameToHtml("GREEK SMALL LETTER DELTA"),
+        utf8NameToHtml("MATHEMATICAL RIGHT ANGLE BRACKET"),
+        "</sub> ; u={u}",
+        cb,
+    ))
+
+    return ret
+# }}} def evaTitleFmt
 
 def evaTitleText(f, g, u, x, y): # {{{
     '''Return the title of a data view as a simple string without nested markup.
     '''
     # NOTE: Assertions handled in *Display().
-    return evaTitleFmt.format(fn=fnDisplay(f, g),
-                              x=xDisplay(x),
-                              y=yDisplay(y),
-                              u=uDisplay(u))
+    fnIsEx = ("Cex" in (f, g)) and (None in (f, g)) # One is Cex, other is None.
+    return evaTitleFmt(fnIsEx).format(
+        fn=fnDisplay(f, g),
+        x=xDisplay(x),
+        y=yDisplay(y),
+        u=uDisplay(u),
+    )
 # }}} def evaTitleText
 
-def evaTitleAny(fn, u, x, y): # {{{
+def evaTitleAny(fn, u, x, y, fnIsEx): # {{{
     '''Return the title of a data view substituing in arbitary markup strings.
     '''
     assert isinstance(fn, str), type(fn)
@@ -123,7 +139,7 @@ def evaTitleAny(fn, u, x, y): # {{{
     assert 0 < len(x), x
     assert 0 < len(y), y
 
-    return evaTitleFmt.format(fn=fn, x=x, y=y, u=u)
+    return evaTitleFmt(fnIsEx).format(fn=fn, x=x, y=y, u=u)
 # }}} def evaTitleAny
 
 def tableTitleRow(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
@@ -194,10 +210,12 @@ def tableTitleRow(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
     yPopover = popoverUl(yDisplay(y), yLinks)
 
 
+    fnIsEx = ("Cex" in (f, g)) and (None in (f, g)) # One is Cex, other is None.
+
     ret = (
         '<tr>',
         '  <th class="tabletitle" colspan="%d">' % colspanTitle,
-        evaTitleAny(fnPopover, uDisplay(u), xPopover, yPopover),
+        evaTitleAny(fnPopover, uDisplay(u), xPopover, yPopover, fnIsEx),
         '  </th>',
         navPrevNext,
         '</tr>',
@@ -208,7 +226,7 @@ def tableTitleRow(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
 def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
     '''Return a string with HTML one or more <tr>.
     '''
-    sibThTxtFmt = "E[%s]<sub>%s</sub>" # symbol, x/y
+    sibThTxtFmt = mapMetricNameToHtml["Ex"] + "[%s]<sub>%s</sub>" # symbol, x/y
 
     def sibHiThs(nm, xNotY, rowspan, values=None): # {{{
 

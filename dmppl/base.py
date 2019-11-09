@@ -9,6 +9,7 @@ import os
 import re
 import sys
 import time
+import unicodedata
 
 if 2 < sys.version_info[0]:
     long = int
@@ -199,6 +200,12 @@ def compose(f, g, unpack=False): # {{{
 
     return composition
 # }}} def compose
+
+def utf8NameToHtml(name): # {{{
+    '''Return the HTML entity for a UTF character name.
+    '''
+    return "&#x{:04x};".format(ord(unicodedata.lookup(name)))
+# }}} def utf8NameToHtml
 
 def tmdiff_wdhms2s(weeks, days, hours, minutes, seconds): # {{{
     '''Convert a time difference in a tuple of (weeks, days, hours, minutes,

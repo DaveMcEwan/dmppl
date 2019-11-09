@@ -9,14 +9,14 @@ import numpy as np
 
 # Local library imports
 from dmppl.math import l2Norm
-from dmppl.base import dbg, info, verb, joinP, rdTxt
+from dmppl.base import dbg, info, verb, joinP, rdTxt, utf8NameToHtml
 from dmppl.color import rgb1D, rgb2D
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
 from dmppl.experiments.eva.eva_common import paths, \
     measureNameParts, measureSiblings, nSibsMax, mapSiblingTypeToHtmlEntity, \
-    metricNames, metric, evaLink, \
+    metricNames, metric, mapMetricNameToHtml, evaLink, \
     winStartTimes, rdEvs, timeToEvsIdx
 
 
@@ -64,12 +64,20 @@ def popoverUl(ulTitle, links): # {{{
 def fnDisplay(f, g): # {{{
     assert f is None or isinstance(f, str), type(f)
     assert g is None or isinstance(g, str), type(g)
+    assert f or g, (f, g)
     if f is not None:
         assert f in metricNames, f
     if g is not None:
         assert g in metricNames, g
-    assert f or g, (f, g)
-    return ("{%s,%s}" % (f, g)) if f and g else (f if f else g)
+
+    fHtml = mapMetricNameToHtml[f] if f else None
+    gHtml = mapMetricNameToHtml[g] if g else None
+
+    ret = ("{%s,%s}" % (fHtml, gHtml)) \
+        if f and g else \
+        (fHtml if f else gHtml)
+
+    return ret
 # }}} def fnDisplay
 
 def uDisplay(u): # {{{
@@ -87,7 +95,11 @@ def yDisplay(y): # {{{
     return "..." if y is None else y
 # }}} def yDisplay
 
-evaTitleFmt = "{fn}(x={x} | y={y}<sub>&lang;&delta;&rang;</sub> ; u={u})"
+evaTitleFmt = "{fn}(x={x} | y={y}<sub>" + \
+    utf8NameToHtml("MATHEMATICAL LEFT ANGLE BRACKET") + \
+    utf8NameToHtml("GREEK SMALL LETTER DELTA") + \
+    utf8NameToHtml("MATHEMATICAL RIGHT ANGLE BRACKET") + \
+    "</sub> ; u={u})"
 
 def evaTitleText(f, g, u, x, y): # {{{
     '''Return the title of a data view as a simple string without nested markup.
@@ -375,7 +387,7 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
           '\n'.join(hiSibThs),
           ' <th class="varying" rowspan="2">%s</th>' % rowVar,
           ' <th colspan="%d"></th>' % nLeftDeltas,
-          ' <th>&delta;</th>',
+          ' <th>' + utf8NameToHtml("GREEK SMALL LETTER DELTA") + '</th>',
           ' <th colspan="%d"></th>' % nRightDeltas,
         '</tr>',
         '<tr class="th_lo">',

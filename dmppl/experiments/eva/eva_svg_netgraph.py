@@ -9,7 +9,7 @@ from math import pi
 import numpy as np
 
 # Local library imports
-from dmppl.base import dbg, info, verb, rdTxt, joinP
+from dmppl.base import dbg, info, verb, rdTxt, joinP, utf8NameToHtml
 from dmppl.math import ptShift, ptsMkPolygon, subsample, downsample, l2Norm
 from dmppl.fx import fxFromFloat
 from dmppl.color import rgb1D, rgb2D, identiconSpriteSvg
@@ -17,7 +17,7 @@ from dmppl.color import rgb1D, rgb2D, identiconSpriteSvg
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
 from dmppl.experiments.eva.eva_common import paths, measureNameParts, rdEvs, \
-    mapSiblingTypeToHtmlEntity, metricNames, metric
+    mapSiblingTypeToHtmlEntity, metricNames, metric, mapMetricNameToHtml
 
 # {{{ Static format strings
 
@@ -41,7 +41,7 @@ mapSiblingTypeToLocalCenter = { # heuristic
 nodeTitleFmt = '\n'.join((
   '<title>{measureName}',
   '',
-  'E&#x0307; = {exValue:.2%}',
+  mapMetricNameToHtml["Ex"] + ' = {exValue:.2%}',
   '</title>',
 ))
 
@@ -195,15 +195,10 @@ sodipodiNamedview = ' '.join((
   '</sodipodi:namedview>',
 ))
 
-# 0x00b7 MIDDLE DOT
-# 0x00ac NOT SIGN
-# 0x0307 COMBINING DOT ABOVE
-# 0x2191 UPWARDS ARROW
-# 0x2193 DOWNWARDS ARROW
-# 0x2229 INTERSECTION
-# 0x27e8 MATHEMATICAL LEFT ANGLE BRACKET
-# 0x27e9 MATHEMATICAL RIGHT ANGLE BRACKET
-# 0x27f6 LONG RIGHTWARDS ARROW
+_scrDeltaFmt = \
+    utf8NameToHtml("MATHEMATICAL LEFT ANGLE BRACKET") + \
+    '{srcDelta}' + \
+    utf8NameToHtml("MATHEMATICAL RIGHT ANGLE BRACKET")
 edgeFmt = ' '.join((
   '<path',
     'class="edge"',
@@ -213,25 +208,28 @@ edgeFmt = ' '.join((
     'inkscape:connector-curvature="0"',
   '>',
     '\n'.join((
-      '<title>{srcName}&#x27e8;{srcDelta}&#x27e9; &#x27f6; {dstName}',
+      '<title>{srcName}' + \
+        _scrDeltaFmt + \
+        utf8NameToHtml("LONG RIGHTWARDS ARROW") + \
+        ' {dstName}',
       '',
       'X = {dstName}',
-      'Y = {srcName}&#x27e8;{srcDelta}&#x27e9;',
+      'Y = {srcName}' + _scrDeltaFmt,
       'sampleFactor = {sampleFactor:d}',
       'f = {f}',
       'g = {g}',
       '',
-      'E&#x0307;(X) = {dstEx:.2%}',
-      'E&#x0307;(Y) = {srcEx:.2%}',
-      #'E&#x0307;(X&#x2229;Y) = {Ex_XconvY:.2%}',
-      #'E&#x0307;(|X-Y|) = {Ex_XabsdiffY:.2%}',
-      'E&#x0307;[X|Y] = {Cex:.2%}',
-      'C&#x0307;ls(X,Y) = {Cls:.2%}',
-      'C&#x0307;os(X,Y) = {Cos:.2%}',
-      'C&#x0307;ov(X,Y) = {Cov:.2%}',
-      'D&#x0307;ep(X,Y) = {Dep:.2%}',
-      'H&#x0307;am(X,Y) = {Ham:.2%}',
-      'T&#x0307;mt(X,Y) = {Tmt:.2%}',
+      mapMetricNameToHtml["Ex"] + '[X] = {dstEx:.2%}',
+      mapMetricNameToHtml["Ex"] + '[Y] = {srcEx:.2%}',
+      #mapMetricNameToHtml["Ex"] + '[X*Y] = {Ex_XconvY:.2%}',
+      #mapMetricNameToHtml["Ex"] + '[|X-Y|] = {Ex_XabsdiffY:.2%}',
+      mapMetricNameToHtml["Cex"] + '[X|Y] = {Cex:.2%}',
+      mapMetricNameToHtml["Cls"] + '(X,Y) = {Cls:.2%}',
+      mapMetricNameToHtml["Cos"] + '(X,Y) = {Cos:.2%}',
+      mapMetricNameToHtml["Cov"] + '(X,Y) = {Cov:.2%}',
+      mapMetricNameToHtml["Dep"] + '(X,Y) = {Dep:.2%}',
+      mapMetricNameToHtml["Ham"] + '(X,Y) = {Ham:.2%}',
+      mapMetricNameToHtml["Tmt"] + '(X,Y) = {Tmt:.2%}',
       '</title>',
     )),
   '</path>',

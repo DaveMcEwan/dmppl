@@ -11,7 +11,8 @@ import struct
 import toml
 
 # Local library imports
-from dmppl.base import dbg, verb, Bunch, Fragile, fnameAppendExt, joinP, mkDirP
+from dmppl.base import dbg, verb, Bunch, Fragile, \
+    fnameAppendExt, joinP, mkDirP, utf8NameToHtml
 from dmppl.fx import *
 from dmppl.math import powsineCoeffs, isEven
 from dmppl.nd import *
@@ -95,6 +96,7 @@ metricNames = [
     "Ham",
     "Tmt",
 ]
+
 def metric(name, winSize, winAlpha, nBits=0): # {{{
     '''Take attributes of a metric, return a callable implementation.
 
@@ -123,6 +125,17 @@ def metric(name, winSize, winAlpha, nBits=0): # {{{
 
     return fs[name]
 # }}} def metric
+
+mapMetricNameToHtml = {
+    "Ex":   utf8NameToHtml("MATHEMATICAL DOUBLE-STRUCK CAPITAL E"), # E[x]
+    "Cex":  utf8NameToHtml("MATHEMATICAL DOUBLE-STRUCK CAPITAL E"), # E[x|y]
+    "Cls":  'C' + utf8NameToHtml("COMBINING DOT ABOVE") + 'ls',
+    "Cos":  'C' + utf8NameToHtml("COMBINING DOT ABOVE") + 'os',
+    "Cov":  'C' + utf8NameToHtml("COMBINING DOT ABOVE") + 'ov',
+    "Dep":  'D' + utf8NameToHtml("COMBINING DOT ABOVE") + 'ep',
+    "Ham":  'H' + utf8NameToHtml("COMBINING DOT ABOVE") + 'am',
+    "Tmt":  'T' + utf8NameToHtml("COMBINING DOT ABOVE") + 'mt',
+}
 
 def dsfDeltas(winSize, reqNDeltasBk, reqNDeltasFw, reqZoomFactor): # {{{
     '''Return a list of downsample factors and deltas (timeshifts).
@@ -510,10 +523,10 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
 # }}} def rdEvs
 
 mapSiblingTypeToHtmlEntity = {
-    "measure":      "&#xb7;",   # MIDDLE DOT
-    "reflection":   "&#x00ac;", # NOT SIGN
-    "rise":         "&#x2191;", # UPWARDS ARROW
-    "fall":         "&#x2193;", # DOWNWARDS ARROW
+    "measure":      utf8NameToHtml("MIDDLE DOT"),
+    "reflection":   utf8NameToHtml("NOT SIGN"),
+    "rise":         utf8NameToHtml("UPWARDS ARROW"),
+    "fall":         utf8NameToHtml("DOWNWARDS ARROW"),
 }
 nSibsMax = len(mapSiblingTypeToHtmlEntity.keys())
 

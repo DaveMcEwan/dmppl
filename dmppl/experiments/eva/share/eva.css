@@ -115,6 +115,10 @@ td.invisible {
     max-width: 100%;
 }
 
+div.title {
+    float: left;
+}
+
 div.controls {
     float: right;
     width: 14em;

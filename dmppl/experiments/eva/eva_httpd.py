@@ -18,7 +18,7 @@ from dmppl.base import dbg, info, verb, joinP, tmdiff, rdTxt
 # NOTE: Roundabout import path for eva_common necessary for unittest.
 from dmppl.experiments.eva.eva_common import appPaths, paths, \
     metricNames, cfgDsfDeltas, loadCfg, evaLink
-from eva_html_table import calculateTableData, htmlTable
+from eva_html_table import calculateTableData, htmlTable, evaTitleText
 from eva_svg_netgraph import calculateEdges, svgNetgraph
 
 # Version-specific imports
@@ -237,6 +237,11 @@ def htmlNetgraph(f, g, u, cfg, vcdInfo, edges): # {{{
     winStride = cfg.windowsize - cfg.windowoverlap
 
     ret_ = []
+    ret_.append('<div class="title">')
+    ret_.append(  '<span>')
+    ret_.append(     evaTitleText(f, g, u, None, None))
+    ret_.append(  '</span>')
+    ret_.append('</div>')
     ret_.append('<div class="controls">')
     ret_.append(  '<span>')
     ret_.append(     evaLink(f, g, u - winStride, None, None, "prev"))

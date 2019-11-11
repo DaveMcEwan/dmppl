@@ -15,7 +15,7 @@ from dmppl.color import rgb1D, rgb2D
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
 from dmppl.experiments.eva.eva_common import paths, \
-    measureNameParts, measureSiblings, nSibsMax, mapSiblingTypeToHtmlEntity, \
+    measureNameParts, measureSiblings, nSibsMax, mapSiblingTypeToHtml, \
     metricNames, metric, mapMetricNameToHtml, evaLink, \
     winStartTimes, rdEvs, timeToEvsIdx
 
@@ -273,7 +273,7 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
                                                      attrStyles,
                                                      attrTitles)]
         sibLinkTxts = \
-            [sibThTxtFmt % (mapSiblingTypeToHtmlEntity[st],
+            [sibThTxtFmt % (mapSiblingTypeToHtml[st],
                             'x' if xNotY else 'y') \
              for mt,st,mn in siblings]
 
@@ -304,15 +304,15 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
     def sibLoThs(xNotY): # {{{
 
         sibTxts = \
-            [sibThTxtFmt % (mapSiblingTypeToHtmlEntity[st],
+            [sibThTxtFmt % (mapSiblingTypeToHtml[st],
                             'x' if xNotY else 'y') \
-             for st in mapSiblingTypeToHtmlEntity.keys()]
+             for st in mapSiblingTypeToHtml.keys()]
 
         classes = ("xsib" if xNotY else "ysib",)
 
         attrClasses = \
             ['class="%s"' % ' '.join(c for c in classes)
-             for _ in mapSiblingTypeToHtmlEntity.keys()]
+             for _ in mapSiblingTypeToHtml.keys()]
 
         fmt = '<th {attrs}> {partA} </th>'
 
@@ -649,7 +649,7 @@ def measureCompactHtml(name): # {{{
     mt, st, bn = measureNameParts(name)
     icon = rdTxt(joinP(paths.dname_identicon, bn + ".svg"))
 
-    return spanFmt % (mt, icon, mapSiblingTypeToHtmlEntity[st])
+    return spanFmt % (mt, icon, mapSiblingTypeToHtml[st])
 # }}} def measureCompactHtml
 
 def tableDataRows(f, g, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
@@ -657,10 +657,10 @@ def tableDataRows(f, g, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
 
     if x and y:
       assert exSib.shape[1] <= 2*nSibsMax, \
-          (exSib.shape, mapSiblingTypeToHtmlEntity)
+          (exSib.shape, mapSiblingTypeToHtml)
     else:
       assert exSib.shape[1] <= nSibsMax, \
-          (exSib.shape, mapSiblingTypeToHtmlEntity)
+          (exSib.shape, mapSiblingTypeToHtml)
 
     assert fnUXY.shape[0] in [1, 2], \
         fnUXY.shape

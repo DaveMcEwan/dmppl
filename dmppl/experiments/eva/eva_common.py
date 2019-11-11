@@ -522,13 +522,13 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
     return mapNameToDatarow
 # }}} def rdEvs
 
-mapSiblingTypeToHtmlEntity = {
+mapSiblingTypeToHtml = {
     "measure":      utf8NameToHtml("MIDDLE DOT"),
     "reflection":   utf8NameToHtml("NOT SIGN"),
     "rise":         utf8NameToHtml("UPWARDS ARROW"),
     "fall":         utf8NameToHtml("DOWNWARDS ARROW"),
 }
-nSibsMax = len(mapSiblingTypeToHtmlEntity.keys())
+nSibsMax = len(mapSiblingTypeToHtml.keys())
 
 mapMeasureTypeToSiblingTypes = {
     "event":     ("measure",),

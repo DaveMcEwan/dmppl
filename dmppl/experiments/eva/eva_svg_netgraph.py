@@ -17,7 +17,7 @@ from dmppl.color import rgb1D, rgb2D, identiconSpriteSvg
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
 from dmppl.experiments.eva.eva_common import paths, measureNameParts, \
-    mapSiblingTypeToHtmlEntity, metricNames, metric, mapMetricNameToHtml, \
+    mapSiblingTypeToHtml, metricNames, metric, mapMetricNameToHtml, \
     timeToEvsIdx, rdEvs
 
 # {{{ Static format strings
@@ -389,7 +389,7 @@ def svgNodes(exs): # {{{
                         tombstoneFill=mapMeasureTypeToTombstoneFill[mt],
                         exRgb=rgb1D(exs[nm]),
                         exValue=exs[nm],
-                        symbol=mapSiblingTypeToHtmlEntity[st]) \
+                        symbol=mapSiblingTypeToHtml[st]) \
          for nm,(mt,st,bn) in zip(measureNames, nameParts))
 
     # }}} nodes

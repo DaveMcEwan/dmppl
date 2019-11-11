@@ -16,8 +16,9 @@ from dmppl.color import rgb1D, rgb2D, identiconSpriteSvg
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
-from dmppl.experiments.eva.eva_common import paths, measureNameParts, rdEvs, \
-    mapSiblingTypeToHtmlEntity, metricNames, metric, mapMetricNameToHtml
+from dmppl.experiments.eva.eva_common import paths, measureNameParts, \
+    mapSiblingTypeToHtmlEntity, metricNames, metric, mapMetricNameToHtml, \
+    timeToEvsIdx, rdEvs
 
 # {{{ Static format strings
 
@@ -284,7 +285,7 @@ def calculateEdges(f, g, u,
             # 3. Size of window = v-u -> sfV-sfU
             sfWinSize = cfg.windowsize // sf
             sfD = d // sf
-            sfU= u // sf
+            sfU = timeToEvsIdx(u, evsStartTime) // sf
             sfV = sfU + sfWinSize
 
             # Sub/downsample entire EVS since it will all be used.

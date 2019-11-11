@@ -17,7 +17,7 @@ from dmppl.base import dbg, info, verb, joinP, tmdiff, rdTxt
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
 from dmppl.experiments.eva.eva_common import appPaths, paths, \
-    metricNames, cfgDsfDeltas, loadCfg
+    metricNames, cfgDsfDeltas, loadCfg, evaLink
 from eva_html_table import calculateTableData, htmlTable
 from eva_svg_netgraph import calculateEdges, svgNetgraph
 
@@ -226,14 +226,28 @@ def evaHtmlString(args, cfg, request): # {{{
         edges = calculateEdges(f, g, u,
                                cfg, dsfDeltas, vcdInfo)
 
-        bodySvg = svgNetgraph(u, cfg, vcdInfo, edges)
-
-        body = bodySvg \
+        body = svgNetgraph(u, cfg, vcdInfo, edges) \
             if bodyOnly else \
-            (['<div class="netgraph">'] + bodySvg + ['</div>'])
+            htmlNetgraph(f, g, u, cfg, vcdInfo, edges)
 
     return htmlTopFmt(body, inlineHead, inlineHead, bodyOnly)
 # }}} def evaHtmlString
+
+def htmlNetgraph(f, g, u, cfg, vcdInfo, edges): # {{{
+    winStride = cfg.windowsize - cfg.windowoverlap
+
+    ret_ = []
+    ret_.append('<div class="controls">')
+    ret_.append(  '<span>')
+    ret_.append(     evaLink(f, g, u - winStride, None, None, "prev"))
+    ret_.append(     evaLink(f, g, u + winStride, None, None, "next"))
+    ret_.append(  '</span>')
+    ret_.append('</div>')
+    ret_.append('<div class="netgraph">')
+    ret_ += svgNetgraph(u, cfg, vcdInfo, edges)
+    ret_.append('</div>')
+    return ret_
+# }}} def htmlNetgraph
 
 class EvaHTTPServer(HTTPServer): # {{{
     def serve_forever(self, args, cfg):

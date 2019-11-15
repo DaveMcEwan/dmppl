@@ -35,7 +35,6 @@ to most people.
   - eva - (EVent Analysis) Measure and visualize correlations between
     measurements.
     Part of my PhD project.
-    TODO: add
 
 Uses [semantic versioning](https://semver.org/spec/v2.0.0.html)
 
@@ -72,7 +71,7 @@ TODO:
 
   1. Upload to PyPI.
   2. mypy
-  3. Integrate eva, relest-ffnn
+  3. Integrate relest-ffnn
   4. Implement vch, vchlite
   5. Expand documentation here
   6. Sphinx/readthedocs

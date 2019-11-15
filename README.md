@@ -26,6 +26,7 @@ parts of the library modules.
   - vcd-utils - Convert VCD (Verilog IEEE1364) files to/from YAML and CSV,
     extract information, or cleanup dodgy VCDs using the forgiving reader
     with strict writer.
+  - svg2png - Simple wrapper around inkscape to export SVGs to PNGs.
 
 Some experiments are given in `dmppl/experiments` which are likely not useful
 to most people.

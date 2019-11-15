@@ -203,6 +203,7 @@ setup(
             "vcd-utils=dmppl.scripts.vcd_utils:entryPoint",
             "parvec=dmppl.scripts.parvec:entryPoint",
             "beamer-times=dmppl.scripts.beamer_times:entryPoint",
+            "svg2png=dmppl.scripts.svg2png:entryPoint",
         ],
     },
 

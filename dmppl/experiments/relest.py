@@ -290,24 +290,24 @@ def exportCsv(system, evs, known, estimated, n_time): # {{{
 
     # [ (<title>, <format>), ... ]
     columns = [
-        ("Xnode",       "{Xnode:d}"),
-        ("Ynode",       "{Ynode:d}"),
-        ("Known",       "{known_XpairY:d}"),
-        ("Ex[X]",       "{Ex_X:0.6f}"),
-        ("Ex[Y]",       "{Ex_Y:0.6f}"),
-        ("Ex[X|Y]",     "{Ex_XgivenY:0.6f}"),
-        ("Ex[Y|X]",     "{Ex_YgivenX:0.6f}"),
-        ("Ex[X*Y]",     "{Ex_XconvY:0.6f}"),
-        ("Ex[|X-Y|]",   "{Ex_XabsdifY:0.6f}"),
-        ('"Ham(X,Y)"',    "{Ham:0.6f}"),
-        ('"Tmt(X,Y)"',    "{Tmt:0.6f}"),
-        ('"Cls(X,Y)"',    "{Cls:0.6f}"),
-        ('"Cos(X,Y)"',    "{Cos:0.6f}"),
-        ('"Cov(X,Y)"',    "{Cov:0.6f}"),
-        ('"Dep(X,Y)"',    "{Dep:0.6f}"),
+        ("xNode",       "{Xnode:d}"),
+        ("yNode",       "{Ynode:d}"),
+        ("known",       "{known_XpairY:d}"),
+        ("E[X]",       "{Ex_X:0.6f}"),
+        ("E[Y]",       "{Ex_Y:0.6f}"),
+        ("E[X|Y]",     "{Ex_XgivenY:0.6f}"),
+        ("E[Y|X]",     "{Ex_YgivenX:0.6f}"),
+        ("E[X*Y]",     "{Ex_XconvY:0.6f}"),
+        ("E[|X-Y|]",   "{Ex_XabsdifY:0.6f}"),
+        ('"Ham(X,Y)"',  "{Ham:0.6f}"),
+        ('"Tmt(X,Y)"',  "{Tmt:0.6f}"),
+        ('"Cls(X,Y)"',  "{Cls:0.6f}"),
+        ('"Cos(X,Y)"',  "{Cos:0.6f}"),
+        ('"Cov(X,Y)"',  "{Cov:0.6f}"),
+        ('"Dep(X,Y)"',  "{Dep:0.6f}"),
     ]
-    titleLine = ", ".join([t for t,f in columns])
-    lineFmt = ", ".join([f for t,f in columns])
+    titleLine = ",".join([t for t,f in columns])
+    lineFmt = ",".join([f for t,f in columns])
 
     m = system["m"]
     assert m == len(evs), (m, len(evs))

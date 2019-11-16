@@ -11,7 +11,7 @@
 #    relest.py score
 #   OR
 #    relest.py exportcsv
-# Output directory is ./results/
+# Output directory is ./relest.<date>.results/
 #
 # Regenerate results for paper with:
 #   time (./relest.py -v score && ./relest.py -v exportcsv --load-estimated)
@@ -49,12 +49,13 @@ from __future__ import print_function
 
 import argparse
 import datetime
+import glob
 import numpy as np
 from numpy.random import choice, uniform, lognormal
-from random import sample
 import os
+from random import sample
+import subprocess
 import sys
-import glob
 
 # NOTE: dmppl doesn't include these packages by default so you need to install
 # them manually with something like:
@@ -370,6 +371,28 @@ def exportCsv(system, evs, known, estimated, n_time): # {{{
     return
 # }}} def exportCsv
 
+def combineCsvs(): # {{{
+    '''Combine all CSV files into one.
+
+    Equivalent to:
+      head -n+1 system000000.csv > combined.csv
+      awk 'FNR>1' system*.csv >> combined.csv
+    '''
+    fnameis = glob.glob(joinP(outdir, "csv", "system*.csv"))
+    fnameo = joinP(outdir, "csv", "combined.csv")
+
+    # Copy header from first CSV.
+    with open(fnameo, 'w') as fd:
+        ret = subprocess.call(("head", "-n+1", fnameis[0]), stdout=fd)
+        if 0 != ret:
+            return ret
+
+    # Append bodies from all CSVs.
+    with open(fnameo, 'a') as fd:
+        ret = subprocess.call(["awk", "FNR>1"] + fnameis, stdout=fd)
+        return ret
+# }}} def combineCsvs
+
 def performEstimations(system, evs, n_time): # {{{
 
     estimateds_dir = joinP(outdir, "estimated")
@@ -668,6 +691,10 @@ def main(args): # {{{
         verb("Exporting CSVs... ", end='', sv_tm=True)
         for system,evs,known,estimated in zip(systems,EVSs,knowns,estimateds):
             exportCsv(system, evs, known, estimated, n_time)
+        verb("Done", rpt_tm=True)
+
+        verb("Combining CSVs... ", end='', sv_tm=True)
+        combineCsvs()
         verb("Done", rpt_tm=True)
 
     elif args.action == "score":

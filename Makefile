@@ -34,6 +34,8 @@ venv3.6:
 venv3.7:
 	python3.7 -m venv venv3.7
 	$(VENV3.7) pip install coverage mypy pyyaml numpy toml
+	$(VENV3.7) pip install joblib matplotlib prettytable seaborn
+	$(VENV3.7) pip install 'tensorflow==2.0.0' graphviz pydot
 
 venv: venv2.7
 venv: venv3.5

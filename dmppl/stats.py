@@ -54,7 +54,7 @@ def matthewsCorrelation(TP, FP, FN, TN): # {{{
 
     https://en.wikipedia.org/wiki/Matthews_correlation_coefficient
     '''
-    return (TP*TN - FP*FN) / np.sqrt((TP+FP) * (TP+FN) * (TN+FP) * (TN+FN))
+    return (TP*TN - FP*FN) / ((TP+FP) * (TP+FN) * (TN+FP) * (TN+FN))**0.5
 # }}} matthewsCorrelation
 
 def bookmakersInformedness(TP, FP, FN, TN): # {{{

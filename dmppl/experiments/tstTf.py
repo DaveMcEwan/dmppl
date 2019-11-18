@@ -1,10 +1,9 @@
+#!/usr/bin/env python3
+
 from __future__ import absolute_import, division, print_function
 
-from datetime import datetime
-import tensorflow as tf
-from tensorflow.keras import Input, Model
-from tensorflow.keras.layers import Dense
 import os
+import tensorflow as tf
 
 from dmppl.stats import *
 
@@ -74,7 +73,10 @@ def buildModel(nInputs): # {{{
     nHidden1, nHidden2 = 8, 8
 
     # act ∈ {sigmoid, relu, tanh}
-    activation1, activation2 = "hard_sigmoid", "hard_sigmoid"
+    #activation1, activation2 = "hard_sigmoid", "hard_sigmoid"
+    #activation1, activation2 = "relu", "relu"
+    activation1, activation2 = "sigmoid", "sigmoid"
+    #activation1, activation2 = "tanh", "tanh"
 
     useHidden1, useHidden2 = (0 < nHidden1), (0 < nHidden2)
 
@@ -88,7 +90,9 @@ def buildModel(nInputs): # {{{
     inputs = tf.keras.Input(shape=(nInputs,))
     hidden1 = tf.keras.layers.Dense(nHidden1, activation=activation1)(inputs)
     hidden2 = tf.keras.layers.Dense(nHidden2, activation=activation2)(hidden1)
-    outputs = tf.keras.layers.Dense(1, activation="hard_sigmoid") \
+
+    # NOTE: Output activation should be smooth.
+    outputs = tf.keras.layers.Dense(1, activation="sigmoid") \
         (hidden2 if useHidden2 else (hidden1 if useHidden1 else inputs))
 
     ret = tf.keras.Model(inputs=inputs, outputs=outputs, name=modelName)
@@ -103,8 +107,6 @@ def fitModel(model, dataset): # {{{
 
     def customLoss(y_true, y_pred): # {{{
         '''Optimise for BMI and MCC.
-
-        TODO: Should not return NaN.
         '''
         y_true = tf.keras.backend.cast_to_floatx(y_true)
         y_pred = tf.keras.backend.cast_to_floatx(y_pred)
@@ -127,12 +129,13 @@ def fitModel(model, dataset): # {{{
             trueNegative(y_pred, y_true), \
             falseNegative(y_pred, y_true)
 
-        gain = bookmakersInformedness(tp, fp, fn, tn) #*  matthewsCorrelation(tp, fp, fn, tn)
+        gain = bookmakersInformedness(tp, fp, fn, tn)
+
         return gain * -1
     # }}} def customLoss
 
-    fitLoss = "binary_crossentropy"
-    #fitLoss = customLoss
+    #fitLoss = "binary_crossentropy"
+    fitLoss = customLoss
 
     fitOptimizer = tf.keras.optimizers.Adam(learning_rate=0.001, amsgrad=True, clipnorm=1.0, clipvalue=1.0)
     #fitOptimizer = tf.keras.optimizers.Nadam()
@@ -144,16 +147,21 @@ def fitModel(model, dataset): # {{{
         "mse", # mean squared error
     ]
 
+    #tensorboardDir = os.sep.join(("tensorboard.results", datetime.now().strftime("%Y%m%d-%H%M%S"))),
+    tensorboardDir = os.sep.join(("tensorboard.results", model.name))
+    # Run tensorboard HTTPD with:
+    #   tensorboard --logdir tensorboard.results
     fitCallbacks = [
-        #tf.keras.callbacks.TensorBoard(log_dir=os.sep.join(("tf_logs", datetime.now().strftime("%Y%m%d-%H%M%S")))),
+        tf.keras.callbacks.TensorBoard(log_dir=tensorboardDir),
     ]
 
     model.compile(loss=fitLoss, optimizer=fitOptimizer, metrics=fitMetrics)
 
-    fitEpochs = 20
+    fitEpochs = 60
     fitStepsPerEpoch = 100
 
     model.fit(dataset,
+              verbose=2, # one line per epoch
               epochs=fitEpochs,
               steps_per_epoch=fitStepsPerEpoch,
               callbacks=fitCallbacks)

@@ -12,17 +12,17 @@
 # Then create and fit several models to compare:
 #   python3.7 relest_learn.py
 # Compare progress in TensorBoard:
-#   tensorboard --logdir assisted.results/
-#   tensorboard --logdir perfcntrs.results/
-#   ...and point browsers to `localhost:6006` and `localhost:6007`
+#   tensorboard --logdir fullassist.results/tf
+#   tensorboard --logdir onchip.results/tf
+#   ...etc
+#   ...Point browsers to `localhost:6006` and `localhost:6007`
 
 # This uses TensorFlow+Keras (API v2.0.0)
 
 # Goal is to make 2 models.
 # 1. GoalBetter, aiming for better metric, using all existing metrics as input.
 #    Can be made to give cycle-by-cycle estimates (slightly delayed realtime).
-#    assisted_tanh8_tanh8, 18 epochs
-#    perfcntrs_tanh8_tanh8, 53 epochs
+#    fullassist_tanh8_tanh8, 18 epochs
 # 2. GoalMin, minimum calculation to compete with Cov, Dep, etc
 #    hard_sigmoid can be used with fx format, Only {+,-,*,>} required
 # Anything on chip must use a hard sigmoid.
@@ -37,6 +37,11 @@ from contextlib import redirect_stdout
 from dmppl.base import *
 from dmppl.stats import *
 
+# Probably fragile imports only for qsig custom activation function.
+from tensorflow.python.framework import constant_op
+from tensorflow.python.ops import clip_ops
+from tensorflow.python.ops import math_ops
+
 sweepNotChosen = False
 
 # Activations:
@@ -46,12 +51,13 @@ sweepNotChosen = False
 # sigmoid       = 1 / (1 + exp(-x)), I.E. Logistic function
 # tanh          = (exp(x) - exp(-x)) / (exp(x) + exp(-x)), I.E. Hyperbolic tangent
 
-# NOTE: In `perfcntrs`, sigmoid/hard_sigmoid makes a difference.
 chosenModelParams = (
+    (2, "qsig",         0, "qsig"),         # qsig2_qsig0
     (2, "hard_sigmoid", 0, "hard_sigmoid"), # hard2_hard0
-    (4, "hard_sigmoid", 0, "hard_sigmoid"), # hard4_hard0
+   #(4, "hard_sigmoid", 0, "hard_sigmoid"), # hard4_hard0
     (8, "hard_sigmoid", 0, "hard_sigmoid"), # hard8_hard0
-    (4, "hard_sigmoid", 4, "hard_sigmoid"), # hard4_hard4
+   #(4, "hard_sigmoid", 4, "hard_sigmoid"), # hard4_hard4
+    (8, "qsig",         8, "qsig"),         # qsig8_qsig8
     (8, "hard_sigmoid", 8, "hard_sigmoid"), # hard8_hard8
     (8, "sigmoid",      8, "sigmoid"),      # sigm8_sigm8
     (8, "relu",         8, "relu"),         # relu8_relu8
@@ -66,9 +72,28 @@ numbers, activations = \
 sweepModelParams = list(itertools.product((numbers, activations, numbers, activations)))
 
 inputCombinations = {
-    "assisted": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]", "Cls(X,Y)", "Cos(X,Y)",
-                 "Cov(X,Y)", "Dep(X,Y)", "Ham(X,Y)", "Tmt(X,Y)"],
-    "perfcntrs": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]"],
+    # Throw everything we have at the problem and hope it sticks!
+    "fullassist": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]", "E[X|Y]", "E[Y|X]",
+                   "Cls(X,Y)", "Cos(X,Y)", "Cov(X,Y)", "Dep(X,Y)", "Ham(X,Y)",
+                   "Tmt(X,Y)"],
+
+    # No assistance to NN given, just basic performance counters.
+    "basiccntrs": ["E[X]", "E[Y]"],
+
+    # No assistance to NN given, but more performance counters.
+    "morecntrs": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]"],
+
+    # All these can be calculated easily in hw.
+    # - E[.] from performance counters, conditionals with a ratio.
+    # - Cov(): multiply, subtract, multiply
+    # - Dep(): multiply, ratio, subtract
+    # - Tmt(): add, subtract, ratio
+    # rejected:
+    #   - Cls(): sqrt(E[|X-Y|]) is difficult
+    #   - Cos(): Two sqrt ops
+    #   - Ham(): Just the reflection of E[|X-Y|]
+    "onchip": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]", "E[X|Y]", "E[Y|X]",
+               "Cov(X,Y)", "Dep(X,Y)", "Tmt(X,Y)"],
 }
 
 defaultLogdir = "tf.results"
@@ -76,7 +101,7 @@ defaultLogdir = "tf.results"
 def getDatasets(**kwargs): # {{{
     # https://www.tensorflow.org/tutorials/load_data/csv
 
-    inputCombination = kwargs.get("selectColumns", "assisted")
+    inputCombination = kwargs.get("selectColumns", "fullassist")
     selectColumns = ["known"] + inputCombinations[inputCombination]
 
     # NOTE: make_csv_dataset is experimental. Look out for API change.
@@ -120,7 +145,7 @@ def getDatasets(**kwargs): # {{{
 
     nInputs = len(selectColumns)-1
 
-    logdir = '.'.join((inputCombination, "results"))
+    logdir = '.'.join(("relest_learn", inputCombination, "results"))
     mkDirP(logdir)
 
     return nInputs, logdir, dataset_train, dataset_test
@@ -128,11 +153,26 @@ def getDatasets(**kwargs): # {{{
 
 def buildModel(nInputs, **kwargs): # {{{
 
-    # n ∈ {0, 2, 4, 8, 16}
+    def qsig(x): # {{{
+        '''Hard Quarter-gradient sigmoid.
+        '''
+        p25 = constant_op.constant(0.25, x.dtype.base_dtype)
+        p50 = constant_op.constant(0.5, x.dtype.base_dtype)
+        _y0 = math_ops.mul(x, p25)
+        _y1 = math_ops.mul(_y0, p50)
+        return clip_ops.clip_by_value(_y1, 0.0, 1.0)
+    # }}} def qsig
+
     n1, n2 = kwargs.get("n1", 8), kwargs.get("n2", 8)
 
-    # a ∈ {sigmoid, relu, tanh}
     a1, a2 = kwargs.get("a1", "hard_sigmoid"), kwargs.get("a2", "hard_sigmoid")
+    mapAct = {
+        "hard_sigmoid": tf.keras.activations.hard_sigmoid,
+        "sigmoid": tf.keras.activations.sigmoid,
+        "relu": tf.keras.activations.relu,
+        "tanh": tf.keras.activations.tanh,
+        "qsig": qsig,
+    }
 
     useHidden1, useHidden2 = (0 < n1), (0 < n2)
 
@@ -144,8 +184,8 @@ def buildModel(nInputs, **kwargs): # {{{
     )
 
     inputs = tf.keras.Input(shape=(nInputs,))
-    hidden1 = tf.keras.layers.Dense(n1, activation=a1)(inputs)
-    hidden2 = tf.keras.layers.Dense(n2, activation=a2)(hidden1)
+    hidden1 = tf.keras.layers.Dense(n1, activation=mapAct[a1])(inputs)
+    hidden2 = tf.keras.layers.Dense(n2, activation=mapAct[a2])(hidden1)
 
     # NOTE: Output activation should be smooth.
     outputs = tf.keras.layers.Dense(1, activation="sigmoid") \
@@ -258,6 +298,8 @@ for inputCombination in inputCombinations.keys():
                     "acc=%0.04f" % acc,
                     "mse=%0.04f" % mse,
                 )))
+
+# TODO: Feed into relest and get plots like in paper.
 
 #predictions = model.predict(dataset_test)
 #nPred = 20

@@ -29,12 +29,15 @@
 
 from __future__ import absolute_import, division, print_function
 
+from contextlib import redirect_stdout
+import itertools
+import json
 import os
 import tensorflow as tf
-import itertools
-from contextlib import redirect_stdout
 
 from dmppl.base import *
+from dmppl.math import isEven, isOdd
+from dmppl.nd import *
 from dmppl.stats import *
 
 # Probably fragile imports only for qsig custom activation function.
@@ -42,7 +45,12 @@ from tensorflow.python.framework import constant_op
 from tensorflow.python.ops import clip_ops
 from tensorflow.python.ops import math_ops
 
+# Sweep over a large range of models, rather than just a select few.
+# Useful during initial experimentation.
 sweepNotChosen = False
+
+# Quickly run with one input combination and one model.
+debugMode = False
 
 # Activations:
 # hard_sigmoid  = 0 if x < -2.5, 1 if x > 2.5, (2x+5)/10 otherwise
@@ -52,33 +60,34 @@ sweepNotChosen = False
 # tanh          = (exp(x) - exp(-x)) / (exp(x) + exp(-x)), I.E. Hyperbolic tangent
 
 chosenModelParams = (
-    (2, "qsig",         0, "qsig"),         # qsig2_qsig0
-    (2, "hard_sigmoid", 0, "hard_sigmoid"), # hard2_hard0
-   #(4, "hard_sigmoid", 0, "hard_sigmoid"), # hard4_hard0
-    (8, "hard_sigmoid", 0, "hard_sigmoid"), # hard8_hard0
-   #(4, "hard_sigmoid", 4, "hard_sigmoid"), # hard4_hard4
-    (8, "qsig",         8, "qsig"),         # qsig8_qsig8
-    (8, "hard_sigmoid", 8, "hard_sigmoid"), # hard8_hard8
-    (8, "sigmoid",      8, "sigmoid"),      # sigm8_sigm8
-    (8, "relu",         8, "relu"),         # relu8_relu8
-    (8, "tanh",         8, "tanh"),         # tanh8_tanh8
-)
+    (2, "qsig",         0, "qsig",          "sigmoid"),    # qsig2_qsig0
+    (2, "qsig",         2, "qsig",          "sigmoid"),    # qsig2_qsig2
+   #(4, "qsig",         0, "qsig",          "qsig"),    # qsig4_qsig0
+   #(4, "qsig",         4, "qsig",          "qsig"),    # qsig4_qsig4
+    (8, "qsig",         8, "qsig",          "sigmoid"),    # qsig8_qsig8
+   #(8, "hard_sigmoid", 8, "hard_sigmoid",  "sigmoid"), # hard8_hard8
+   #(8, "sigmoid",      8, "sigmoid",       "sigmoid"), # sigm8_sigm8
+   #(8, "relu",         8, "relu",          "sigmoid"), # relu8_relu8
+    (8, "tanh",         8, "tanh",          "sigmoid"),    # tanh8_tanh8
+) if not debugMode else ((4, "qsig", 2, "qsig", "sigmoid"),)
 
 # Use sweepModelParams to sweep a selection of model parameters.
 # 5*4*5*4=400 models
 numbers, activations = \
     (0, 2, 4, 8, 16), \
     ("hard_sigmoid", "sigmoid", "relu", "tanh")
-sweepModelParams = list(itertools.product((numbers, activations, numbers, activations)))
+sweepModelParams = list(itertools.product((numbers, activations, numbers, activations, ["sigmoid"])))
+
+modelParams = sweepModelParams if sweepNotChosen else chosenModelParams
 
 inputCombinations = {
-    # Throw everything we have at the problem and hope it sticks!
-    "fullassist": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]", "E[X|Y]", "E[Y|X]",
-                   "Cls(X,Y)", "Cos(X,Y)", "Cov(X,Y)", "Dep(X,Y)", "Ham(X,Y)",
-                   "Tmt(X,Y)"],
+#    # Throw everything we have at the problem and hope it sticks!
+#    "fullassist": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]", "E[X|Y]", "E[Y|X]",
+#                   "Cls(X,Y)", "Cos(X,Y)", "Cov(X,Y)", "Dep(X,Y)", "Ham(X,Y)",
+#                   "Tmt(X,Y)"],
 
-    # No assistance to NN given, just basic performance counters.
-    "basiccntrs": ["E[X]", "E[Y]"],
+#    # No assistance to NN given, just basic performance counters.
+#    "basiccntrs": ["E[X]", "E[Y]"],
 
     # No assistance to NN given, but more performance counters.
     "morecntrs": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]"],
@@ -94,9 +103,75 @@ inputCombinations = {
     #   - Ham(): Just the reflection of E[|X-Y|]
     "onchip": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]", "E[X|Y]", "E[Y|X]",
                "Cov(X,Y)", "Dep(X,Y)", "Tmt(X,Y)"],
-}
+} if not debugMode else {"tst": ["E[X]", "E[Y]", "E[X*Y]"]}
 
 defaultLogdir = "tf.results"
+
+def getMetric(fname): # {{{
+    '''Read in a JSON file created by createModels() and return a callable which
+    with the same API as ndCov(win, x, y) et al.
+
+    This can be fed back into relest.py for plotting
+    '''
+
+    # NumPy implementations of activation functions to ensure TF/Keras matches
+    # what we think is supposed to happen.
+    activationFunctions = {
+        "qsig":
+            lambda x: np.clip(np.add(np.multiply(x, 0.25), 0.50), 0.0, 1.0),
+        "relu":
+            lambda x: np.maximum(0, x),
+        "sigmoid":
+            lambda x: (np.exp(-1 * x) + 1)**-1,
+        "tanh":
+            lambda x: np.tanh(x),
+    }
+
+    with open(fname, 'r') as fd:
+        metricParams = json.load(fd)
+
+    inputNames, ws, bs, activations = \
+        metricParams["inputNames"], \
+        [np.array(w) for w in metricParams["ws"]], \
+        [np.array(b) for b in metricParams["bs"]], \
+        [activationFunctions[a] for a in metricParams["activations"]]
+
+    def fn(win, x, y, **kwargs):
+        '''Estimate the correlation between x and y.
+
+        First calculate some standard metrics, then feed those results into
+        a feed-forward neural network.
+        '''
+
+        # Standard metrics
+        ffnnInput_ = []
+        for nm in inputNames:
+            if   "E[X]" == nm:      value = ndEx(win, x, **kwargs)
+            elif "E[Y]" == nm:      value = ndEx(win, y, **kwargs)
+            elif "E[X*Y]" == nm:    value = ndEx(win, ndConv(x, y, **kwargs), **kwargs)
+            elif "E[|X-Y|]" == nm:  value = ndEx(win, ndAbsDiff(x, y, **kwargs), **kwargs)
+            elif "E[X|Y]" == nm:    value = ndCex(win, x, y, **kwargs)
+            elif "E[Y|X]" == nm:    value = ndCex(win, y, x, **kwargs)
+            elif "Cls(X,Y)" == nm:  value = ndCls(win, x, y, **kwargs)
+            elif "Cos(X,Y)" == nm:  value = ndCos(win, x, y, **kwargs)
+            elif "Cov(X,Y)" == nm:  value = ndCov(win, x, y, **kwargs)
+            elif "Dep(X,Y)" == nm:  value = ndDep(win, x, y, **kwargs)
+            elif "Ham(X,Y)" == nm:  value = ndHam(win, x, y, **kwargs)
+            elif "Tmt(X,Y)" == nm:  value = ndTmt(win, x, y, **kwargs)
+            else:
+                assert False, nm
+            ffnnInput_.append(value)
+
+        # Feed-forward
+        ret_ = np.array(ffnnInput_)
+        for w, b, activation in zip(ws, bs, activations):
+            ret_ = activation(np.matmul(ret_, w) + b)
+
+        assert ret_.shape == (1,)
+        return ret_[0]
+
+    return fn
+# }}} def getMetric
 
 def getDatasets(**kwargs): # {{{
     # https://www.tensorflow.org/tutorials/load_data/csv
@@ -155,17 +230,21 @@ def buildModel(nInputs, **kwargs): # {{{
 
     def qsig(x): # {{{
         '''Hard Quarter-gradient sigmoid.
+
+        Based on https://github.com/tensorflow/tensorflow/blob/r2.0/tensorflow/python/keras/backend.py#L4604-L4623
+        But easy to implement in fixed point hw.
         '''
         p25 = constant_op.constant(0.25, x.dtype.base_dtype)
-        p50 = constant_op.constant(0.5, x.dtype.base_dtype)
+        p50 = constant_op.constant(0.50, x.dtype.base_dtype)
         _y0 = math_ops.mul(x, p25)
-        _y1 = math_ops.mul(_y0, p50)
+        _y1 = math_ops.add(_y0, p50)
         return clip_ops.clip_by_value(_y1, 0.0, 1.0)
     # }}} def qsig
 
     n1, n2 = kwargs.get("n1", 8), kwargs.get("n2", 8)
+    a1, a2 = kwargs.get("a1", "qsig"), kwargs.get("a2", "qsig")
+    ao = kwargs.get("ao", "qsig")
 
-    a1, a2 = kwargs.get("a1", "hard_sigmoid"), kwargs.get("a2", "hard_sigmoid")
     mapAct = {
         "hard_sigmoid": tf.keras.activations.hard_sigmoid,
         "sigmoid": tf.keras.activations.sigmoid,
@@ -188,7 +267,7 @@ def buildModel(nInputs, **kwargs): # {{{
     hidden2 = tf.keras.layers.Dense(n2, activation=mapAct[a2])(hidden1)
 
     # NOTE: Output activation should be smooth.
-    outputs = tf.keras.layers.Dense(1, activation="sigmoid") \
+    outputs = tf.keras.layers.Dense(1, activation=mapAct[ao]) \
         (hidden2 if useHidden2 else (hidden1 if useHidden1 else inputs))
 
     model = tf.keras.Model(inputs=inputs, outputs=outputs, name=modelName)
@@ -272,34 +351,63 @@ def fitModel(model, dataset, **kwargs): # {{{
               callbacks=fitCallbacks)
 # }}} def fitModel
 
-modelParams = sweepModelParams if sweepNotChosen else chosenModelParams
+def createModels(): # {{{
 
-for inputCombination in inputCombinations.keys():
+    for inputCombination in inputCombinations.keys():
 
-    nInputs, logdir, dataset_train, dataset_test = \
-        getDatasets(selectColumns=inputCombination)
+        nInputs, logdir, dataset_train, dataset_test = \
+            getDatasets(selectColumns=inputCombination)
 
-    for i,(n1,a1,n2,a2) in enumerate(modelParams):
+        for i,(n1,a1,n2,a2,ao) in enumerate(modelParams):
 
-        model = buildModel(nInputs, n1=n1, a1=a1, n2=n2, a2=a2, logdir=logdir)
+            model = buildModel(nInputs,
+                              n1=n1, a1=a1,
+                              n2=n2, a2=a2,
+                              ao=ao,
+                              logdir=logdir)
 
-        fitModel(model, dataset_train, logdir=logdir)
+            fitModel(model, dataset_train, logdir=logdir)
 
-        loss, acc, mse = model.evaluate(dataset_test)
+            loss, acc, mse = model.evaluate(dataset_test)
 
-        fnameTxt = joinP(logdir, model.name+".txt")
-        with open(fnameTxt, 'a') as fd:
-            with redirect_stdout(fd):
-                print(' '.join((
-                    "EVAL",
-                    str(i),
-                    model.name,
-                    "loss=%0.04f" % loss,
-                    "acc=%0.04f" % acc,
-                    "mse=%0.04f" % mse,
-                )))
+            fnameTxt = joinP(logdir, model.name+".txt")
+            with open(fnameTxt, 'a') as fd:
+                with redirect_stdout(fd):
+                    print(' '.join((
+                        "EVAL",
+                        str(i),
+                        model.name,
+                        "loss=%0.04f" % loss,
+                        "acc=%0.04f" % acc,
+                        "mse=%0.04f" % mse,
+                    )))
 
-# TODO: Feed into relest and get plots like in paper.
+            weights = [a.tolist() for a in model.get_weights()]
+            metricParams = {
+                "inputNames": inputCombinations[inputCombination],
+                "ws": [a for i,a in enumerate(weights) if isEven(i)],
+                "bs": [a for i,a in enumerate(weights) if isOdd(i)],
+                "activations": [a1, a2, ao],
+            }
+
+            fnameMetric = joinP(logdir, model.name+".metric.json")
+            with open(fnameMetric, 'w') as fd:
+                json.dump(metricParams, fd, indent=2)
+
+            # Give the new metric a try just for a smoke test.
+            newMetric = getMetric(fnameMetric)
+            dummy = (
+                np.array([1.0, 1.0, 1.0, 1.0, 1.0]),
+                np.array([0.1, 0.2, 0.3, 0.4, 0.5]),
+                np.array([0.1, 0.2, 0.3, 0.4, 0.5]),
+            )
+            print(newMetric(*dummy))
+
+    return
+# }}} def createModels
+
+if __name__ == "__main__":
+    createModels()
 
 #predictions = model.predict(dataset_test)
 #nPred = 20

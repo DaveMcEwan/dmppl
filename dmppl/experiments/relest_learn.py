@@ -60,15 +60,15 @@ debugMode = False
 # tanh          = (exp(x) - exp(-x)) / (exp(x) + exp(-x)), I.E. Hyperbolic tangent
 
 chosenModelParams = (
-    (2, "qsig",         0, "qsig",          "sigmoid"),    # qsig2_qsig0
-    (2, "qsig",         2, "qsig",          "sigmoid"),    # qsig2_qsig2
+    (2, "qsig",         0, "qsig",          "sigmoid"), # qsig2_qsig0
+    (2, "qsig",         2, "qsig",          "sigmoid"), # qsig2_qsig2
    #(4, "qsig",         0, "qsig",          "qsig"),    # qsig4_qsig0
    #(4, "qsig",         4, "qsig",          "qsig"),    # qsig4_qsig4
-    (8, "qsig",         8, "qsig",          "sigmoid"),    # qsig8_qsig8
+    (8, "qsig",         8, "qsig",          "sigmoid"), # qsig8_qsig8
    #(8, "hard_sigmoid", 8, "hard_sigmoid",  "sigmoid"), # hard8_hard8
-   #(8, "sigmoid",      8, "sigmoid",       "sigmoid"), # sigm8_sigm8
+    (8, "sigmoid",      8, "sigmoid",       "sigmoid"), # sigm8_sigm8
    #(8, "relu",         8, "relu",          "sigmoid"), # relu8_relu8
-    (8, "tanh",         8, "tanh",          "sigmoid"),    # tanh8_tanh8
+    (8, "tanh",         8, "tanh",          "sigmoid"), # tanh8_tanh8
 ) if not debugMode else ((4, "qsig", 2, "qsig", "sigmoid"),)
 
 # Use sweepModelParams to sweep a selection of model parameters.
@@ -130,7 +130,8 @@ def getMetric(fname): # {{{
     with open(fname, 'r') as fd:
         metricParams = json.load(fd)
 
-    inputNames, ws, bs, activations = \
+    metricName, inputNames, ws, bs, activations = \
+        metricParams["name"], \
         metricParams["inputNames"], \
         [np.array(w) for w in metricParams["ws"]], \
         [np.array(b) for b in metricParams["bs"]], \
@@ -170,7 +171,7 @@ def getMetric(fname): # {{{
         assert ret_.shape == (1,)
         return ret_[0]
 
-    return fn
+    return (metricName, fn)
 # }}} def getMetric
 
 def getDatasets(**kwargs): # {{{
@@ -226,7 +227,7 @@ def getDatasets(**kwargs): # {{{
     return nInputs, logdir, dataset_train, dataset_test
 # }}} def getDatasets
 
-def buildModel(nInputs, **kwargs): # {{{
+def buildModel(inputCombination, **kwargs): # {{{
 
     def qsig(x): # {{{
         '''Hard Quarter-gradient sigmoid.
@@ -255,13 +256,15 @@ def buildModel(nInputs, **kwargs): # {{{
 
     useHidden1, useHidden2 = (0 < n1), (0 < n2)
 
-    modelName = "{a1}{n1}_{a2}{n2}".format(
+    modelName = "{a1}{n1}_{a2}{n2}_{ao}".format(
         a1=a1[:4] if useHidden1 else "",
         n1=n1,
         a2=a2[:4] if useHidden2 else "",
         n2=n2,
+        ao=ao[:4],
     )
 
+    nInputs = len(inputCombinations[inputCombination])
     inputs = tf.keras.Input(shape=(nInputs,))
     hidden1 = tf.keras.layers.Dense(n1, activation=mapAct[a1])(inputs)
     hidden2 = tf.keras.layers.Dense(n2, activation=mapAct[a2])(hidden1)
@@ -360,11 +363,11 @@ def createModels(): # {{{
 
         for i,(n1,a1,n2,a2,ao) in enumerate(modelParams):
 
-            model = buildModel(nInputs,
-                              n1=n1, a1=a1,
-                              n2=n2, a2=a2,
-                              ao=ao,
-                              logdir=logdir)
+            model = buildModel(inputCombination,
+                               n1=n1, a1=a1,
+                               n2=n2, a2=a2,
+                               ao=ao,
+                               logdir=logdir)
 
             fitModel(model, dataset_train, logdir=logdir)
 
@@ -384,6 +387,7 @@ def createModels(): # {{{
 
             weights = [a.tolist() for a in model.get_weights()]
             metricParams = {
+                "name": model.name,
                 "inputNames": inputCombinations[inputCombination],
                 "ws": [a for i,a in enumerate(weights) if isEven(i)],
                 "bs": [a for i,a in enumerate(weights) if isOdd(i)],
@@ -395,13 +399,13 @@ def createModels(): # {{{
                 json.dump(metricParams, fd, indent=2)
 
             # Give the new metric a try just for a smoke test.
-            newMetric = getMetric(fnameMetric)
+            newMetricName, newMetric = getMetric(fnameMetric)
             dummy = (
                 np.array([1.0, 1.0, 1.0, 1.0, 1.0]),
                 np.array([0.1, 0.2, 0.3, 0.4, 0.5]),
                 np.array([0.1, 0.2, 0.3, 0.4, 0.5]),
             )
-            print(newMetric(*dummy))
+            print(newMetricName, newMetric(*dummy))
 
     return
 # }}} def createModels

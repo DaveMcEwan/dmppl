@@ -72,6 +72,7 @@ from dmppl.math import *
 from dmppl.nd import *
 from dmppl.yaml import *
 import dmppl.stats
+from relest_learn import getMetric
 
 __version__ = "0.1.0"
 
@@ -86,8 +87,8 @@ metrics = [
     ("Cov", ndCov),
     ("Dep", ndDep),
 ]
-nMetrics = len(metrics)
-metricNames = [nm for nm,fn in metrics]
+nMetrics = None     # Initialized by main()
+metricNames = None  # Initialized by main()
 
 # https://en.wikipedia.org/wiki/Confusion_matrix
 # https://en.wikipedia.org/wiki/Evaluation_of_binary_classifiers
@@ -461,7 +462,7 @@ def tabulateScores(scoresByTypename): # {{{
         if 3 != len(scores.shape): continue # No systems of this type.
 
         # Average scores over all systems and tabulate.
-        sysScoresMean = np.mean(scores, axis=0)
+        sysScoresMean = np.nanmean(scores, axis=0)
 
         table = PrettyTable(["Metric"] + statNames)
         rows = zip(metricNames, *sysScoresMean)
@@ -548,6 +549,11 @@ argparser.add_argument("-j", "--n_jobs",
     default=-2,
     help="Number of parallel jobs, where applicable.")
 
+argparser.add_argument("-L", "--learned-metric-fnames",
+    default=[],
+    action='append',
+    help="Filename of learned metric (JSON).")
+
 argparser.add_argument("--load-system",
     default=False,
     action='store_true',
@@ -601,6 +607,14 @@ def main(args): # {{{
         args.n_time = 20
         args.n_sys = 20
         args.n_maxm = 10
+
+    global metrics
+    global metricNames
+    global nMetrics
+    metrics += [getMetric(fnameAppendExt(fname, "metric.json")) \
+                for fname in args.learned_metric_fnames]
+    nMetrics = len(metrics)
+    metricNames = [nm for nm,fn in metrics]
 
     # Use of generator comprehensions allows only required data to be
     # either generated or read from file once.
@@ -674,7 +688,7 @@ def main(args): # {{{
                     for system,evs in zip(systems, EVSs))
         verb("Done", rpt_tm=True)
 
-        # Redefine generator to allow it to be reconsumed later
+        # Redefine generator to allow it to be reconsumed later by exportcsv.
         EVSs = (loadNpy(f) for f in EVSs_fnames)
 
     # Lazily read estimations from disk.

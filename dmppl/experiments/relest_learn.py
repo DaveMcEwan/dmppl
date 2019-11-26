@@ -5,17 +5,23 @@
 # Dave McEwan 2019-04-09
 
 # To run first create a training and evaluation dataset with relest:
-#   python3.7 relest.py TRAIN exportcsv             # Default 1000 systems
-#   python3.7 relest.py -q TEST exportcsv           # Quick run with 20 systems
+#   source ../../venv3.7/bin/activate
+#   python relest.py TRAIN exportcsv             # Default 1000 systems
+#   python relest.py -q TEST exportcsv           # Quick run with 20 systems
 #   mv TRAIN/csv/combined.csv ./combinedTrain.csv
 #   mv TEST/csv/combined.csv ./combinedTest.csv
 # Then create and fit several models to compare:
-#   python3.7 relest_learn.py
+#   python relest_learn.py
 # Compare progress in TensorBoard:
 #   tensorboard --logdir fullassist.results/tf
 #   tensorboard --logdir onchip.results/tf
 #   ...etc
 #   ...Point browsers to `localhost:6006` and `localhost:6007`
+# Then score and plot specific metrics:
+#   python relest.py -v \
+#       -L relest_learn.inputCombA.results/qsig2_qsig2_sigm \
+#       -L relest_learn.inputCombZ.results/tanh8_tanh8_sigm \
+#       --load-evs relest.<date>.results/ score
 
 # This uses TensorFlow+Keras (API v2.0.0)
 
@@ -90,7 +96,9 @@ inputCombinations = {
 #    "basiccntrs": ["E[X]", "E[Y]"],
 
     # No assistance to NN given, but more performance counters.
-    "morecntrs": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]"],
+    "morecntrsA": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]"],
+    "morecntrsB": ["E[X]", "E[Y]", "E[X*Y]"],
+    "morecntrsC": ["E[X]", "E[Y]", "E[|X-Y|]"],
 
     # All these can be calculated easily in hw.
     # - E[.] from performance counters, conditionals with a ratio.
@@ -101,8 +109,13 @@ inputCombinations = {
     #   - Cls(): sqrt(E[|X-Y|]) is difficult
     #   - Cos(): Two sqrt ops
     #   - Ham(): Just the reflection of E[|X-Y|]
-    "onchip": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]", "E[X|Y]", "E[Y|X]",
-               "Cov(X,Y)", "Dep(X,Y)", "Tmt(X,Y)"],
+    # TODO: Finalize set
+    "assistA": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]", "E[X|Y]", "E[Y|X]",
+                "Cov(X,Y)", "Dep(X,Y)", "Tmt(X,Y)"],
+    "assistB": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]", # No Cex
+                "Cov(X,Y)", "Dep(X,Y)", "Tmt(X,Y)"],
+    "assistC": ["E[X]", "E[Y]", "E[X*Y]", # No counters for E[|X-Y|]
+                "Cov(X,Y)", "Dep(X,Y)", "Tmt(X,Y)"],
 } if not debugMode else {"tst": ["E[X]", "E[Y]", "E[X*Y]"]}
 
 defaultLogdir = "tf.results"
@@ -256,7 +269,8 @@ def buildModel(inputCombination, **kwargs): # {{{
 
     useHidden1, useHidden2 = (0 < n1), (0 < n2)
 
-    modelName = "{a1}{n1}_{a2}{n2}_{ao}".format(
+    modelName = "{ip}_{n1}{a1}_{n2}{a2}_{ao}".format(
+        ip=inputCombination,
         a1=a1[:4] if useHidden1 else "",
         n1=n1,
         a2=a2[:4] if useHidden2 else "",

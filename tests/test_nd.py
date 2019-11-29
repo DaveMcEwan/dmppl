@@ -179,34 +179,34 @@ class Test_ndAbsDiff(unittest.TestCase): # {{{
 
 # }}} class Test_ndAbsDiff
 
-class Test_ndConv(unittest.TestCase): # {{{
+class Test_ndHadp(unittest.TestCase): # {{{
 
     def test_Float(self):
         x = np.array([1.1, 2.2, 3.3])
         y = np.array([0, -4.4, 5.5])
-        result = ndConv(x, y)
+        result = ndHadp(x, y)
         self.assertTrue(np.allclose(result, np.array([0.0, -9.68, 18.15])))
 
     def test_Bool(self):
         x = np.array([0, 1, 0, 1], dtype=np.bool)
         y = np.array([0, 0, 1, 1], dtype=np.bool)
-        result = ndConv(x, y)
+        result = ndHadp(x, y)
         self.assertTrue(np.array_equal(result, np.array([0, 0, 0, 1], dtype=np.bool)))
 
     def test_Broadcast(self):
         x = np.array(12)
         y = np.array([3.4, 5, 6])
-        result = ndConv(x, y)
+        result = ndHadp(x, y)
         self.assertTrue(np.array_equal(result, np.array([40.8, 60, 72])))
 
     def test_MultiDim(self):
         x = np.ones((2,4))
         y = np.array([[1, 1, 1, 1],
                       [0, 0, 0, 0]])
-        result = ndConv(x, y)
+        result = ndHadp(x, y)
         self.assertTrue(np.array_equal(result, y))
 
-# }}} class Test_ndConv
+# }}} class Test_ndHadp
 
 class Test_ndMax(unittest.TestCase): # {{{
 
@@ -277,7 +277,7 @@ class Test_ndEx(unittest.TestCase): # {{{
 class Test_ndCex(unittest.TestCase): # {{{
     # TODO: assertRange
     # TODO: y_Ex
-    # TODO: xConvY_Ex
+    # TODO: xHadpY_Ex
 
     def test_ZeroWin(self):
         w = np.array([0, 0, 0])
@@ -399,7 +399,7 @@ class Test_ndHam(unittest.TestCase): # {{{
 
 class Test_ndTmt(unittest.TestCase): # {{{
     # TODO: assertRange
-    # TODO: xConvY_Ex
+    # TODO: xHadpY_Ex
     # TODO: bool x,y
 
     def test_ZeroWin(self):
@@ -464,7 +464,7 @@ class Test_ndTmt(unittest.TestCase): # {{{
 
 class Test_ndCls(unittest.TestCase): # {{{
     # TODO: assertRange
-    # TODO: xConvY_Ex
+    # TODO: xHadpY_Ex
     # TODO: bool x,y
 
     def test_ZeroWin(self):
@@ -522,7 +522,7 @@ class Test_ndCls(unittest.TestCase): # {{{
 
 class Test_ndCos(unittest.TestCase): # {{{
     # TODO: assertRange
-    # TODO: xConvY_Ex
+    # TODO: xHadpY_Ex
     # TODO: bool x,y
 
     def test_ZeroWin(self):
@@ -580,7 +580,7 @@ class Test_ndCos(unittest.TestCase): # {{{
 
 class Test_ndCov(unittest.TestCase): # {{{
     # TODO: assertRange
-    # TODO: xConvY_Ex
+    # TODO: xHadpY_Ex
     # TODO: bool x,y
 
     def test_ZeroWin(self):
@@ -638,7 +638,7 @@ class Test_ndCov(unittest.TestCase): # {{{
 
 class Test_ndDep(unittest.TestCase): # {{{
     # TODO: assertRange
-    # TODO: xConvY_Ex
+    # TODO: xHadpY_Ex
     # TODO: bool x,y
 
     def test_ZeroWin(self):

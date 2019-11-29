@@ -91,8 +91,8 @@ def ndAbsDiff(x, y): # {{{
     return ret
 # }}} def ndAbsDiff
 
-def ndConv(x, y): # {{{
-    '''Convolve ndarrays, (elementwise multiplication).
+def ndHadp(x, y): # {{{
+    '''Hadamard product of ndarrays, (elementwise multiplication).
 
     Boolean arrays use faster bitwise operations.
     On sets this is the intersection.
@@ -100,10 +100,10 @@ def ndConv(x, y): # {{{
     ret = np.logical_and(x, y) if (np.bool == x.dtype == y.dtype) \
         else np.multiply(x, y)
     return ret
-# }}} def ndConv
+# }}} def ndHadp
 
 def ndMax(x, y): # {{{
-    '''Convolve ndarrays, (elementwise multiplication).
+    '''Elementwise maximum.
 
     Boolean arrays use faster bitwise operations.
     On sets this is the union.
@@ -132,12 +132,12 @@ def ndEx(w, x, **kwargs): # {{{
     assert np.isscalar(w_Area), type(w_Area)
     assert w_Area <= np.prod(w.shape), (w_Area, w.shape)
 
-    wConvX_Area = np.sum(ndConv(w, x))
-    assert np.isscalar(wConvX_Area), type(wConvX_Area)
+    wHadpX_Area = np.sum(ndHadp(w, x))
+    assert np.isscalar(wHadpX_Area), type(wHadpX_Area)
     if kwargs.get("assertRange", True):
-        assert wConvX_Area <= w_Area, (wConvX_Area, w_Area)
+        assert wHadpX_Area <= w_Area, (wHadpX_Area, w_Area)
 
-    ret = wConvX_Area / w_Area if 0.0 < abs(w_Area) else w_Area
+    ret = wHadpX_Area / w_Area if 0.0 < abs(w_Area) else w_Area
     ndAssertScalarNorm(ret)
 
     return ret
@@ -165,13 +165,13 @@ def ndCex(w, x, y, **kwargs): # {{{
     if 0.0 == y_Ex:
         ret = np.nan
     else:
-        _xConvY_Ex = kwargs.get("xConvY_Ex", None)
-        xConvY_Ex = ndEx(w, ndConv(x, y), **kwargs) \
-            if _xConvY_Ex is None else _xConvY_Ex
-        ndAssertScalarNorm(xConvY_Ex)
-        assert xConvY_Ex <= y_Ex, (xConvY_Ex, y_Ex)
+        _xHadpY_Ex = kwargs.get("xHadpY_Ex", None)
+        xHadpY_Ex = ndEx(w, ndHadp(x, y), **kwargs) \
+            if _xHadpY_Ex is None else _xHadpY_Ex
+        ndAssertScalarNorm(xHadpY_Ex)
+        assert xHadpY_Ex <= y_Ex, (xHadpY_Ex, y_Ex)
 
-        ret = xConvY_Ex / y_Ex
+        ret = xHadpY_Ex / y_Ex
         ndAssertScalarNorm(ret)
 
     assert np.isnan(ret) or np.isscalar(ret), type(ret)
@@ -226,13 +226,13 @@ def ndTmt(w, x, y, **kwargs): # {{{
     x_Ex = ndEx(w, x, **kwargs) if _x_Ex is None else _x_Ex
     ndAssertScalarNorm(x_Ex)
 
-    _xConvY_Ex = kwargs.get("xConvY_Ex", None)
-    xConvY_Ex = ndEx(w, ndConv(x, y), **kwargs) \
-            if _xConvY_Ex is None else _xConvY_Ex
-    ndAssertScalarNorm(xConvY_Ex)
+    _xHadpY_Ex = kwargs.get("xHadpY_Ex", None)
+    xHadpY_Ex = ndEx(w, ndHadp(x, y), **kwargs) \
+            if _xHadpY_Ex is None else _xHadpY_Ex
+    ndAssertScalarNorm(xHadpY_Ex)
 
-    denominator = x_Ex + y_Ex - xConvY_Ex
-    ret = 0.0 if 0.0 == denominator else (xConvY_Ex / denominator)
+    denominator = x_Ex + y_Ex - xHadpY_Ex
+    ret = 0.0 if 0.0 == denominator else (xHadpY_Ex / denominator)
     ndAssertScalarNorm(ret)
 
     return ret
@@ -256,7 +256,7 @@ def ndCls(w, x, y, **kwargs): # {{{
     xDiffY = ndAbsDiff(x, y)
     ndAssert(xDiffY, **kwargs)
 
-    xDiffY2_Ex = ndEx(w, ndConv(xDiffY, xDiffY), **kwargs)
+    xDiffY2_Ex = ndEx(w, ndHadp(xDiffY, xDiffY), **kwargs)
 
     ret = 1.0 - np.sqrt(xDiffY2_Ex)
     ndAssertScalarNorm(ret)
@@ -278,22 +278,22 @@ def ndCos(w, x, y, **kwargs): # {{{
     '''
     ndAssert(w, x, y, **kwargs)
 
-    _xConvY_Ex = kwargs.get("xConvY_Ex", None)
-    xConvY_Ex = ndEx(w, ndConv(x, y), **kwargs) \
-            if _xConvY_Ex is None else _xConvY_Ex
-    ndAssertScalarNorm(xConvY_Ex)
+    _xHadpY_Ex = kwargs.get("xHadpY_Ex", None)
+    xHadpY_Ex = ndEx(w, ndHadp(x, y), **kwargs) \
+            if _xHadpY_Ex is None else _xHadpY_Ex
+    ndAssertScalarNorm(xHadpY_Ex)
 
-    x_Ex2 = ndEx(w, ndConv(x, x), **kwargs)
+    x_Ex2 = ndEx(w, ndHadp(x, x), **kwargs)
     ndAssertScalarNorm(x_Ex2)
 
-    y_Ex2 = ndEx(w, ndConv(y, y), **kwargs)
+    y_Ex2 = ndEx(w, ndHadp(y, y), **kwargs)
     ndAssertScalarNorm(y_Ex2)
 
     # Finite precision with very high dimensional vectors means ret can
     # sometimes slightly exceed 1.0.
     ret = np.minimum(1.0,
                      0.0 if 0.0 in [x_Ex2, y_Ex2] else
-                        (xConvY_Ex / (np.sqrt(x_Ex2) * np.sqrt(y_Ex2))))
+                        (xHadpY_Ex / (np.sqrt(x_Ex2) * np.sqrt(y_Ex2))))
     ndAssertScalarNorm(ret)
 
     return ret
@@ -322,12 +322,12 @@ def ndCov(w, x, y, **kwargs): # {{{
     x_Ex = ndEx(w, x, **kwargs) if _x_Ex is None else _x_Ex
     ndAssertScalarNorm(x_Ex)
 
-    _xConvY_Ex = kwargs.get("xConvY_Ex", None)
-    xConvY_Ex = ndEx(w, ndConv(x, y), **kwargs) \
-            if _xConvY_Ex is None else _xConvY_Ex
-    ndAssertScalarNorm(xConvY_Ex)
+    _xHadpY_Ex = kwargs.get("xHadpY_Ex", None)
+    xHadpY_Ex = ndEx(w, ndHadp(x, y), **kwargs) \
+            if _xHadpY_Ex is None else _xHadpY_Ex
+    ndAssertScalarNorm(xHadpY_Ex)
 
-    ret = 4 * np.fabs(xConvY_Ex - (x_Ex * y_Ex))
+    ret = 4 * np.fabs(xHadpY_Ex - (x_Ex * y_Ex))
     ndAssertScalarNorm(ret)
 
     return ret

@@ -41,7 +41,7 @@ Convert to true value x from representation s.
 
 There isn't a representation for 0, but that's okay.
 Multiplying nearly zero with nearly zero gets you even closer to zero, so
-fxMul(0x0, 0x0) returns 0x0.
+fxHadp(0x0, 0x0) returns 0x0.
 Adding nearly zero to nearly zero does get you further from zero, so
 fxAdd(0x0, 0x0) returns 0x1.
 
@@ -362,7 +362,7 @@ def fxReflect(x, **kwargs): # {{{
     return ret
 # }}} def fxReflect
 
-def fxMul(x, y, **kwargs): # {{{
+def fxHadp(x, y, **kwargs): # {{{
     '''Elementwise multiply two NumPy arrays for fixed point (0, 1].
 
     Take arrays x, y of equal shape and equal dtype.
@@ -395,7 +395,7 @@ def fxMul(x, y, **kwargs): # {{{
 
     fxAssert(ret, **kwargs)
     return ret
-# }}} def fxMul
+# }}} def fxHadp
 
 def fxPow(x, n, **kwargs): # {{{
     '''Raise elements of NumPy array to integer power n for fixed point (0, 1].
@@ -425,13 +425,13 @@ def fxPow(x, n, **kwargs): # {{{
     y_ = y
     while n_ > 1:
         if n_ % 2:
-            y_ = fxMul(x_, y_, **kwargs)
+            y_ = fxHadp(x_, y_, **kwargs)
             n_ = (n_ - 1) >> 1
         else:
             n_ = n_ >> 1
-        x_ = fxMul(x_, x_, **kwargs)
+        x_ = fxHadp(x_, x_, **kwargs)
 
-    ret = fxMul(x_, y_, **kwargs)
+    ret = fxHadp(x_, y_, **kwargs)
 
     fxAssert(ret, **kwargs)
     return ret
@@ -552,7 +552,7 @@ def fxExpectation(W, X, **kwargs): # {{{
     '''
     fxAssert(W, X, **kwargs)
 
-    ret = fxArithMean(fxMul(W, X, **kwargs), **kwargs)
+    ret = fxArithMean(fxHadp(W, X, **kwargs), **kwargs)
     assert np.isscalar(ret)
 
     return ret
@@ -572,19 +572,19 @@ def fxConditional(W, X, Y, **kwargs): # {{{
 
     Y_Ex = fxExpectation(W, Y, **kwargs)
 
-    XconvY_Ex = fxExpectation(W, fxMul(X, Y, **kwargs), **kwargs)
-    fxAssert(Y_Ex, geq=XconvY_Ex, **kwargs)
+    xHadpY_Ex = fxExpectation(W, fxHadp(X, Y, **kwargs), **kwargs)
+    fxAssert(Y_Ex, geq=xHadpY_Ex, **kwargs)
 
     # NOTE: This fixed point representation has no 0, so there is no need to
     # check if Y_Ex == 0 to avoid NaN.
 
-    ret = fxRatio(XconvY_Ex+1, Y_Ex+1, **kwargs)
+    ret = fxRatio(xHadpY_Ex+1, Y_Ex+1, **kwargs)
     assert np.isscalar(ret)
 
     return ret
 # }}} def fxConditional
 
-def fxDependency(W, X, Y, **kwargs): # {{{
+def fxDep(W, X, Y, **kwargs): # {{{
     '''Calculate Dep(X,Y)
 
     Take rows W, X, Y of equal length, and a threshold epsilon.
@@ -611,22 +611,22 @@ def fxDependency(W, X, Y, **kwargs): # {{{
     if 0 == Y_Ex: # NOTE: Close to zero, not equal to zero.
         return fxZero(**kwargs)
 
-    XY_Ex = fxMul(X_Ex, Y_Ex, **kwargs)
+    XY_Ex = fxHadp(X_Ex, Y_Ex, **kwargs)
     fxAssert(X_Ex, Y_Ex, geq=XY_Ex, **kwargs)
 
-    XconvY_Ex = fxExpectation(W, fxMul(X, Y, **kwargs), **kwargs)
-    fxAssert(X_Ex, Y_Ex, geq=XconvY_Ex, **kwargs)
+    xHadpY_Ex = fxExpectation(W, fxHadp(X, Y, **kwargs), **kwargs)
+    fxAssert(X_Ex, Y_Ex, geq=xHadpY_Ex, **kwargs)
 
-    if XconvY_Ex < XY_Ex:
+    if xHadpY_Ex < XY_Ex:
         return fxZero(**kwargs)
 
-    ret = fxReflect(fxRatio(XY_Ex+1, XconvY_Ex+1, **kwargs), **kwargs)
+    ret = fxReflect(fxRatio(XY_Ex+1, xHadpY_Ex+1, **kwargs), **kwargs)
     assert np.isscalar(ret)
 
     return ret
-# }}} def fxDependency
+# }}} def fxDep
 
-def fxCovariance(W, X, Y, **kwargs): # {{{
+def fxCov(W, X, Y, **kwargs): # {{{
     '''Calculate Cov(X,Y)
 
     Take rows W, X, Y of equal length, and a threshold epsilon.
@@ -650,19 +650,19 @@ def fxCovariance(W, X, Y, **kwargs): # {{{
     if 0 == Y_Ex: # NOTE: Close to zero, not equal to zero.
         return fxZero(**kwargs)
 
-    XY_Ex = fxMul(X_Ex, Y_Ex, **kwargs)
+    XY_Ex = fxHadp(X_Ex, Y_Ex, **kwargs)
     fxAssert(X_Ex, Y_Ex, geq=XY_Ex, **kwargs)
 
     if 0 == XY_Ex: # NOTE: Close to zero, not equal to zero.
         return fxZero(**kwargs)
 
-    XconvY_Ex = fxExpectation(W, fxMul(X, Y, **kwargs), **kwargs)
-    fxAssert(X_Ex, Y_Ex, geq=XconvY_Ex, **kwargs)
+    xHadpY_Ex = fxExpectation(W, fxHadp(X, Y, **kwargs), **kwargs)
+    fxAssert(X_Ex, Y_Ex, geq=xHadpY_Ex, **kwargs)
 
-    if XconvY_Ex < XY_Ex:
+    if xHadpY_Ex < XY_Ex:
         return fxZero(**kwargs)
 
-    s = fxSub(XconvY_Ex, XY_Ex, **kwargs)
+    s = fxSub(xHadpY_Ex, XY_Ex, **kwargs)
     fxAssert(s, leq=(fxOne(**kwargs) >> 2).astype(dtype1), **kwargs)
 
     ret = (s * 4 + 3).astype(dtype1) # 4(s+1)-1 = 4s+3
@@ -670,7 +670,7 @@ def fxCovariance(W, X, Y, **kwargs): # {{{
 
     fxAssert(ret, **kwargs)
     return ret
-# }}} def fxCovariance
+# }}} def fxCov
 
 if __name__ == "__main__":
     assert False, "Not a standalone script."

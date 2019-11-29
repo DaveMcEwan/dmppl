@@ -162,7 +162,7 @@ def getMetric(fname): # {{{
         for nm in inputNames:
             if   "E[X]" == nm:      value = ndEx(win, x, **kwargs)
             elif "E[Y]" == nm:      value = ndEx(win, y, **kwargs)
-            elif "E[X*Y]" == nm:    value = ndEx(win, ndConv(x, y, **kwargs), **kwargs)
+            elif "E[X*Y]" == nm:    value = ndEx(win, ndHadp(x, y, **kwargs), **kwargs)
             elif "E[|X-Y|]" == nm:  value = ndEx(win, ndAbsDiff(x, y, **kwargs), **kwargs)
             elif "E[X|Y]" == nm:    value = ndCex(win, x, y, **kwargs)
             elif "E[Y|X]" == nm:    value = ndCex(win, y, x, **kwargs)

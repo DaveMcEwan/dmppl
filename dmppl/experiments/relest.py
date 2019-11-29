@@ -298,7 +298,7 @@ def exportCsv(system, evs, known, estimated, n_time): # {{{
         ("E[Y]",       "{Ex_Y:0.6f}"),
         ("E[X|Y]",     "{Ex_XgivenY:0.6f}"),
         ("E[Y|X]",     "{Ex_YgivenX:0.6f}"),
-        ("E[X*Y]",     "{Ex_XconvY:0.6f}"),
+        ("E[X*Y]",     "{Ex_XhadpY:0.6f}"),
         ("E[|X-Y|]",   "{Ex_XabsdifY:0.6f}"),
         ('"Ham(X,Y)"',  "{Ham:0.6f}"),
         ('"Tmt(X,Y)"',  "{Tmt:0.6f}"),
@@ -338,7 +338,7 @@ def exportCsv(system, evs, known, estimated, n_time): # {{{
                 Ex_XgivenY = np.nan_to_num(ndCex(W, X, Y))
                 Ex_YgivenX = np.nan_to_num(ndCex(W, Y, X))
 
-                Ex_XconvY = ndEx(W, ndConv(X, Y))
+                Ex_XhadpY = ndEx(W, ndHadp(X, Y))
 
                 Ex_XabsdifY = ndEx(W, ndAbsDiff(X, Y))
 
@@ -358,7 +358,7 @@ def exportCsv(system, evs, known, estimated, n_time): # {{{
                     Ex_Y        =Ex_Y,
                     Ex_XgivenY  =Ex_XgivenY,
                     Ex_YgivenX  =Ex_YgivenX,
-                    Ex_XconvY   =Ex_XconvY,
+                    Ex_XhadpY   =Ex_XhadpY,
                     Ex_XabsdifY =Ex_XabsdifY,
                     Ham         =Ham,
                     Tmt         =Tmt,

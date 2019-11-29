@@ -545,71 +545,71 @@ class Test_fxMul(unittest.TestCase): # {{{
 
     def test_ZeroZero(self):
         z = fxZero()
-        self.assertEqual(fxMul(z, z), np.array(0, dtype=np.uint8))
+        self.assertEqual(fxHadp(z, z), np.array(0, dtype=np.uint8))
         for i in range(2, 8+1):
             z = fxZero(nBits=i)
-            self.assertEqual(fxMul(z, z, nBits=i), np.array(0, dtype=np.uint8))
+            self.assertEqual(fxHadp(z, z, nBits=i), np.array(0, dtype=np.uint8))
         for i in range(9, 16+1):
             z = fxZero(nBits=i)
-            self.assertEqual(fxMul(z, z, nBits=i), np.array(0, dtype=np.uint16))
+            self.assertEqual(fxHadp(z, z, nBits=i), np.array(0, dtype=np.uint16))
         for i in range(17, 31+1):
             z = fxZero(nBits=i)
-            self.assertEqual(fxMul(z, z, nBits=i), np.array(0, dtype=np.uint32))
+            self.assertEqual(fxHadp(z, z, nBits=i), np.array(0, dtype=np.uint32))
 
     def test_ZerosZeros(self):
         for i in range(2, 8+1):
             shape = (3, 4)
             z = fxZeros(shape, nBits=i)
-            self.assertTrue(np.all(fxMul(z, z, nBits=i) == np.zeros(shape, dtype=np.uint8)))
+            self.assertTrue(np.all(fxHadp(z, z, nBits=i) == np.zeros(shape, dtype=np.uint8)))
         for i in range(9, 16+1):
             shape = (3, 4)
             z = fxZeros(shape, nBits=i)
-            self.assertTrue(np.all(fxMul(z, z, nBits=i) == np.zeros(shape, dtype=np.uint16)))
+            self.assertTrue(np.all(fxHadp(z, z, nBits=i) == np.zeros(shape, dtype=np.uint16)))
         for i in range(17, 31+1):
             shape = (3, 4)
             z = fxZeros(shape, nBits=i)
-            self.assertTrue(np.all(fxMul(z, z, nBits=i) == np.zeros(shape, dtype=np.uint32)))
+            self.assertTrue(np.all(fxHadp(z, z, nBits=i) == np.zeros(shape, dtype=np.uint32)))
 
     def test_OneOne(self):
         o = fxOne()
-        self.assertEqual(fxMul(o, o), np.array(0xff, dtype=np.uint8))
+        self.assertEqual(fxHadp(o, o), np.array(0xff, dtype=np.uint8))
         for i in range(2, 8+1):
             o = fxOne(nBits=i)
-            self.assertEqual(fxMul(o, o, nBits=i), np.array(2**i-1, dtype=np.uint8))
+            self.assertEqual(fxHadp(o, o, nBits=i), np.array(2**i-1, dtype=np.uint8))
         for i in range(9, 16+1):
             o = fxOne(nBits=i)
-            self.assertEqual(fxMul(o, o, nBits=i), np.array(2**i-1, dtype=np.uint16))
+            self.assertEqual(fxHadp(o, o, nBits=i), np.array(2**i-1, dtype=np.uint16))
         for i in range(17, 31+1):
             o = fxOne(nBits=i)
-            self.assertEqual(fxMul(o, o, nBits=i), np.array(2**i-1, dtype=np.uint32))
+            self.assertEqual(fxHadp(o, o, nBits=i), np.array(2**i-1, dtype=np.uint32))
 
     def test_Large(self):
         i = 16
         o = (fxOne(nBits=i) - 10).astype(fxDtype(i))
         b = ((fxOne(nBits=i) >> 1) + 10).astype(fxDtype(i))
-        fxMul(o, b, nBits=i) # No assertion should raise.
+        fxHadp(o, b, nBits=i) # No assertion should raise.
 
     def test_OnesOnes(self):
         for i in range(2, 8+1):
             shape = (3, 4)
             o = fxOnes(shape, nBits=i)
             ob = np.broadcast_to(o.astype(np.uint8), shape)
-            self.assertTrue(np.all(fxMul(o, o, nBits=i) == ob))
+            self.assertTrue(np.all(fxHadp(o, o, nBits=i) == ob))
         for i in range(9, 16+1):
             shape = (3, 4)
             o = fxOnes(shape, nBits=i)
             ob = np.broadcast_to(o.astype(np.uint16), shape)
-            self.assertTrue(np.all(fxMul(o, o, nBits=i) == ob))
+            self.assertTrue(np.all(fxHadp(o, o, nBits=i) == ob))
         for i in range(17, 31+1):
             shape = (3, 4)
             o = fxOnes(shape, nBits=i)
             ob = np.broadcast_to(o.astype(np.uint32), shape)
-            self.assertTrue(np.all(fxMul(o, o, nBits=i) == ob))
+            self.assertTrue(np.all(fxHadp(o, o, nBits=i) == ob))
 
     def test_QuarterQuarter(self):
         q = np.array(0x3f, dtype=np.uint8)
         s = np.array(0x0f, dtype=np.uint8) # 1/16
-        self.assertEqual(fxMul(q, q), s)
+        self.assertEqual(fxHadp(q, q), s)
 
         for i in range(2, 31+1):
             #h = (fxOne(nBits=i) >> 1).astype(fxDtype(nBits=i))
@@ -617,12 +617,12 @@ class Test_fxMul(unittest.TestCase): # {{{
             e = (fxOne(nBits=i) >> 3).astype(fxDtype(nBits=i))
             s = (fxOne(nBits=i) >> 4).astype(fxDtype(nBits=i))
 
-            self.assertEqual(fxMul(q, q, nBits=i), s)
+            self.assertEqual(fxHadp(q, q, nBits=i), s)
 
     def test_HalfHalf(self):
         h = np.array(0x7f, dtype=np.uint8)
         q = np.array(0x3f, dtype=np.uint8)
-        self.assertEqual(fxMul(h, h), q)
+        self.assertEqual(fxHadp(h, h), q)
 
         for i in range(2, 31+1):
             h = (fxOne(nBits=i) >> 1).astype(fxDtype(nBits=i))
@@ -630,14 +630,14 @@ class Test_fxMul(unittest.TestCase): # {{{
             #e = (fxOne(nBits=i) >> 3).astype(fxDtype(nBits=i))
             #s = (fxOne(nBits=i) >> 4).astype(fxDtype(nBits=i))
 
-            self.assertEqual(fxMul(h, h, nBits=i), q)
+            self.assertEqual(fxHadp(h, h, nBits=i), q)
 
     def test_QuarterHalf(self):
         q = np.array(0x3f, dtype=np.uint8)
         h = np.array(0x7f, dtype=np.uint8)
         e = np.array(0x1f, dtype=np.uint8) # 1/8
-        self.assertEqual(fxMul(q, h), e)
-        self.assertEqual(fxMul(h, q), e)
+        self.assertEqual(fxHadp(q, h), e)
+        self.assertEqual(fxHadp(h, q), e)
 
         for i in range(2, 31+1):
             h = (fxOne(nBits=i) >> 1).astype(fxDtype(nBits=i))
@@ -645,8 +645,8 @@ class Test_fxMul(unittest.TestCase): # {{{
             e = (fxOne(nBits=i) >> 3).astype(fxDtype(nBits=i))
             #s = (fxOne(nBits=i) >> 4).astype(fxDtype(nBits=i))
 
-            self.assertEqual(fxMul(q, h, nBits=i), e)
-            self.assertEqual(fxMul(h, q, nBits=i), e)
+            self.assertEqual(fxHadp(q, h, nBits=i), e)
+            self.assertEqual(fxHadp(h, q, nBits=i), e)
 
 # }}} class Test_fxMul
 
@@ -814,7 +814,7 @@ class Test_fxDependency(unittest.TestCase): # {{{
             X = np.array([q, h, t, q, h, t, h, h], dtype=fxDtype(i))
             Y = np.array([h, h, h, h, h, h, h, h], dtype=fxDtype(i))
             W = fxOnes(X.shape, nBits=i)
-            self.assertEqual(fxDependency(W, X, Y, nBits=i), fxZero(nBits=i))
+            self.assertEqual(fxDep(W, X, Y, nBits=i), fxZero(nBits=i))
 
     def test_Basic1(self):
         for i in range(2, 31+1):
@@ -822,7 +822,7 @@ class Test_fxDependency(unittest.TestCase): # {{{
             X = np.array([fxZero(nBits=i), fxOne(nBits=i)], dtype=fxDtype(i))
             Y = np.array([fxZero(nBits=i), fxOne(nBits=i)], dtype=fxDtype(i))
             W = fxOnes(X.shape, nBits=i)
-            self.assertEqual(fxDependency(W, X, Y, nBits=i), h)
+            self.assertEqual(fxDep(W, X, Y, nBits=i), h)
 
     def test_Basic2(self):
         for i in range(4, 31+1): # NOTE: Breakdown at nBits<4
@@ -830,7 +830,7 @@ class Test_fxDependency(unittest.TestCase): # {{{
             X = np.array([fxZero(nBits=i), fxOne(nBits=i),fxZero(nBits=i),fxZero(nBits=i)], dtype=fxDtype(i))
             Y = np.array([fxZero(nBits=i), fxOne(nBits=i),fxZero(nBits=i),fxZero(nBits=i)], dtype=fxDtype(i))
             W = fxOnes(X.shape, nBits=i)
-            self.assertEqual(fxDependency(W, X, Y, nBits=i), t)
+            self.assertEqual(fxDep(W, X, Y, nBits=i), t)
 
     def test_Breakdown(self):
         for i in range(2, 31+1):
@@ -838,7 +838,7 @@ class Test_fxDependency(unittest.TestCase): # {{{
             X = np.array([q, h, t, q, h, t, h, h], dtype=fxDtype(i))
             Y = np.array([0, 0, 0, 0, 0, 0, 0, 0], dtype=fxDtype(i))
             W = fxOnes(X.shape, nBits=i)
-            self.assertEqual(fxDependency(W, X, Y, nBits=i), fxZero(nBits=i))
+            self.assertEqual(fxDep(W, X, Y, nBits=i), fxZero(nBits=i))
 
     @unittest.skip("long runtime")
     def test_UpperLimit(self):
@@ -852,7 +852,7 @@ class Test_fxDependency(unittest.TestCase): # {{{
                     X = np.random.randint(0, 2**i, arrlen).astype(dtype1)
                     Y = np.random.randint(0, 2**i, arrlen).astype(dtype1)
                     try:
-                        a = fxDependency(W, X, Y, nBits=i)
+                        a = fxDep(W, X, Y, nBits=i)
                     except Exception as e:
                         print(i, i, dtype1, X, Y)
                         raise e
@@ -868,7 +868,7 @@ class Test_fxCovariance(unittest.TestCase): # {{{
             X = np.array([q, h, t, q, h, t, h, h], dtype=fxDtype(i))
             Y = np.array([h, h, h, h, h, h, h, h], dtype=fxDtype(i))
             W = fxOnes(X.shape, nBits=i)
-            self.assertEqual(fxCovariance(W, X, Y, nBits=i), np.array(3, dtype=fxDtype(i)))
+            self.assertEqual(fxCov(W, X, Y, nBits=i), np.array(3, dtype=fxDtype(i)))
 
     def test_Basic1(self):
         for i in range(3, 31+1): # Breakdown at nBits<3
@@ -876,7 +876,7 @@ class Test_fxCovariance(unittest.TestCase): # {{{
             X = np.array([fxZero(nBits=i), fxOne(nBits=i)], dtype=fxDtype(i))
             Y = np.array([fxZero(nBits=i), fxOne(nBits=i)], dtype=fxDtype(i))
             W = fxOnes(X.shape, nBits=i)
-            self.assertEqual(fxCovariance(W, X, Y, nBits=i), fxOne(nBits=i))
+            self.assertEqual(fxCov(W, X, Y, nBits=i), fxOne(nBits=i))
 
     def test_Basic2(self):
         for i in range(5, 31+1): # NOTE: Breakdown at nBits<5
@@ -884,7 +884,7 @@ class Test_fxCovariance(unittest.TestCase): # {{{
             X = np.array([fxZero(nBits=i), fxOne(nBits=i),fxZero(nBits=i),fxZero(nBits=i)], dtype=fxDtype(i))
             Y = np.array([fxZero(nBits=i), fxOne(nBits=i),fxZero(nBits=i),fxZero(nBits=i)], dtype=fxDtype(i))
             W = fxOnes(X.shape, nBits=i)
-            self.assertEqual(fxCovariance(W, X, Y, nBits=i), t)
+            self.assertEqual(fxCov(W, X, Y, nBits=i), t)
 
     def test_Breakdown(self):
         for i in range(2, 31+1):
@@ -892,7 +892,7 @@ class Test_fxCovariance(unittest.TestCase): # {{{
             X = np.array([q, h, t, q, h, t, h, h], dtype=fxDtype(i))
             Y = np.array([0, 0, 0, 0, 0, 0, 0, 0], dtype=fxDtype(i))
             W = fxOnes(X.shape, nBits=i)
-            self.assertEqual(fxCovariance(W, X, Y, nBits=i), fxZero(nBits=i))
+            self.assertEqual(fxCov(W, X, Y, nBits=i), fxZero(nBits=i))
 
 # }}} class Test_fxCovariance
 

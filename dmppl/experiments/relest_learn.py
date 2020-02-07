@@ -109,7 +109,7 @@ inputCombinations = {
     #   - Cls(): sqrt(E[|X-Y|]) is difficult
     #   - Cos(): Two sqrt ops
     #   - Ham(): Just the reflection of E[|X-Y|]
-    # TODO: Finalize set
+    # TODO: Finalize set for "onchip"
     "assistA": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]", "E[X|Y]", "E[Y|X]",
                 "Cov(X,Y)", "Dep(X,Y)", "Tmt(X,Y)"],
     "assistB": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]", # No Cex

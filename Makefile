@@ -12,6 +12,7 @@ VENV2.7 = source venv2.7/bin/activate &&
 VENV3.5 = source venv3.5/bin/activate &&
 VENV3.6 = source venv3.6/bin/activate &&
 VENV3.7 = source venv3.7/bin/activate &&
+VENV3.8 = source venv3.8/bin/activate &&
 
 # Create the virtual environments and install dependencies.
 # In Python2.7 virtualenv is not in the standard library.
@@ -40,11 +41,16 @@ venv3.7:
 	$(VENV3.7) pip install joblib matplotlib prettytable seaborn
 	$(VENV3.7) pip install 'tensorflow==2.0.0' graphviz pydot
 	$(VENV3.7) pip install -e .
+venv3.8:
+	python3.8 -m venv venv3.8
+	$(VENV3.8) pip install coverage mypy pyyaml numpy toml
+	$(VENV3.8) pip install -e .
 
 venv: venv2.7
 venv: venv3.5
 venv: venv3.6
 venv: venv3.7
+venv: venv3.8
 
 # Run unit tests like this:
 #   python -m unittest tests                        # All modules
@@ -55,6 +61,7 @@ unittest: venv
 	$(VENV3.5) python -m unittest tests
 	$(VENV3.6) python -m unittest tests
 	$(VENV3.7) python -m unittest tests
+	$(VENV3.8) python -m unittest tests
 
 # Collect coverage and produces HTML reports from unit tests.
 COVRC = --rcfile=tests/.coveragerc_
@@ -67,6 +74,8 @@ unittest-coverage: venv
 		coverage html $(COVRC)3.6
 	$(VENV3.7) coverage run $(COVRC)3.7 -m unittest tests && \
 		coverage html $(COVRC)3.7
+	$(VENV3.8) coverage run $(COVRC)3.8 -m unittest tests && \
+		coverage html $(COVRC)3.8
 
 
 # Use a specific Python version for packaging to aid reproducability.

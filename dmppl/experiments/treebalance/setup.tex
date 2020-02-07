@@ -1,0 +1,172 @@
+
+
+\usepackage[utf8]{inputenc}
+
+\usepackage{parskip}
+\usepackage{sectsty}
+
+\usepackage[a4paper,margin=2.5cm,headheight=13.6pt]{geometry}
+\usepackage{fancyhdr}
+\pagestyle{fancy} % options: empty, plain, fancy
+\renewcommand{\headrulewidth}{0pt}
+\lhead{}\chead{}\rhead{}
+\lfoot{}\cfoot{\thepage}\rfoot{}
+
+\usepackage{url}
+\usepackage{breakurl}
+
+\usepackage{cite}
+
+\usepackage{placeins}
+\usepackage{subcaption}
+\usepackage{multirow}
+\usepackage[page]{appendix}
+
+\ifdefined\SansFontFamily
+    % Font for section titles.
+    \allsectionsfont{\sffamily\mdseries\upshape}
+
+    % Font for the "Appendices" title.
+    \let\appendixpagenameorig\appendixpagename
+    \renewcommand{\appendixpagename}{\sffamily\appendixpagenameorig}
+\fi
+
+\usepackage[usenames,svgnames]{xcolor}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\hypersetup{
+    colorlinks,
+    citecolor=black,
+    filecolor=black,
+    linkcolor=black,
+    urlcolor=black
+}
+
+\usepackage{listings}
+\lstdefinelanguage{none}{
+  identifierstyle=
+}
+\newcommand{\lstNone}{
+    \lstset{language=none,
+            numbers=left,
+            showstringspaces=false,
+            numberstyle=\tiny\color{gray},
+            numbersep=5pt,
+            breaklines=false,
+            basicstyle=\scriptsize\ttfamily}
+}
+
+\newcommand{\lstC}{
+    \lstset{language=C,
+            numbers=left,
+            showstringspaces=false,
+            numberstyle=\tiny\color{gray},
+            keywordstyle=\color{blue},
+            commentstyle=\color{dkgreen},
+            stringstyle=\color{mauve},
+            numbersep=5pt,
+            breaklines=false,
+            basicstyle=\small\ttfamily}
+}
+
+\newcommand{\lstSV}{
+    \lstset{language=SystemVerilog,
+            numbers=left,
+            showstringspaces=false,
+            numberstyle=\tiny\color{gray},
+            keywordstyle=\color{blue},
+            commentstyle=\color{dkgreen},
+            stringstyle=\color{mauve},
+            numbersep=5pt,
+            breaklines=false,
+            basicstyle=\small\ttfamily}
+}
+
+\lstdefinelanguage{SystemVerilog}%
+  {morekeywords={% reserved keywords
+      always_comb,always_ff,always_latch,%
+      bit,logic,int,var,%
+      always,and,assign,automatic,begin,buf,bufif0,bufif1,case,casex,%
+      casez,cell,cmos,config,deassign,default,defparam,design,disable,%
+      edge,else,end,endcase,endconfig,endfunction,endgenerate,%
+      endmodule,endprimitive,endspecify,endtable,endtask,event,for,%
+      force,forever,fork,function,generate,genvar,highz0,highz1,if,%
+      ifnone,incdir,include,initial,inout,input,instance,integer,join,%
+      large,liblist,library,localparam,macromodule,medium,module,nand,%
+      negedge,nmos,nor,noshowcancelled,not,notif0,notif1,or,output,%
+      parameter,pmos,posedge,primitive,pull0,pull1,pulldown,pullup,%
+      pulsestyle_onevent,pulsestyle_ondetect,rcmos,real,realtime,reg,%
+      release,repeat,rnmos,rpmos,rtran,rtranif0,rtranif1,scalared,%
+      showcancelled,signed,small,specify,specparam,strong0,strong1,%
+      supply0,supply1,table,task,time,tran,tranif0,tranif1,tri,tri0,%
+      tri1,triand,trior,trireg,unsigned,use,vectored,wait,wand,weak0,%
+      weak1,while,wire,wor,xnor,xor},%
+   morekeywords=[2]{% system tasks and functions
+      $clog2,$onehot,%
+      $bitstoreal,$countdrivers,$display,$fclose,$fdisplay,$fmonitor,%
+      $fopen,$fstrobe,$fwrite,$finish,$getpattern,$history,$incsave,%
+      $input,$itor,$key,$list,$log,$monitor,$monitoroff,$monitoron,%
+      $nokey},%
+   morekeywords=[3]{% compiler directives
+      `accelerate,`autoexpand_vectornets,`celldefine,`default_nettype,%
+      `define,`else,`elsif,`endcelldefine,`endif,`endprotect,%
+      `endprotected,`expand_vectornets,`ifdef,`ifndef,`include,%
+      `no_accelerate,`noexpand_vectornets,`noremove_gatenames,%
+      `nounconnected_drive,`protect,`protected,`remove_gatenames,%
+      `remove_netnames,`resetall,`timescale,`unconnected_drive},%
+   alsoletter=\`,%
+   sensitive,%
+   morecomment=[s]{/*}{*/},%
+   morecomment=[l]//,% nonstandard
+   morestring=[b]"%
+  }[keywords,comments,strings]%
+
+\usepackage{graphicx}
+\graphicspath{{../img/}}
+\usepackage{tikz}
+\usetikzlibrary{shapes, shapes.arrows}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\newcommand{\indep}{\perp\!\!\!\perp} % Define the independent symbol
+\newcommand{\nindep}{\centernot{\indep}} % Define the not-independent symbol
+\newcommand{\nimplies}{\centernot{\implies}} % Define the not-implies symbol
+\newcommand{\niff}{\centernot{\iff}} % Define the not-iff symbol
+\newcommand{\G}{\mathcal{G}} % Graph
+\newcommand{\E}{\mathcal{E}} % Edges
+\newcommand{\V}{\mathcal{V}} % Nodes (vertices)
+\newcommand{\reals}{\mathbb{R}}
+\newcommand{\rationals}{\mathbb{Q}}
+\newcommand{\integers}{\mathbb{Z}}
+\newcommand{\naturals}{\mathbb{N}}
+\newcommand{\complex}{\mathbb{C}}
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+\renewcommand{\vec}[1]{\mathbf{#1}} % Vector as bold, not the overhead arrow.
+\newcommand{\transpose}[1]{{#1}^\mathrm{T}}
+
+\usepackage[binary-units]{siunitx}
+\let\DeclareUSUnit\DeclareSIUnit
+\let\US\SI
+\DeclareUSUnit\ounce{oz} % Ounce
+\DeclareUSUnit\inch{in} % Inch
+\DeclareUSUnit\foot{ft} % 12 inches
+\DeclareUSUnit\mil{mil} % Thousands of an inch
+\DeclareSIUnit\dBi{dBi} % Relative to an isotropic radiator.
+
+\newcommand{\Hrule}{\hfil \rule{0.67\linewidth}{0.4pt} \hfil \\}
+
+\newcommand{\TODO}[1]{[\textbf{TODO} \textsl{#1}]}
+
+\usepackage{glossaries}
+\makenoidxglossaries
+
+\usepackage{pgfgantt} % Gantt chart.
+\usepackage{pdflscape} % Put pages landscape in PDF.
+
+\usepackage{fancyref} % \fref and Fref for nicer references.
+
+\usepackage{enumitem} % Allow list customization.
+

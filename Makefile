@@ -87,7 +87,6 @@ venv3.7/lib/python3.7/site-packages/wheel:
 dist: venv3.7 venv3.7/lib/python3.7/site-packages/wheel
 	$(VENV3.7) python setup.py sdist bdist_wheel
 
-
 # Upload to PyPI test server by default.
 # https://packaging.python.org/tutorials/packaging-projects/#uploading-the-distribution-archives
 ifeq ($(PYPITEST), 0)
@@ -99,22 +98,6 @@ upload:
 	$(VENV3.7) python -m twine upload --repository-url $(REPOURL) dist/*
 endif
 
-# Install from PyPI test server without dependencies.
-# https://packaging.python.org/tutorials/packaging-projects/#installing-your-newly-uploaded-package
-ifeq ($(PYPITEST), 0)
-install: venv
-	$(VENV2.7) pip install $(PKGNAME)
-	$(VENV3.5) pip install $(PKGNAME)
-	$(VENV3.6) pip install $(PKGNAME)
-	$(VENV3.7) pip install $(PKGNAME)
-else
-INDEXURL=https://test.pypi.org/simple/
-install: venv
-	$(VENV2.7) pip install --index-url $(INDEXURL) --no-deps $(PKGNAME)
-	$(VENV3.5) pip install --index-url $(INDEXURL) --no-deps $(PKGNAME)
-	$(VENV3.6) pip install --index-url $(INDEXURL) --no-deps $(PKGNAME)
-	$(VENV3.7) pip install --index-url $(INDEXURL) --no-deps $(PKGNAME)
-endif
 
 clean:
 	rm -rf build

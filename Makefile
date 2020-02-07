@@ -24,18 +24,22 @@ venv2.7:
 	python2.7 -m pip install --user virtualenv
 	python2.7 -m virtualenv --no-wheel venv2.7
 	$(VENV2.7) pip install coverage pyyaml numpy toml
+	$(VENV2.7) pip install -e .
 venv3.5:
 	python3.5 -m pip install --user virtualenv
 	python3.5 -m virtualenv --no-wheel venv3.5
 	$(VENV3.5) pip install coverage pyyaml numpy toml
+	$(VENV3.5) pip install -e .
 venv3.6:
 	python3.6 -m venv venv3.6
 	$(VENV3.6) pip install coverage mypy pyyaml numpy toml
+	$(VENV3.6) pip install -e .
 venv3.7:
 	python3.7 -m venv venv3.7
 	$(VENV3.7) pip install coverage mypy pyyaml numpy toml
 	$(VENV3.7) pip install joblib matplotlib prettytable seaborn
 	$(VENV3.7) pip install 'tensorflow==2.0.0' graphviz pydot
+	$(VENV3.7) pip install -e .
 
 venv: venv2.7
 venv: venv3.5

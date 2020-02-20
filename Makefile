@@ -5,7 +5,7 @@ PKGNAME=dmppl
 # Allow the use of `source` in makerules working with venv.
 SHELL := /bin/bash
 
-default: clean unittest-coverage dist
+default: unittest
 
 # Convenience variables just to keep Makefile tidy.
 VENV2.7 = source venv2.7/bin/activate &&

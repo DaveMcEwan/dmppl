@@ -163,7 +163,8 @@ $timescale 1ns $end
     def test_MissingEnddefs(self):
         fname = os.path.join(self.tstDir, "missingEnddefs.vcd")
         v = VcdReader(fname)
-        self.assertRaises(StopIteration, v.__enter__)
+        self.assertRaises(ValueError, v.__enter__)
+        v.fd.close()
 
 # }}} class Test_VcdReader
 

@@ -78,15 +78,20 @@ class VcdReader(object): # {{{
         '''
 
         # Take all lines up to $enddefinitions.
-        # NOTE: The same generator (lines) is used by vcdTimechunks.
-        headerLines = []
-        line = ""
-        while "$enddefinitions" not in line:
-            lineNum, line = next(lines)
-            headerLines.append(line)
-
         # Treat header as a single string of tokens separated by whitespace.
-        headerTokens = iter(' '.join(headerLines).split())
+        # NOTE: The same generator (lines) is used by vcdTimechunks.
+        def getHeaderTokens(lines):
+            line = ""
+            while "$enddefinitions" not in line:
+                try:
+                  lineNum, line = next(lines)
+                except StopIteration:
+                    return
+
+                for token in line.split():
+                    yield token
+
+        headerTokens = getHeaderTokens(lines)
 
         # Parse tokens with FSM to fill in header as IEEE1364-2001.
         header = {

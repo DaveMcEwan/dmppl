@@ -201,10 +201,6 @@ class VcdReader(object): # {{{
 
         vcdVars = sorted(header["vars"])
 
-        varIds = [varId for varId,_,_,_,_,_ in vcdVars]
-        varTypes = [varType for _,_,_,varType,_,_ in vcdVars]
-        varSizes = [varSize for _,_,_,_,varSize,_ in vcdVars]
-
         def vcdVarPath(varScope,
                        varName,
                        varType,
@@ -213,12 +209,12 @@ class VcdReader(object): # {{{
         #               varName: str,
         #               varType: str,
         #               varBitSel: str) -> str:
-            '''Print full dot-separated VCD var path.
+            '''Get full dot-separated VCD var path.
             Scope types only stated where they change.
             '''
             prev_t = None
             s = []
-            for i,(t,n) in enumerate(varScope):
+            for t,n in varScope:
                 if t != prev_t:
                     prev_t = t
                     s.append(t + ':' + n)
@@ -229,15 +225,20 @@ class VcdReader(object): # {{{
             s.append(varName + sizeSuffix)
 
             return '.'.join(s)
-        varNames = [vcdVarPath(varScope, varName, varType, varBitSel) \
-                    for _,varScope,varName,varType,_,varBitSel in vcdVars]
 
-        assert len(varIds) == len(varTypes) == len(varSizes) == len(varNames)
+        varIds, varTypes, varSizes, varNames = zip(*(
+            (varId, varType, varSize, vcdVarPath(varScope,
+                                                 varName,
+                                                 varType,
+                                                 varBitSel)) \
+            for varId,varScope,varName,varType,varSize,varBitSel in vcdVars))
+
+        #assert len(varIds) == len(varTypes) == len(varSizes) == len(varNames)
         h = (
-            varIds,   # Non-unique short strings.
-            varNames, # Full path strings. Should be unique.
-            varSizes, # Integers.
-            varTypes, # VCD types as strings.
+            list(varIds),   # Non-unique short strings.
+            list(varNames), # Full path strings. Should be unique.
+            list(varSizes), # Integers.
+            list(varTypes), # VCD types as strings.
             vcdComment,
             vcdDate,
             vcdVersion,

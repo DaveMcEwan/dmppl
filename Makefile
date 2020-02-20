@@ -9,7 +9,7 @@ default: unittest
 
 # Convenience variables just to keep Makefile tidy.
 VENV2.7 = source venv2.7/bin/activate &&
-VENV3.5 = source venv3.5/bin/activate &&
+#VENV3.5 = source venv3.5/bin/activate &&
 VENV3.6 = source venv3.6/bin/activate &&
 VENV3.7 = source venv3.7/bin/activate &&
 VENV3.8 = source venv3.8/bin/activate &&
@@ -26,11 +26,11 @@ venv2.7:
 	python2.7 -m virtualenv --no-wheel venv2.7
 	$(VENV2.7) pip install coverage pyyaml numpy toml
 	$(VENV2.7) pip install -e .
-venv3.5:
-	python3.5 -m pip install --user virtualenv
-	python3.5 -m virtualenv --no-wheel venv3.5
-	$(VENV3.5) pip install coverage pyyaml numpy toml
-	$(VENV3.5) pip install -e .
+#venv3.5:
+#	python3.5 -m pip install --user virtualenv
+#	python3.5 -m virtualenv --no-wheel venv3.5
+#	$(VENV3.5) pip install coverage pyyaml numpy toml
+#	$(VENV3.5) pip install -e .
 venv3.6:
 	python3.6 -m venv venv3.6
 	$(VENV3.6) pip install coverage mypy pyyaml numpy toml
@@ -47,29 +47,29 @@ venv3.8:
 	$(VENV3.8) pip install -e .
 
 venv: venv2.7
-venv: venv3.5
+#venv: venv3.5
 venv: venv3.6
 venv: venv3.7
 venv: venv3.8
 
+#	$(VENV3.5) python -m unittest tests
 # Run unit tests like this:
 #   python -m unittest tests                        # All modules
 #   python -m unittest tests.test_math              # One module
 #   python -m unittest tests.test_math.isPow2       # One function
 unittest: venv
 	$(VENV2.7) python -m unittest tests
-	$(VENV3.5) python -m unittest tests
 	$(VENV3.6) python -m unittest tests
 	$(VENV3.7) python -m unittest tests
 	$(VENV3.8) python -m unittest tests
 
+#	$(VENV3.5) coverage run $(COVRC)3.5 -m unittest tests && \
+#		coverage html $(COVRC)3.5
 # Collect coverage and produces HTML reports from unit tests.
 COVRC = --rcfile=tests/.coveragerc_
 unittest-coverage: venv
 	$(VENV2.7) coverage run $(COVRC)2.7 -m unittest tests && \
 		coverage html $(COVRC)2.7
-	$(VENV3.5) coverage run $(COVRC)3.5 -m unittest tests && \
-		coverage html $(COVRC)3.5
 	$(VENV3.6) coverage run $(COVRC)3.6 -m unittest tests && \
 		coverage html $(COVRC)3.6
 	$(VENV3.7) coverage run $(COVRC)3.7 -m unittest tests && \

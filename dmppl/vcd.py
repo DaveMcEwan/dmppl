@@ -370,15 +370,23 @@ class VcdReader(object): # {{{
         self.mapVarIdToType = {}
         self.mapVarIdToSize = {}
         self.mapVarIdToNames = {}
+        _prev_ = None
         _iVars = zip(self.varIds, self.varTypes, self.varSizes, self.varNames)
         for v,t,s,nm in _iVars:
-            if v not in self.varIdsUnique:
+
+            # NOTE: Using _prev_ instead of not-in relies on vcdVars being
+            # sorted previously in vcdHeader().
+            # Using not-in is very expensive when there are many vars.
+            #if v not in self.varIdsUnique:
+            if v != _prev_:
                 self.varIdsUnique.append(v)
                 self.mapVarIdToType[v] = t
                 self.mapVarIdToSize[v] = s
                 self.mapVarIdToNames[v] = [nm]
             else:
                 self.mapVarIdToNames[v] += [nm]
+
+            _prev_ = v
 
         self.mapVarNameToVarId = \
             {nm: v for v,nms in self.mapVarIdToNames.items() for nm in nms}

@@ -111,9 +111,6 @@ b00000000 Q
 b00000001 Q
 1F
 
-#1
-1R
-
 #3
 0C
 0E
@@ -133,6 +130,9 @@ b00000010 Q
 1F
 #8
 0F
+
+#1
+1R
 '''
         self.fname0 = os.path.join(self.tstDir, "tst0.vcd")
         with open(self.fname0, 'w') as fd:

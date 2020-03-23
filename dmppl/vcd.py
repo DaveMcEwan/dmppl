@@ -882,8 +882,18 @@ def vcdClean(fnamei, fnameo, comment=None): # {{{
 
         _ = next(vdi.timechunks) # Initialize timechunks generator FSM.
         for newTime,fileOffset in timejumps:
-            vdi.fd.seek(fileOffset)
-            tci = next(vdi.timechunks)
+            try:
+                vdi.fd.seek(fileOffset)
+                tci = next(vdi.timechunks)
+            except StopIteration:
+                # Last timechunk exhausts the rdLines generator underlying the
+                # vdi.timechunks generator, so this restarts everything.
+                vdi.fd.close()
+                vdi.__enter__()
+                _ = next(vdi.timechunks) # Initialize timechunks generator FSM.
+                vdi.fd.seek(fileOffset)
+                tci = next(vdi.timechunks)
+
             _, changedVarIds, newValues = tci
 
             changedVars = \

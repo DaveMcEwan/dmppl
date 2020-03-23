@@ -376,7 +376,7 @@ def rdLines(fname, **kwargs): # {{{
     kwarg_caseFold            = kwargs.get("caseFold",            False)
 
     try:
-        fd_0 = fileinput.input(fname)
+        fd_0 = sys.stdin if (fname is None) else fileinput.input(fname)
 
         _notCommentLine = functools.partial(notCommentLine, c=kwarg_commentMark)
         fd_1 = filter(_notCommentLine, fd_0) \

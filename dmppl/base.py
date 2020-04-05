@@ -165,17 +165,17 @@ def stripSuffix(t, s): # {{{
 
 def fnameStripExt(fname, ext): # {{{
     '''Strip a given case-insensitive extension from a filename, if it exists.
-
-    NOTE: ext should not contain leading dot separator.
     '''
     assert isinstance(fname, str)
     assert isinstance(ext, str)
-    assert '.' != ext[0]
 
-    froot, _fext = os.path.splitext(fname)
-    fext = _fext[1:] # Remove dot separator
+    froot, fext = os.path.splitext(fname)
 
-    return '.'.join((froot, fext) if fext.lower() != ext.lower() else (froot,))
+    # Remove dot separator
+    fextClean = fext[1:]
+    extClean = ext[1:] if ext.startswith('.') else ext
+
+    return froot if fextClean.lower() == extClean.lower() else fname
 # }}} def fnameStripExt
 
 def fnameAppendExt(fname, ext): # {{{

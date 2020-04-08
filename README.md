@@ -39,18 +39,17 @@ to most people.
 
 Uses [semantic versioning](https://semver.org/spec/v2.0.0.html)
 
-Supports multiple versions of Python (2.7, 3.5, 3.6, 3.7).
+Supports multiple versions of Python (2.7, 3.6, 3.7, 3.8).
 
   - At some point I'll drop support for 2.7 and <3.7, probably when distros stop
     including them which isn't likely soon.
   - Dropping support for <3.6 allows use of type annotations.
-    TODO: Type annotations can be added as comments in the meantime.
   - Dropping support for <3.8 allows use of newer language features such as the
     walrus operator, and getting rid of version-specific hacks like
     `openCsvKwargs'.
     Don't necessarily need to wait for distros to support 3.8+, only wait for
     3.6+ since altinstall+venv seems to be the recommended way forward.
-    TODO: low priority
+    low priority
   - Keeping support for old versions allows compatibility with other programs
     which have built-in Python shells,
     TODO: Collate version dependencies for various programs and decide what I

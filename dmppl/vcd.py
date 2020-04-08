@@ -880,6 +880,14 @@ def vcdClean(fnamei, fnameo, comment=None): # {{{
 
         vdo.separateTimechunks = False # Omit blank lines between timechunks.
 
+        # All timechunks are read in monotonic increasing time order, thanks to
+        # the sort() in rdMetadata().
+        # Multiple (consecutive) timechunks referring to the same time will be
+        # read in the same order as the input file, so last one wins.
+        # Timechunks to write are put into a queue, then only written out when
+        # a timechunk for a greater time is processed.
+        wrqTime_, wrqChangedVars_, wrqNewValues_ = 0, [], []
+
         _ = next(vdi.timechunks) # Initialize timechunks generator FSM.
         for newTime,fileOffset in timejumps:
             try:
@@ -899,8 +907,27 @@ def vcdClean(fnamei, fnameo, comment=None): # {{{
             changedVars = \
                 [detypeVarName(vdi.mapVarIdToNames[v][0]) \
                  for v in changedVarIds]
-            tco = newTime, changedVars, newValues
-            vdo.wrTimechunk(tco)
+
+            if newTime == wrqTime_:
+                # Append this timechunk to queue.
+                wrqChangedVars_ += changedVars
+                wrqNewValues_ += newValues
+            else:
+                # Merge all timechunks in the queue.
+                _merge = dict(zip(wrqChangedVars_, wrqNewValues_))
+                mrgdChangedVars, mrgdNewValues = \
+                    zip(*[(k,v) for k,v in _merge.items()])
+                vdo.wrTimechunk((wrqTime_, mrgdChangedVars, mrgdNewValues))
+                wrqChangedVars_, wrqNewValues_ = changedVars, newValues
+
+            wrqTime_ = newTime
+
+        # Merge last lot of timechunks in the queue.
+        _merge = dict(zip(wrqChangedVars_, wrqNewValues_))
+        mrgdChangedVars, mrgdNewValues = \
+            zip(*[(k,v) for k,v in _merge.items()])
+        tco = (wrqTime_, mrgdChangedVars, mrgdNewValues)
+        vdo.wrTimechunk((wrqTime_, mrgdChangedVars, mrgdNewValues))
 
     rmtree(tmpd)
 

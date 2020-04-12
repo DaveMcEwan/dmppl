@@ -31,13 +31,10 @@ import sys
 import tempfile
 import shutil
 
-from dmppl.base import *
-from dmppl.vcd import *
-
-#from typing import BinaryIO, Optional, List, Tuple, Union, Type # Python3.6+
-# NOTE: To run static type checking install and run mypy:
-#   pip3 install --user mypy
-#   mypy vcd-utils
+from dmppl.base import fnameAppendExt, rdLines, run, verb
+from dmppl.vcd import VcdReader, VcdWriter, \
+    fourStates, fourStateTypes, supportedTypes, twoStateTypes, \
+    detypeVarName, vcdClean
 
 __version__ = "0.1.0"
 

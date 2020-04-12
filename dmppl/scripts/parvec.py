@@ -30,8 +30,13 @@ import random
 import re
 import sys
 
-from dmppl.base import *
-from dmppl.yaml import *
+import yaml
+
+from dmppl.base import run
+from dmppl.yaml import loadYml, saveYml, yamlMarkedLoad
+
+if 2 < sys.version_info[0]:
+    long = int
 
 __version__ = "0.1.0"
 

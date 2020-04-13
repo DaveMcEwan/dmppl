@@ -24,6 +24,7 @@ import argparse
 import curses
 import enum
 import functools
+import locale
 import sys
 import time
 
@@ -56,6 +57,15 @@ class SampleMode(enum.Enum): # {{{
     Nonperiodic = enum.auto()
 # }}} class SampleMode
 
+mapMetricIntToStr = {
+    1: "Ċls",
+    2: "Ċos",
+    3: "Ċov",
+    4: "Ḋep",
+    5: "Ḣam",
+    6: "Ṫmt",
+}
+
 def getBitfilePath(args): # {{{
 
     ret = "foo"
@@ -76,8 +86,21 @@ def uploadBitfile(args): # {{{
 # }}} def uploadBitfile
 
 def hwReadRegs(device, keys): # {{{
-
-    return {k:0 for k in keys}
+    dummyRegs = {
+        HwReg.Precision                 : 8,
+        HwReg.MetricA                   : 3,
+        HwReg.MetricB                   : 4,
+        HwReg.MaxNInputs                : 5,
+        HwReg.MaxWindowLengthExp        : 32,
+        HwReg.MaxSampleRateNegExp       : 32,
+        HwReg.MaxSampleJitterNegExp     : 32,
+        HwReg.NInputs                   : 5,
+        HwReg.WindowLengthExp           : 6,
+        HwReg.SampleRateNegExp          : 7,
+        HwReg.SampleMode                : SampleMode.Periodic,
+        HwReg.SampleJitterNegExp        : 8,
+    }
+    return {k: dummyRegs[k] for k in keys}
 # }}} def hwReadRegs
 
 def hwWriteRegs(device, keyValues): # {{{
@@ -85,11 +108,52 @@ def hwWriteRegs(device, keyValues): # {{{
     return 0
 # }}} def hwWriteRegs
 
-def gui(scr): # {{{
+def titleLine(device, regs, length=80): # {{{
+    '''Return a string for the title line.
 
-    curses.init_pair(1, curses.COLOR_CYAN,  curses.COLOR_BLACK)
-    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
-    curses.init_pair(3, curses.COLOR_BLUE,  curses.COLOR_BLACK)
+    <appName> ... <precision> <metricA> <metricB> ... <devicePath>
+    '''
+    appName = "Correlator"
+    devicePath = device.name
+    precision = "%db" % regs[HwReg.Precision]
+    metricA = mapMetricIntToStr[regs[HwReg.MetricA]]
+    metricB = mapMetricIntToStr[regs[HwReg.MetricB]]
+
+    left = appName
+    mid = ' '.join((precision, metricA, metricB))
+    right = devicePath
+    dbg(len(left))
+    dbg(len(mid))
+    dbg(len(right))
+
+    midBegin = (length // 2) - (len(mid) // 2)
+    midEnd = midBegin + len(mid)
+
+    leftPad = ' '*(midBegin - len(left))
+    rightPad = ' '*(length - midEnd - len(right))
+    dbg(len(leftPad))
+    dbg(len(rightPad))
+
+    ret = "Correlator"+"@"*75 # TODO
+    ret = left + leftPad + mid + rightPad + right
+    #assert len(ret) == length, (len(ret), length, "<<<%s>>>" % ret)
+    dbg(len(ret))
+    dbg(len(ret.encode("utf8")))
+    return ret
+# }}} def titleLine
+
+def gui(scr, device, regs): # {{{
+
+    locale.setlocale(locale.LC_ALL, '')
+
+    # Title
+    # Instructions
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLUE)
+
+
+    #curses.init_pair(1, curses.COLOR_CYAN,  curses.COLOR_BLACK)
+    #curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+    #curses.init_pair(3, curses.COLOR_BLUE,  curses.COLOR_BLACK)
 
     # Hide the cursor.
     curses.curs_set(0)
@@ -103,6 +167,12 @@ def gui(scr): # {{{
 
     # Create sub-window for less refresh.
     win = curses.newwin(winLines+2, winChars+2, winY, winX)
+
+    win.clear()
+    win.box()
+    win.addstr(1, 1, titleLine(device, regs).encode('UTF-8'), curses.color_pair(1))
+    win.refresh()
+    time.sleep(5)
 
 # }}} def gui
 
@@ -213,42 +283,45 @@ def main(args): # {{{
     uploadBitfile(args)
     verb("Done")
 
+    # TODO: Search for device every 100ms instead of just sleeping, with 1s
+    # timeout to give useful error message.
     time.sleep(1) # Allow OS to enumerate USB.
 
+    # Keep lock on device to prevent other processes from accidentally messing
+    # with the state machine.
     verb("Connecting to device")
     with open(getDevicePath(args), "w+b") as device:
         rd = functools.partial(hwReadRegs, device)
         wr = functools.partial(hwWriteRegs, device)
 
-        verb("Reading config RO registers...", end='')
-        hwConfig = \
-            rd((HwReg.Precision,
-                HwReg.MetricA,
-                HwReg.MetricB,
-                HwReg.MaxNInputs,
-                HwReg.MaxWindowLengthExp,
-                HwReg.MaxSampleRateNegExp,
-                HwReg.MaxSampleJitterNegExp))
+        verb("Reading RO registers...", end='')
+        regsRO = rd((HwReg.Precision,
+                     HwReg.MetricA,
+                     HwReg.MetricB,
+                     HwReg.MaxNInputs,
+                     HwReg.MaxWindowLengthExp,
+                     HwReg.MaxSampleRateNegExp,
+                     HwReg.MaxSampleJitterNegExp))
         verb("Done")
 
-        verb("Initializing config RW registers...", end='')
-        hwRegsInit = {
+        verb("Initializing RW registers...", end='')
+        initRegsRW = {
             HwReg.NInputs:              args.init_nInputs,
             HwReg.WindowLengthExp:      args.init_windowLengthExp,
             HwReg.SampleRateNegExp:     args.init_sampleRateNegExp,
             HwReg.SampleMode:           args.init_sampleMode,
             HwReg.SampleJitterNegExp:   args.init_sampleJitterNegExp,
         }
-        wr(hwRegsInit)
+        wr(initRegsRW)
         verb("Checking...", end='')
-        readBack = rd(hwRegsInit.keys())
+        regsRW = rd(initRegsRW.keys())
         # TODO: uncomment
-        #assert all(hwRegsInit[k] == v for k,v in readBack.items()), readBack
+        #assert all(initRegsRW[k] == v for k,v in regsRW.items()), regsRW
         verb("Done")
+        tmp = titleLine(device, regsRO)
 
-        # TODO: GUI
         try:
-            curses.wrapper(gui)
+            curses.wrapper(gui, device, {**regsRO, **regsRW})
         except KeyboardInterrupt:
             verb("KeyboardInterrupt. Exiting.")
 

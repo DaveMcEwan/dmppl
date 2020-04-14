@@ -2,11 +2,13 @@
 from __future__ import absolute_import
 from __future__ import division
 
+import curses
 import hashlib
+import itertools
 import math
 import numpy as np
 import sys
-from .base import compose
+from .base import compose, dbg
 
 def colorspace1D(a, gamma=1.0, nBits=8): # {{{
     '''Return RGB tuple to represent a bounded value as grayscale.
@@ -194,6 +196,42 @@ def identiconSpriteSvg(x, **kwargs): # {{{
 
     return '\n'.join(ret_)
 # }}} def identiconSpriteSvg
+
+cursesColors = (
+    curses.COLOR_BLACK,
+    curses.COLOR_RED,
+    curses.COLOR_GREEN,
+    curses.COLOR_YELLOW,
+    curses.COLOR_BLUE,
+    curses.COLOR_MAGENTA,
+    curses.COLOR_CYAN,
+    curses.COLOR_WHITE,
+)
+nCursesColors = len(cursesColors)
+
+cursesPairNums = \
+    tuple(enumerate((cursesColors[f], cursesColors[b]) \
+                    for f,b in itertools.product(range(nCursesColors),
+                                                 range(nCursesColors))))
+
+_,           blackRed,  blackGreen,  blackYellow,  blackBlue,  blackMagenta, blackCyan,  blackWhite,    \
+redBlack,    _,         redGreen,    redYellow,    redBlue,    redMagenta,   redCyan,    redWhite,      \
+greenBlack,  greenRed,  _,           greenYellow,  greenBlue,  greenMagenta, greenCyan,  greenWhite,    \
+yellowBlack, yellowRed, yellowGreen, _,            yellowBlue, yellowMagenta,yellowCyan, yellowWhite,   \
+blueBlack,   blueRed,   blueGreen,   blueYellow,   _,          blueMagenta,  blueCyan,   blueWhite,     \
+magentaBlack,magentaRed,magentaGreen,magentaYellow,magentaBlue,_,            magentaCyan,magentaWhite,  \
+cyanBlack,   cyanRed,   cyanGreen,   cyanYellow,   cyanBlue,   cyanMagenta,  _,          cyanWhite,     \
+whiteBlack,  whiteRed,  whiteGreen,  whiteYellow,  whiteBlue,  whiteMagenta, whiteCyan,  _              = \
+    tuple(n for n,(f,b) in cursesPairNums)
+
+def cursesInitPairs(): # {{{
+    '''Initialize curses foreground/background color pairs so that the
+    foregroundBackground names below may be used.
+    '''
+    for n,(f,b) in cursesPairNums:
+        if f != b:
+            curses.init_pair(n, f, b)
+# }}} def cursesInitPairs
 
 
 if __name__ == "__main__":

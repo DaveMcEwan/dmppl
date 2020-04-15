@@ -29,7 +29,8 @@ import sys
 import time
 
 from dmppl.base import run, verb, dbg
-from dmppl.color import cursesInitPairs, whiteBlue, whiteRed, blackRed, greenBlack
+from dmppl.color import CursesWindow, cursesInitPairs, \
+    whiteBlue, whiteRed, blackRed, greenBlack
 
 __version__ = "0.1.0"
 
@@ -109,162 +110,148 @@ def hwWriteRegs(device, keyValues): # {{{
     return 0
 # }}} def hwWriteRegs
 
-def drawStr(s, x=0, y=0, colorPair=0, win=None,
-            encoding=locale.getpreferredencoding()): # {{{
-    '''Intended to be used with functools.partial()
+class FullWindow(CursesWindow): # {{{
+    '''The "full" window is a rectangle in the middle of the screen.
+
+    +----------- ... -------------+
+    |Title...                     |
+    |                             |
+    | inputs/parameters           |
+    |                             |
+    ...                         ...
+    |                             |
+    | outputs/results             |
+    |                             |
+    |Status...                    |
+    +----------- ... -------------+
     '''
-    # TODO: Check length
-    b = s.encode(encoding)
-    return win.addstr(y, x, b, curses.color_pair(colorPair))
-# }}} def drawStr
+    def drawTitle(self, device, regs): # {{{
+        '''Draw the static title section.
+        Intended to be called only once.
 
-def guiTitle(win, device, regs): # {{{
-    '''Draw the static title section.
-    Intended to be called only once.
+        <appName> ... <precision> <metricA> <metricB> ... <devicePath>
+        '''
 
-    <appName> ... <precision> <metricA> <metricB> ... <devicePath>
-    '''
+        appName = "Correlator"
+        devicePath = device.name
+        precision = "%db" % regs[HwReg.Precision]
+        metricA = mapMetricIntToStr[regs[HwReg.MetricA]]
+        metricB = mapMetricIntToStr[regs[HwReg.MetricB]]
 
-    draw = functools.partial(drawStr, y=0, colorPair=whiteBlue, win=win)
+        left = appName
+        mid = ' '.join((precision, metricA, metricB))
+        right = devicePath
 
-    height, width = win.getmaxyx()
-    maxX = width - 1 # Can't write rightmost character.
+        midBegin = (self.nChars // 2) - (len(mid) // 2)
+        rightBegin = self.charRight - len(right) + 1
 
-    appName = "Correlator"
-    devicePath = device.name
-    precision = "%db" % regs[HwReg.Precision]
-    metricA = mapMetricIntToStr[regs[HwReg.MetricA]]
-    metricB = mapMetricIntToStr[regs[HwReg.MetricB]]
+        # Fill whole line with background.
+        self.drawStr(" "*self.charsWidth)
 
-    left = appName
-    mid = ' '.join((precision, metricA, metricB))
-    right = devicePath
+        self.drawStr(left)
+        self.drawStr(mid, midBegin)
+        self.drawStr(right, rightBegin)
 
-    midBegin = (width // 2) - (len(mid) // 2)
-    rightBegin = maxX - len(right)
+        return # No return value
+    # }}} def drawTitle
 
-    draw(" "*maxX, 0)
-    draw(left, 0)
-    draw(mid, midBegin)
-    draw(right, rightBegin)
-    win.refresh()
+    def drawStatus(self): # {{{
+        '''Draw/redraw the status section.
 
-    return # No return value
-# }}} def guiTitle
+        Up/Down: Move ... Left/Right: Change ... Enter: Send
+        '''
 
-def guiStatus(win, hwUpdated): # {{{
-    '''Draw/redraw the status section.
+        left = "Up/Down: Move"
+        mid = "Left/Right: Change"
+        right = "Enter: Send"
 
-    Up/Down: Move ... Left/Right: Change ... Enter: Send
-    '''
+        midBegin = (self.nChars // 2) - (len(mid) // 2)
+        rightBegin = self.charRight - len(right) + 1
 
-    draw = functools.partial(drawStr, y=0, colorPair=whiteBlue, win=win)
-    drawHC = functools.partial(drawStr, y=0, colorPair=whiteRed, win=win)
+        # Fill whole line with background.
+        self.drawStr(" "*self.charsWidth, y=self.lineBottom)
 
-    height, width = win.getmaxyx()
-    maxX = width - 1 # Can't write rightmost character.
+        self.drawStr(left, y=self.lineBottom)
+        self.drawStr(mid, midBegin, y=self.lineBottom)
+        self.drawStr(right, rightBegin, y=self.lineBottom)
 
-    left = "Up/Down: Move"
-    mid = "Left/Right: Change"
-    right = "Enter: Send"
-
-    midBegin = (width // 2) - (len(mid) // 2)
-    rightBegin = maxX - len(right)
-
-    draw(" "*maxX, 0)
-    draw(left, 0)
-    draw(mid, midBegin)
-    if hwUpdated:
-        draw(right, rightBegin)
-    else:
-        drawHC(right, rightBegin)
-
-    win.refresh()
-
-    return # No return value
-# }}} def guiStatus
+        return # No return value
+    # }}} def drawStatus
+# }}} class FullWindow
 
 def gui(scr, device, regs): # {{{
     '''
     Window objects:
     - scr: All available screen space.
     - full: Rectangle in the centre of scr.
-    - titl: Single line at top of full for title and static info.
-    - inpt: Rectangle below titl for dynamic inputs.
-    - otpt: Rectangle below inpt for dynamic outputs.
-    - stus: Single line at bottom of full for instructions and dynamic status.
+    - inpt: Rectangle below title for dynamic inputs.
+    - otpt: Rectangle above status for dynamic outputs.
 
     Each of the window objects is refreshed individually.
     '''
 
-    # {{{ Define layout
-    # Top, Bottom, Left, and Right positions are relative to scr.
+#    # {{{ Layout test/example
+#
+#    # 0000-+
+#    # |1111|
+#    # |+--+|
+#    # ||22||
+#    # |+--+|
+#    # |    5
+#    # |    |
+#    # +7777+
+#
+#    tst1 = curses.newwin(8, 6, 0, 1)
+#    tst1.box()
+#    tst1.addstr(0, 0, "0000") # Overwrites topLeft box
+#    tst1.addstr(1, 1, "1111") # Nicely contained
+#    tst1.addstr(7, 1, "7777") # Overwrites bottom box
+#    tst1.addstr(5, 5, "5")    # Overwrites right box
+#    tst1.refresh()
+#
+#    tst2 = curses.newwin(3, 4, 2, 2)
+#    tst2.box()
+#    tst2.addstr(1, 1, "22")
+#    tst2.refresh()
+#
+#    tst3 = curses.newwin(1, 4, 1, 10)
+#    tst3.box()
+#    tst3.refresh()
+#
+#    # }}} Layout test/example
 
-    # Screen is passed as first arg from curses.wrapper().
-    scrLines, scrChars = scr.getmaxyx()
-    scrTop, scrLeft = 0, 0
-    scrBottom, scrRight = scrLines - 1, scrChars - 1
-
-    # The "full" window is a rectangle in the middle of the screen.
-    # A box is drawn around full using an extra character on each side.
-    fullLines, fullChars = 30, 80
-    fullTop, fullLeft = \
-        (scrLines - fullLines) // 2, \
-        (scrChars - fullChars) // 2
-    fullBottom, fullRight = fullTop + fullLines - 1, fullLeft + fullChars - 1
-    full = curses.newwin(fullLines+1, fullChars+2, fullTop, fullLeft-1)
-
-    # The "titl" window is a single line at the top of full.
-    titlLines, titlChars = 1, fullChars
-    titlTop, titlLeft = fullTop + 1, fullLeft
-    titlBottom, titlRight = titlTop + titlLines - 1, titlLeft + titlChars - 1
-    titl = curses.newwin(titlLines, titlChars+1, titlTop, titlLeft)
-    titl.clear()
-
-    # The "inpt" window is a fixed height rectangle below titl.
-    inptLines, inptChars = 5, fullChars
-    inptTop, inptLeft = titlTop + 1, fullLeft
-    inptBottom, inptRight = inptTop + inptLines - 1, inptLeft + inptChars - 1
-    inpt = curses.newwin(inptLines, inptChars+1, inptTop, inptLeft)
-
-    # The "stus" window is a single line at the bottom of full.
-    # NOTE: Defined bottom-up rather than top-down.
-    stusLines, stusChars = 1, fullChars
-    stusBottom, stusLeft = fullBottom, fullLeft
-    stusTop, stusRight = stusBottom - stusLines + 1, stusLeft + stusChars - 1
-    stus = curses.newwin(stusLines, stusChars+1, stusTop, stusLeft)
-
-    # The "otpt" window is a rectangle below inpt which occupies all remaining
-    # lines between inpt and stus.
-    otptLines, otptChars = \
-        fullLines - titlLines - inptLines - stusLines, \
-        fullChars
-    otptTop, otptLeft = inptBottom + 1, fullLeft
-    otptBottom, otptRight = otptTop + otptLines - 1, otptLeft + otptChars - 1
-    otpt = curses.newwin(otptLines, otptChars+1, otptTop, otptLeft)
-
-    # }}} Define layout
+    nParams = 10
 
     curses.curs_set(0) # Hide the cursor.
     cursesInitPairs() # Initialize colors
-    scr.clear()
-    #full.box()
 
-    guiTitle(titl, device, regs)
+    full = FullWindow(scr, nLines=30, nChars=80, colorPair=whiteBlue)
+    full.win.box()
+    full.drawTitle(device, regs)
+    full.drawStatus()
+    full.win.refresh()
 
-    drawInpt = functools.partial(drawStr, colorPair=greenBlack, win=inpt)
-    drawOtpt = functools.partial(drawStr, colorPair=blackRed, win=otpt)
-    for i in range(inptLines):
-        drawInpt(str(i)[-1]*fullChars, 0, i)
-    for i in range(otptLines):
-        drawOtpt(str(i)[-1]*fullChars, 0, i)
-    inpt.refresh()
-    otpt.refresh()
+    inpt = CursesWindow(full.win, nLines=nParams+2, nChars=full.nChars-2,
+                        colorPair=greenBlack,
+                        center=False, beginY=full.lineTop+1, beginX=1)
+    for i in range(inpt.linesHeight):
+        inpt.drawStr(str(i)[-1]*inpt.charsWidth, x=1, y=inpt.lineTop+i)
+    #inpt.win.box()
+    inpt.win.refresh()
 
-    guiStatus(stus, False)
-    stus.refresh()
+    # Fill remaining lines
+    otpt = CursesWindow(full.win,
+                        nLines=full.nLines-4-nParams-1,
+                        nChars=full.nChars-2,
+                        colorPair=whiteRed,
+                        center=False, beginY=inpt.nLines+1, beginX=1)
+    for i in range(otpt.linesHeight):
+        otpt.drawStr(str(i)[-1]*otpt.charsWidth, x=1, y=otpt.lineTop+i)
+    #otpt.win.box()
+    otpt.win.refresh()
 
-    stus.getch()
+    #time.sleep(2)
+    full.win.getch() # Calls refresh for this and derived windows.
 
     return # No return value
 # }}} def gui

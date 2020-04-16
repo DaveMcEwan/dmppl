@@ -290,6 +290,9 @@ class CursesWindow(object): # {{{
     def _drawStr(self, s, x=1, y=1, colorPair=0,
                  encoding=locale.getpreferredencoding()): # {{{
         '''Intended to be used with functools.partial()
+
+        NOTE: Unicode requires libncursesw-dev to be present at build, not just
+        libncurses-dev ('w' indicates wide-character support).
         '''
         b = s.encode(encoding)
         return self.win.addstr(y, x, b, curses.color_pair(colorPair))

@@ -34,6 +34,8 @@ from dmppl.color import CursesWindow, cursesInitPairs, \
 
 __version__ = "0.1.0"
 
+maxSampleRateMHz = 48
+
 @enum.unique
 class HwReg(enum.Enum): # {{{
     # Static, RO
@@ -51,13 +53,50 @@ class HwReg(enum.Enum): # {{{
     SampleRateNegExp        = enum.auto()
     SampleMode              = enum.auto()
     SampleJitterNegExp      = enum.auto()
-# }}} class HwReg
+# }}} Enum HwReg
 
 @enum.unique
 class SampleMode(enum.Enum): # {{{
-    Periodic    = enum.auto()
+    Nonjitter   = enum.auto()
     Nonperiodic = enum.auto()
 # }}} class SampleMode
+
+@enum.unique
+class UpdateMode(enum.Enum): # {{{
+    Batch       = enum.auto()
+    Interactive = enum.auto()
+# }}} class UpdateMode
+
+# NOTE: Some values are carefully updated with string substitution on the
+# initial read of the RO registers.
+# TODO: Should be enum called GuiReg
+mapParamToDomain = {
+    # Controls no hardware register (GUI state only).
+    "UpdateMode": "∊ {%s}" % ", ".join(m.name for m in UpdateMode),
+
+    # Controls register "NInputs" (toggle between 0 and previous NInputs).
+    "Enable": "∊ {True, False}",
+
+    # Controls register "NInputs".
+    # Domain defined by HwReg.MaxNInputs
+    "NInputs": "∊ ℤ ∩ [2, %d]",
+
+    # Controls register "WindowLengthExp".
+    # Domain defined by HwReg.MaxWindowLengthExp
+    "WindowLength": "(samples) = 2**w; w ∊ ℤ ∩ [1, %d]",
+
+    # Controls register "SampleMode".
+    "SampleMode": "∊ {%s}" % ", ".join(m.name for m in SampleMode),
+
+    # Controls register "SampleRateNegExp".
+    # Domain defined by HwReg.MaxSampleRateNegExp
+    "SampleRate": "(MHz) = %d/2**r; r ∊ ℤ ∩ [0, %%d]" % maxSampleRateMHz,
+
+    # Controls register "SampleJitterNegExp".
+    # Domain defined by HwReg.MaxSampleJitterNegExp
+    "SampleJitter": "(samples) = WindowLength/2**j; j ∊ ℤ ∩ [1, %d]",
+}
+nParams = len(mapParamToDomain.keys())
 
 mapMetricIntToStr = {
     1: "Ċls",
@@ -99,7 +138,7 @@ def hwReadRegs(device, keys): # {{{
         HwReg.NInputs                   : 5,
         HwReg.WindowLengthExp           : 6,
         HwReg.SampleRateNegExp          : 7,
-        HwReg.SampleMode                : SampleMode.Periodic,
+        HwReg.SampleMode                : SampleMode.Nonjitter,
         HwReg.SampleJitterNegExp        : 8,
     }
     return {k: dummyRegs[k] for k in keys}
@@ -125,7 +164,7 @@ class FullWindow(CursesWindow): # {{{
     |Status...                    |
     +----------- ... -------------+
     '''
-    def drawTitle(self, device, regs): # {{{
+    def drawTitle(self, device, hwRegs): # {{{
         '''Draw the static title section.
         Intended to be called only once.
 
@@ -134,9 +173,9 @@ class FullWindow(CursesWindow): # {{{
 
         appName = "Correlator"
         devicePath = device.name
-        precision = "%db" % regs[HwReg.Precision]
-        metricA = mapMetricIntToStr[regs[HwReg.MetricA]]
-        metricB = mapMetricIntToStr[regs[HwReg.MetricB]]
+        precision = "%db" % hwRegs[HwReg.Precision]
+        metricA = mapMetricIntToStr[hwRegs[HwReg.MetricA]]
+        metricB = mapMetricIntToStr[hwRegs[HwReg.MetricB]]
 
         left = appName
         mid = ' '.join((precision, metricA, metricB))
@@ -161,9 +200,9 @@ class FullWindow(CursesWindow): # {{{
         Up/Down: Move ... Left/Right: Change ... Enter: Send
         '''
 
-        left = "Up/Down: Move"
-        mid = "Left/Right: Change"
-        right = "Enter: Send"
+        left = "Up/Down: Navigate"
+        mid = "Left/Right: Modify"
+        right = "Enter: Send Update"
 
         midBegin = (self.nChars // 2) - (len(mid) // 2)
         rightBegin = self.charRight - len(right) + 1
@@ -179,7 +218,85 @@ class FullWindow(CursesWindow): # {{{
     # }}} def drawStatus
 # }}} class FullWindow
 
-def gui(scr, device, regs): # {{{
+class InputWindow(CursesWindow): # {{{
+    '''The "inpt" window contains a list of parameters with their values.
+
+    The user can modify values using the left/right arrow keys.
+    No box.
+    Asterisk at topLeft indicates if display is up to date with hardware.
+
+    +----------- ... -------------+
+    |label0     value0     domain0|
+    |label1     value1     domain1|
+    ...                         ...
+    |labelN     valueN     domainN|
+    +----------- ... -------------+
+    '''
+    def drawParams(self, paramValues): # {{{
+        '''Draw all the parameter lines.
+
+        <label> ... <value> ... <domain>
+        '''
+        maxLenName = max(len(nm) for nm in mapParamToDomain.keys())
+
+        self.win.clear()
+        for i,(nm,d) in enumerate(mapParamToDomain.items()):
+
+          left = ' '*(maxLenName - len(nm)) + nm + " = "
+          right = d
+
+          v = paramValues[nm]
+          if isinstance(v, str):
+            mid = v
+          elif isinstance(v, bool):
+            mid = "True" if v else "False"
+          elif isinstance(v, int):
+            mid = "%d" % v
+          elif isinstance(v, float):
+            mid = "%0.03f" % v
+          elif isinstance(v, enum.Enum):
+            mid = v.name
+          else:
+            mid = str(v)
+
+          #midBegin = (self.nChars // 2) - (len(mid) // 2)
+          midBegin = len(left) + 2
+          #rightBegin = self.charRight - len(right) + 1
+          rightBegin = 30
+
+          # Fill whole line with background.
+          self.drawStr(" "*self.charsWidth, y=i+1)
+
+          self.drawStr(left, y=i+1)
+          self.drawStr(mid, midBegin, y=i+1)
+          self.drawStr(right, rightBegin, y=i+1)
+
+        return # No return value
+    # }}} def drawParams
+# }}} class InputWindow
+
+def hwRegsToGuiRegs(hwRegs): # {{{
+    enable = (0 == hwRegs[HwReg.NInputs])
+
+    windowLength = 2**hwRegs[HwReg.WindowLengthExp]
+
+    sampleJitter = None \
+        if hwRegs[HwReg.SampleMode] == SampleMode.Nonjitter else \
+        (windowLength // 2**hwRegs[HwReg.SampleJitterNegExp])
+
+    sampleRate = float(maxSampleRateMHz) / 2**hwRegs[HwReg.SampleRateNegExp]
+    ret = {
+        "Enable":       enable,
+        "NInputs":      hwRegs[HwReg.NInputs],
+        "WindowLength": windowLength,
+        "SampleMode":   hwRegs[HwReg.SampleMode],
+        "SampleRate":   sampleRate,
+        "SampleJitter": '-' if sampleJitter is None else sampleJitter,
+    }
+    return ret
+# }}} def hwRegsToGuiRegs
+
+def gui(scr, device, hwRegs): # {{{
     '''
     Window objects:
     - scr: All available screen space.
@@ -189,54 +306,23 @@ def gui(scr, device, regs): # {{{
 
     Each of the window objects is refreshed individually.
     '''
-
-#    # {{{ Layout test/example
-#
-#    # 0000-+
-#    # |1111|
-#    # |+--+|
-#    # ||22||
-#    # |+--+|
-#    # |    5
-#    # |    |
-#    # +7777+
-#
-#    tst1 = curses.newwin(8, 6, 0, 1)
-#    tst1.box()
-#    tst1.addstr(0, 0, "0000") # Overwrites topLeft box
-#    tst1.addstr(1, 1, "1111") # Nicely contained
-#    tst1.addstr(7, 1, "7777") # Overwrites bottom box
-#    tst1.addstr(5, 5, "5")    # Overwrites right box
-#    tst1.refresh()
-#
-#    tst2 = curses.newwin(3, 4, 2, 2)
-#    tst2.box()
-#    tst2.addstr(1, 1, "22")
-#    tst2.refresh()
-#
-#    tst3 = curses.newwin(1, 4, 1, 10)
-#    tst3.box()
-#    tst3.refresh()
-#
-#    # }}} Layout test/example
-
-    nParams = 10
-
     curses.curs_set(0) # Hide the cursor.
     cursesInitPairs() # Initialize colors
 
     full = FullWindow(scr, nLines=30, nChars=80, colorPair=whiteBlue)
     full.win.box()
-    full.drawTitle(device, regs)
+    full.drawTitle(device, hwRegs)
     full.drawStatus()
     full.win.refresh()
 
-    inpt = CursesWindow(full.win, nLines=nParams+2, nChars=full.nChars-2,
-                        colorPair=greenBlack,
-                        center=False, beginY=full.lineTop+1, beginX=1)
-    for i in range(inpt.linesHeight):
-        inpt.drawStr(str(i)[-1]*inpt.charsWidth, x=1, y=inpt.lineTop+i)
-    #inpt.win.box()
+    guiRegs_ = hwRegsToGuiRegs(hwRegs)
+    guiRegs_.update({"UpdateMode": UpdateMode.Batch})
+    assert all(k in guiRegs_.keys() for k in mapParamToDomain.keys())
+
+    inpt = InputWindow(full.win, nLines=nParams+2, nChars=full.nChars-2,
+                       colorPair=greenBlack,
+                       beginY=full.lineTop+1, beginX=1)
+    inpt.drawParams(guiRegs_)
     inpt.win.refresh()
 
     # Fill remaining lines
@@ -244,11 +330,45 @@ def gui(scr, device, regs): # {{{
                         nLines=full.nLines-4-nParams-1,
                         nChars=full.nChars-2,
                         colorPair=whiteRed,
-                        center=False, beginY=inpt.nLines+1, beginX=1)
+                        beginY=inpt.nLines+1, beginX=1)
     for i in range(otpt.linesHeight):
         otpt.drawStr(str(i)[-1]*otpt.charsWidth, x=1, y=otpt.lineTop+i)
     #otpt.win.box()
     otpt.win.refresh()
+
+    # {{{ Layout test/example
+
+    # 0000-+
+    # |1111|
+    # |+--+|
+    # ||22||
+    # |+--+|
+    # |    5
+    # |    |
+    # +7777+
+
+    tst1 = curses.newwin(8, 6, 0, 1)
+    tst1.box()
+    tst1.addstr(0, 0, "0000") # Overwrites topLeft box
+    tst1.addstr(1, 1, "1111") # Nicely contained
+    tst1.addstr(7, 1, "7777") # Overwrites bottom box
+    tst1.addstr(5, 5, "5")    # Overwrites right box
+    tst1.refresh()
+
+    tst2 = curses.newwin(3, 4, 2, 2)
+    tst2.box()
+    tst2.addstr(1, 1, "22")
+    tst2.refresh()
+
+    tst3 = curses.newwin(1, 4, 1, 10)
+    tst3.box()
+    tst3.refresh()
+
+    tst4 = curses.newwin(1, 10, 3, 10)
+    tst4.addstr(0, 0, full.win.encoding)
+    tst4.refresh()
+
+    # }}} Layout test/example
 
     #time.sleep(2)
     full.win.getch() # Calls refresh for this and derived windows.
@@ -311,7 +431,7 @@ argparser.add_argument("--init-sampleRateNegExp",
 def argparseSampleMode(s): # {{{
     i = s.lower()
     if "periodic" == i:
-        ret = SampleMode.Periodic
+        ret = SampleMode.Nonjitter
     elif "nonperiodic" == i:
         ret = SampleMode.Nonperiodic
     else:
@@ -321,7 +441,7 @@ def argparseSampleMode(s): # {{{
 # }}} def argparseSampleMode
 argparser.add_argument("--init-sampleMode",
     type=argparseSampleMode,
-    default=SampleMode.Periodic,
+    default=SampleMode.Nonjitter,
     help="Sample periodically or non-periodically (using pseudo-random jitter)")
 
 def argparseSampleJitterNegExp(s): # {{{
@@ -385,6 +505,18 @@ def main(args): # {{{
                      HwReg.MaxSampleRateNegExp,
                      HwReg.MaxSampleJitterNegExp))
         verb("Done")
+
+        # Fill in missing values of parameter domains.
+        mapParamToDomain.update({
+            "NInputs": mapParamToDomain["NInputs"] %
+                regsRO[HwReg.MaxNInputs],
+            "WindowLength": mapParamToDomain["WindowLength"] %
+                regsRO[HwReg.MaxWindowLengthExp],
+            "SampleRate": mapParamToDomain["SampleRate"] %
+                regsRO[HwReg.MaxSampleRateNegExp],
+            "SampleJitter": mapParamToDomain["SampleJitter"] %
+                regsRO[HwReg.MaxSampleJitterNegExp],
+        })
 
         verb("Initializing RW registers...", end='')
         initRegsRW = {

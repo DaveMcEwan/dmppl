@@ -31,11 +31,11 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 from dmppl.base import run, verb, dbg
 from dmppl.color import CursesWindow, cursesInitPairs, \
-    whiteBlue, whiteRed, blackRed, greenBlack
+    whiteBlue, whiteRed, greenBlack
 
 __version__ = "0.1.0"
 
-maxSampleRateMHz:int = 48
+maxSampleRate_kHz:int = 48000
 
 @enum.unique
 class HwReg(enum.Enum): # {{{
@@ -82,6 +82,18 @@ class GuiReg(enum.Enum): # {{{
     SampleJitter    = enum.auto()
 # }}} Enum GuiReg
 
+@enum.unique
+class KeyAction(enum.Enum): # {{{
+    NavigateUp          = enum.auto()
+    NavigateDown        = enum.auto()
+    ModifyIncrease      = enum.auto()
+    ModifyDecrease      = enum.auto()
+    SendUpdate          = enum.auto()
+    Quit                = enum.auto()
+# }}} Enum KeyAction
+
+listGuiReg:List[GuiReg] = list(r for i,r in enumerate(GuiReg))
+
 # NOTE: Some values are carefully updated with string substitution on the
 # initial read of the RO registers.
 # TODO: Should be enum called GuiReg
@@ -105,7 +117,7 @@ mapGuiRegToDomain_:Dict[GuiReg, str] = { # {{{
 
     # Controls register "SampleRateNegExp".
     # Domain defined by HwReg.MaxSampleRateNegExp
-    GuiReg.SampleRate: "(MHz) = %d/2**r; r ∊ ℤ ∩ [0, %%d]" % maxSampleRateMHz,
+    GuiReg.SampleRate: "(kHz) = %d/2**r; r ∊ ℤ ∩ [0, %%d]" % maxSampleRate_kHz,
 
     # Controls register "SampleJitterNegExp".
     # Domain defined by HwReg.MaxSampleJitterNegExp
@@ -146,9 +158,9 @@ def hwReadRegs(device, keys) -> Dict[HwReg, Any]: # {{{
         HwReg.MetricA                   : 3,
         HwReg.MetricB                   : 4,
         HwReg.MaxNInputs                : 5,
-        HwReg.MaxWindowLengthExp        : 32,
-        HwReg.MaxSampleRateNegExp       : 32,
-        HwReg.MaxSampleJitterNegExp     : 32,
+        HwReg.MaxWindowLengthExp        : 31,
+        HwReg.MaxSampleRateNegExp       : 31,
+        HwReg.MaxSampleJitterNegExp     : 31,
         HwReg.NInputs                   : 5,
         HwReg.WindowLengthExp           : 6,
         HwReg.SampleRateNegExp          : 7,
@@ -164,7 +176,6 @@ def hwWriteRegs(device, keyValues): # {{{
 # }}} def hwWriteRegs
 
 def hwRegsToGuiRegs(hwRegs:Dict[HwReg, Any]) -> Dict[GuiReg, Any]: # {{{
-    enable:bool = (0 == hwRegs[HwReg.NInputs])
 
     windowLength:int = 2**hwRegs[HwReg.WindowLengthExp]
 
@@ -172,9 +183,9 @@ def hwRegsToGuiRegs(hwRegs:Dict[HwReg, Any]) -> Dict[GuiReg, Any]: # {{{
         if hwRegs[HwReg.SampleMode] == SampleMode.Nonjitter else \
         (windowLength // 2**hwRegs[HwReg.SampleJitterNegExp])
 
-    sampleRate = float(maxSampleRateMHz) / 2**hwRegs[HwReg.SampleRateNegExp]
+    sampleRate = float(maxSampleRate_kHz) / 2**hwRegs[HwReg.SampleRateNegExp]
+
     ret = {
-        GuiReg.Enable:       enable,
         GuiReg.NInputs:      hwRegs[HwReg.NInputs],
         GuiReg.WindowLength: windowLength,
         GuiReg.SampleMode:   hwRegs[HwReg.SampleMode],
@@ -267,14 +278,19 @@ class InputWindow(CursesWindow): # {{{
     |labelN     valueN     domainN|
     +----------- ... -------------+
     '''
-    def drawParams(self, guiRegs, selectIdx:int) -> None: # {{{
+    def draw(self,
+                   guiRegs:Dict[GuiReg, Any],
+                   selectIdx:int=0,
+                   outstanding:bool=False) -> None: # {{{
         '''Draw all the parameter lines.
 
         <label> ... <value> ... <domain>
         '''
+
         maxLenName:int = max(len(r.name) for r in GuiReg)
 
         self.win.clear()
+
         for i,(r,d) in enumerate(mapGuiRegToDomain_.items()):
             nm:str = r.name
 
@@ -289,26 +305,85 @@ class InputWindow(CursesWindow): # {{{
             elif isinstance(v, int):
               mid = "%d" % v
             elif isinstance(v, float):
-              mid = "%0.03f" % v
+              mid = "%0.5f" % v
             elif isinstance(v, enum.Enum):
               mid = v.name
             else:
               mid = str(v)
 
-            #midBegin:int = (self.nChars // 2) - (len(mid) // 2)
             midBegin:int = len(left) + 2
-            #rightBegin:int = self.charRight - len(right) + 1
             rightBegin:int = 30
 
             # Fill whole line with background.
-            self.drawStr(" "*self.charsWidth, y=i+1)
+            self.drawStr(' '*self.charsWidth, y=i+1)
 
             self.drawStr(left, y=i+1)
-            self.drawStr(mid, midBegin, y=i+1)
+            self.drawStr(mid, midBegin, y=i+1,
+                attr=(curses.A_REVERSE if i == selectIdx else curses.A_NORMAL))
             self.drawStr(right, rightBegin, y=i+1)
 
+        if outstanding:
+            ready:str = "*ready*"
+            self.win.addstr(1, self.charRight-len(ready),
+                            ready, curses.color_pair(whiteRed))
+
         return # No return value
-    # }}} def drawParams
+    # }}} def draw
+
+    def updateState(self,
+                    selectIdx:int,
+                    guiRegs_:Dict[GuiReg, Any],
+                    hwRegs_:Dict[HwReg, Any],
+                    decrNotIncr:bool) -> None: # {{{
+        '''Update state in guiRegs and hwRegs_ in response to keypress.
+        '''
+        gr:GuiReg = listGuiReg[selectIdx]
+
+        if GuiReg.UpdateMode == gr:
+            guiRegs_[GuiReg.UpdateMode] = UpdateMode.Interactive \
+                if UpdateMode.Batch == guiRegs_[GuiReg.UpdateMode] else \
+                UpdateMode.Batch
+
+        elif GuiReg.Enable == gr:
+            guiRegs_[GuiReg.Enable] = not guiRegs_[GuiReg.Enable]
+
+        elif GuiReg.NInputs == gr:
+            n = hwRegs_[HwReg.NInputs]
+            m = (n-1) if decrNotIncr else (n+1)
+            lo, hi = 2, hwRegs_[HwReg.MaxNInputs]
+            hwRegs_[HwReg.NInputs] = max(lo, min(m, hi))
+
+        elif GuiReg.WindowLength == gr:
+            n = hwRegs_[HwReg.WindowLengthExp]
+            m = (n-1) if decrNotIncr else (n+1)
+            lo, hi = 1, hwRegs_[HwReg.MaxWindowLengthExp]
+            hwRegs_[HwReg.WindowLengthExp] = max(lo, min(m, hi))
+
+        elif GuiReg.SampleMode == gr:
+            hwRegs_[HwReg.SampleMode] = SampleMode.Nonperiodic \
+                if SampleMode.Nonjitter == hwRegs_[HwReg.SampleMode] else \
+                SampleMode.Nonjitter
+
+        elif GuiReg.SampleRate == gr:
+            n = hwRegs_[HwReg.SampleRateNegExp]
+            m = (n+1) if decrNotIncr else (n-1)
+            lo, hi = 0, hwRegs_[HwReg.MaxSampleRateNegExp]
+            hwRegs_[HwReg.SampleRateNegExp] = max(lo, min(m, hi))
+
+        elif GuiReg.SampleJitter == gr and \
+             guiRegs_[GuiReg.SampleMode] == SampleMode.Nonperiodic:
+            n = hwRegs_[HwReg.SampleJitterNegExp]
+            m = (n+1) if decrNotIncr else (n-1)
+            lo, hi = 1, hwRegs_[HwReg.MaxSampleJitterNegExp]
+            hwRegs_[HwReg.SampleJitterNegExp] = max(lo, min(m, hi))
+
+        else:
+            pass
+
+        guiRegs_.update(hwRegsToGuiRegs(hwRegs_))
+
+        return
+    # }}} def updateState
 # }}} class InputWindow
 
 def gui(scr, device, hwRegs): # {{{
@@ -321,74 +396,130 @@ def gui(scr, device, hwRegs): # {{{
 
     Each of the window objects is refreshed individually.
     '''
+    rd:Callable = functools.partial(hwReadRegs, device)
+    wr:Callable = functools.partial(hwWriteRegs, device)
+
+    guiRegs_:Dict[GuiReg, Any] = hwRegsToGuiRegs(hwRegs)
+    guiRegs_.update({GuiReg.UpdateMode: UpdateMode.Batch,
+                     GuiReg.Enable: True})
+    assert all(k in guiRegs_.keys() for k in GuiReg)
+    selectIdx_ = 0
+    outstanding_ = False
+    hwRegs_ = hwRegs
+
     curses.curs_set(0) # Hide the cursor.
     cursesInitPairs() # Initialize colors
 
     full:CursesWindow = FullWindow(scr,
-        nLines=30, nChars=80,
+        nLines=len(GuiReg)+6, nChars=80,
         colorPair=whiteBlue)
     full.win.box()
     full.drawTitle(device, hwRegs)
     full.drawStatus()
     full.win.refresh()
 
-    guiRegs_:Dict[GuiReg, Any] = hwRegsToGuiRegs(hwRegs)
-    guiRegs_.update({GuiReg.UpdateMode: UpdateMode.Batch})
-    assert all(k in guiRegs_.keys() for k in GuiReg)
-
     inpt:CursesWindow = InputWindow(full.win,
         nLines=len(GuiReg)+2, nChars=full.nChars-2,
         colorPair=greenBlack,
         beginY=full.lineTop+1, beginX=1)
-    inpt.drawParams(guiRegs_, 0)
+    inpt.draw(guiRegs_)
+    inpt.win.keypad(True)
     inpt.win.refresh()
 
-    # Fill remaining lines
-    otpt:CursesWindow = CursesWindow(full.win,
-        nLines=full.nLines-4-len(GuiReg)-1, nChars=full.nChars-2,
-        colorPair=whiteRed,
-        beginY=inpt.nLines+1, beginX=1)
-    for i in range(otpt.linesHeight):
-        otpt.drawStr(str(i)[-1]*otpt.charsWidth, x=1, y=otpt.lineTop+i)
-    #otpt.win.box()
-    otpt.win.refresh()
+    ## Fill remaining lines
+    #otpt:CursesWindow = CursesWindow(full.win,
+    #    nLines=full.nLines-4-len(GuiReg)-1, nChars=full.nChars-2,
+    #    colorPair=whiteRed,
+    #    beginY=inpt.nLines+1, beginX=1)
+    #for i in range(otpt.linesHeight):
+    #    otpt.drawStr(str(i)[-1]*otpt.charsWidth, x=1, y=otpt.lineTop+i)
+    ##otpt.win.box()
+    #otpt.win.refresh()
 
-    # {{{ Layout test/example
+#    # {{{ Layout test/example
+#
+#    # 0000-+
+#    # |1111|
+#    # |+--+|
+#    # ||22||
+#    # |+--+|
+#    # |    5
+#    # |    |
+#    # +7777+
+#
+#    tst1 = curses.newwin(8, 6, 0, 1)
+#    tst1.box()
+#    tst1.addstr(0, 0, "0000") # Overwrites topLeft box
+#    tst1.addstr(1, 1, "1111") # Nicely contained
+#    tst1.addstr(7, 1, "7777") # Overwrites bottom box
+#    tst1.addstr(5, 5, "5")    # Overwrites right box
+#    tst1.refresh()
+#
+#    tst2 = curses.newwin(3, 4, 2, 2)
+#    tst2.box()
+#    tst2.addstr(1, 1, "22")
+#    tst2.refresh()
+#
+#    tst3 = curses.newwin(1, 4, 1, 10)
+#    tst3.box()
+#    tst3.refresh()
+#
+#    tst4 = curses.newwin(1, 10, 3, 10)
+#    tst4.addstr(0, 0, full.win.encoding)
+#    tst4.refresh()
+#
+#    # }}} Layout test/example
 
-    # 0000-+
-    # |1111|
-    # |+--+|
-    # ||22||
-    # |+--+|
-    # |    5
-    # |    |
-    # +7777+
+    while 1:
+        c = inpt.win.getch() # Calls refresh for this and derived windows.
 
-    tst1 = curses.newwin(8, 6, 0, 1)
-    tst1.box()
-    tst1.addstr(0, 0, "0000") # Overwrites topLeft box
-    tst1.addstr(1, 1, "1111") # Nicely contained
-    tst1.addstr(7, 1, "7777") # Overwrites bottom box
-    tst1.addstr(5, 5, "5")    # Overwrites right box
-    tst1.refresh()
+        # Map keypress/character to action.
+        if curses.KEY_UP == c and 0 < selectIdx_:
+            keyAction:KeyAction = KeyAction.NavigateUp
+        elif curses.KEY_DOWN == c and 6 > selectIdx_:
+            keyAction:KeyAction = KeyAction.NavigateDown
+        elif curses.KEY_LEFT == c:
+            keyAction:KeyAction = KeyAction.ModifyDecrease
+        elif curses.KEY_RIGHT == c:
+            keyAction:KeyAction = KeyAction.ModifyIncrease
+        elif curses.KEY_ENTER == c or ord('\n') == c:
+            keyAction:KeyAction = KeyAction.SendUpdate
+        elif ord('q') == c or ord('Q') == c:
+            keyAction:KeyAction = KeyAction.Quit
+        else:
+            continue
 
-    tst2 = curses.newwin(3, 4, 2, 2)
-    tst2.box()
-    tst2.addstr(1, 1, "22")
-    tst2.refresh()
+        # Change states according to action.
+        if keyAction == KeyAction.NavigateUp:
+            selectIdx_ -= 1
+        elif keyAction == KeyAction.NavigateDown:
+            selectIdx_ += 1
+        elif keyAction == KeyAction.ModifyDecrease:
+            inpt.updateState(selectIdx_, guiRegs_, hwRegs_, True)
+        elif keyAction == KeyAction.ModifyIncrease:
+            inpt.updateState(selectIdx_, guiRegs_, hwRegs_, False)
+        elif keyAction == KeyAction.Quit:
+            break
+        else:
+            pass
 
-    tst3 = curses.newwin(1, 4, 1, 10)
-    tst3.box()
-    tst3.refresh()
+        # Send updates to hardware and readback to ensure display matches the
+        # actual values reported from hardware.
+        if guiRegs_[GuiReg.UpdateMode] == UpdateMode.Interactive or \
+           keyAction == KeyAction.SendUpdate:
+            wr(hwRegs_)
+            hwRegs_:Dict[HwReg, Any] = hwRegs_ # TODO: rd(hwRegs_.keys())
+            guiRegs_.update(hwRegsToGuiRegs(hwRegs_))
+            outstanding_ = False
+        elif guiRegs_[GuiReg.UpdateMode] == UpdateMode.Batch and \
+           keyAction in (KeyAction.ModifyDecrease, KeyAction.ModifyIncrease):
+            outstanding_ = True
+        else:
+            pass
 
-    tst4 = curses.newwin(1, 10, 3, 10)
-    tst4.addstr(0, 0, full.win.encoding)
-    tst4.refresh()
-
-    # }}} Layout test/example
-
-    #time.sleep(2)
-    full.win.getch() # Calls refresh for this and derived windows.
+        # Update display.
+        inpt.draw(guiRegs_, selectIdx_, outstanding_)
+        inpt.win.refresh()
 
     return # No return value
 # }}} def gui

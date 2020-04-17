@@ -590,7 +590,7 @@ argparser.add_argument("--init-sampleRateNegExp",
 
 def argparseSampleMode(s): # {{{
     i = s.lower()
-    if "periodic" == i:
+    if "nonjitter" == i:
         ret = SampleMode.NonJitter
     elif "nonperiodic" == i:
         ret = SampleMode.NonPeriodic

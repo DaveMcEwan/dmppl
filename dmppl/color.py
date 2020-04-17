@@ -287,7 +287,7 @@ class CursesWindow(object): # {{{
         self.drawStr = functools.partial(self._drawStr,
                                          colorPair=colorPair)
 
-    def _drawStr(self, s, x=1, y=1, colorPair=0,
+    def _drawStr(self, s, x=1, y=1, colorPair=0, attr=curses.A_NORMAL,
                  encoding=locale.getpreferredencoding()): # {{{
         '''Intended to be used with functools.partial()
 
@@ -295,7 +295,7 @@ class CursesWindow(object): # {{{
         libncurses-dev ('w' indicates wide-character support).
         '''
         b = s.encode(encoding)
-        return self.win.addstr(y, x, b, curses.color_pair(colorPair))
+        return self.win.addstr(y, x, b, attr | curses.color_pair(colorPair))
     # }}} def _drawStr
 
 # }}} class CursesWindow

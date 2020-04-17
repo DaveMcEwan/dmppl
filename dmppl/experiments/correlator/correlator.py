@@ -27,6 +27,7 @@ import functools
 import locale
 import sys
 import time
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from dmppl.base import run, verb, dbg
 from dmppl.color import CursesWindow, cursesInitPairs, \
@@ -34,7 +35,7 @@ from dmppl.color import CursesWindow, cursesInitPairs, \
 
 __version__ = "0.1.0"
 
-maxSampleRateMHz = 48
+maxSampleRateMHz:int = 48
 
 @enum.unique
 class HwReg(enum.Enum): # {{{
@@ -84,7 +85,7 @@ class GuiReg(enum.Enum): # {{{
 # NOTE: Some values are carefully updated with string substitution on the
 # initial read of the RO registers.
 # TODO: Should be enum called GuiReg
-mapGuiRegToDomain = {
+mapGuiRegToDomain_:Dict[GuiReg, str] = { # {{{
     # Controls no hardware register (GUI state only).
     GuiReg.UpdateMode: "∊ {%s}" % ", ".join(m.name for m in UpdateMode),
 
@@ -109,24 +110,24 @@ mapGuiRegToDomain = {
     # Controls register "SampleJitterNegExp".
     # Domain defined by HwReg.MaxSampleJitterNegExp
     GuiReg.SampleJitter: "(samples) = WindowLength/2**j; j ∊ ℤ ∩ [1, %d]",
-}
+} # }}}
 
-mapMetricIntToStr = {
+mapMetricIntToStr:Dict[int, str] = { # {{{
     1: "Ċls",
     2: "Ċos",
     3: "Ċov",
     4: "Ḋep",
     5: "Ḣam",
     6: "Ṫmt",
-}
+} # }}}
 
-def getBitfilePath(args): # {{{
+def getBitfilePath(args) -> str: # {{{
 
     ret = "foo"
     return ret
 # }}} def getBitfilePath
 
-def getDevicePath(args): # {{{
+def getDevicePath(args) -> str: # {{{
 
     ret = "/dev/null"
     return ret
@@ -139,7 +140,7 @@ def uploadBitfile(args): # {{{
     return 0
 # }}} def uploadBitfile
 
-def hwReadRegs(device, keys): # {{{
+def hwReadRegs(device, keys) -> Dict[HwReg, Any]: # {{{
     dummyRegs = {
         HwReg.Precision                 : 8,
         HwReg.MetricA                   : 3,
@@ -162,12 +163,12 @@ def hwWriteRegs(device, keyValues): # {{{
     return 0
 # }}} def hwWriteRegs
 
-def hwRegsToGuiRegs(hwRegs): # {{{
-    enable = (0 == hwRegs[HwReg.NInputs])
+def hwRegsToGuiRegs(hwRegs:Dict[HwReg, Any]) -> Dict[GuiReg, Any]: # {{{
+    enable:bool = (0 == hwRegs[HwReg.NInputs])
 
-    windowLength = 2**hwRegs[HwReg.WindowLengthExp]
+    windowLength:int = 2**hwRegs[HwReg.WindowLengthExp]
 
-    sampleJitter = None \
+    sampleJitter:Optional[int] = None \
         if hwRegs[HwReg.SampleMode] == SampleMode.Nonjitter else \
         (windowLength // 2**hwRegs[HwReg.SampleJitterNegExp])
 
@@ -198,25 +199,25 @@ class FullWindow(CursesWindow): # {{{
     |Status...                    |
     +----------- ... -------------+
     '''
-    def drawTitle(self, device, hwRegs): # {{{
+    def drawTitle(self, device, hwRegs) -> None: # {{{
         '''Draw the static title section.
         Intended to be called only once.
 
         <appName> ... <precision> <metricA> <metricB> ... <devicePath>
         '''
 
-        appName = "Correlator"
-        devicePath = device.name
-        precision = "%db" % hwRegs[HwReg.Precision]
-        metricA = mapMetricIntToStr[hwRegs[HwReg.MetricA]]
-        metricB = mapMetricIntToStr[hwRegs[HwReg.MetricB]]
+        appName:str = "Correlator"
+        devicePath:str = device.name
+        precision:str = "%db" % hwRegs[HwReg.Precision]
+        metricA:str = mapMetricIntToStr[hwRegs[HwReg.MetricA]]
+        metricB:str = mapMetricIntToStr[hwRegs[HwReg.MetricB]]
 
-        left = appName
-        mid = ' '.join((precision, metricA, metricB))
-        right = devicePath
+        left:str = appName
+        mid:str = ' '.join((precision, metricA, metricB))
+        right:str = devicePath
 
-        midBegin = (self.nChars // 2) - (len(mid) // 2)
-        rightBegin = self.charRight - len(right) + 1
+        midBegin:int = (self.nChars // 2) - (len(mid) // 2)
+        rightBegin:int = self.charRight - len(right) + 1
 
         # Fill whole line with background.
         self.drawStr(" "*self.charsWidth)
@@ -228,18 +229,18 @@ class FullWindow(CursesWindow): # {{{
         return # No return value
     # }}} def drawTitle
 
-    def drawStatus(self): # {{{
+    def drawStatus(self) -> None: # {{{
         '''Draw/redraw the status section.
 
         Up/Down: Move ... Left/Right: Change ... Enter: Send
         '''
 
-        left = "Up/Down: Navigate"
-        mid = "Left/Right: Modify"
-        right = "Enter: Send Update"
+        left:str = "Up/Down: Navigate"
+        mid:str = "Left/Right: Modify"
+        right:str = "Enter: Send Update"
 
-        midBegin = (self.nChars // 2) - (len(mid) // 2)
-        rightBegin = self.charRight - len(right) + 1
+        midBegin:int = (self.nChars // 2) - (len(mid) // 2)
+        rightBegin:int = self.charRight - len(right) + 1
 
         # Fill whole line with background.
         self.drawStr(" "*self.charsWidth, y=self.lineBottom)
@@ -266,19 +267,19 @@ class InputWindow(CursesWindow): # {{{
     |labelN     valueN     domainN|
     +----------- ... -------------+
     '''
-    def drawParams(self, guiRegs): # {{{
+    def drawParams(self, guiRegs, selectIdx:int) -> None: # {{{
         '''Draw all the parameter lines.
 
         <label> ... <value> ... <domain>
         '''
-        maxLenName = max(len(r.name) for r in GuiReg)
+        maxLenName:int = max(len(r.name) for r in GuiReg)
 
         self.win.clear()
-        for i,(r,d) in enumerate(mapGuiRegToDomain.items()):
-            nm = r.name
+        for i,(r,d) in enumerate(mapGuiRegToDomain_.items()):
+            nm:str = r.name
 
-            left = ' '*(maxLenName - len(nm)) + nm + " = "
-            right = d
+            left:str = ' '*(maxLenName - len(nm)) + nm + " = "
+            right:str = d
 
             v = guiRegs[r]
             if isinstance(v, str):
@@ -294,10 +295,10 @@ class InputWindow(CursesWindow): # {{{
             else:
               mid = str(v)
 
-            #midBegin = (self.nChars // 2) - (len(mid) // 2)
-            midBegin = len(left) + 2
-            #rightBegin = self.charRight - len(right) + 1
-            rightBegin = 30
+            #midBegin:int = (self.nChars // 2) - (len(mid) // 2)
+            midBegin:int = len(left) + 2
+            #rightBegin:int = self.charRight - len(right) + 1
+            rightBegin:int = 30
 
             # Fill whole line with background.
             self.drawStr(" "*self.charsWidth, y=i+1)
@@ -323,28 +324,30 @@ def gui(scr, device, hwRegs): # {{{
     curses.curs_set(0) # Hide the cursor.
     cursesInitPairs() # Initialize colors
 
-    full = FullWindow(scr, nLines=30, nChars=80, colorPair=whiteBlue)
+    full:CursesWindow = FullWindow(scr,
+        nLines=30, nChars=80,
+        colorPair=whiteBlue)
     full.win.box()
     full.drawTitle(device, hwRegs)
     full.drawStatus()
     full.win.refresh()
 
-    guiRegs_ = hwRegsToGuiRegs(hwRegs)
+    guiRegs_:Dict[GuiReg, Any] = hwRegsToGuiRegs(hwRegs)
     guiRegs_.update({GuiReg.UpdateMode: UpdateMode.Batch})
     assert all(k in guiRegs_.keys() for k in GuiReg)
 
-    inpt = InputWindow(full.win, nLines=len(GuiReg)+2, nChars=full.nChars-2,
-                       colorPair=greenBlack,
-                       beginY=full.lineTop+1, beginX=1)
-    inpt.drawParams(guiRegs_)
+    inpt:CursesWindow = InputWindow(full.win,
+        nLines=len(GuiReg)+2, nChars=full.nChars-2,
+        colorPair=greenBlack,
+        beginY=full.lineTop+1, beginX=1)
+    inpt.drawParams(guiRegs_, 0)
     inpt.win.refresh()
 
     # Fill remaining lines
-    otpt = CursesWindow(full.win,
-                        nLines=full.nLines-4-len(GuiReg)-1,
-                        nChars=full.nChars-2,
-                        colorPair=whiteRed,
-                        beginY=inpt.nLines+1, beginX=1)
+    otpt:CursesWindow = CursesWindow(full.win,
+        nLines=full.nLines-4-len(GuiReg)-1, nChars=full.nChars-2,
+        colorPair=whiteRed,
+        beginY=inpt.nLines+1, beginX=1)
     for i in range(otpt.linesHeight):
         otpt.drawStr(str(i)[-1]*otpt.charsWidth, x=1, y=otpt.lineTop+i)
     #otpt.win.box()
@@ -472,7 +475,7 @@ argparser.add_argument("--init-sampleJitterNegExp",
 
 # }}} argparser
 
-def main(args): # {{{
+def main(args) -> int: # {{{
     '''
     1. Upload bitfile to FPGA.
     2. Open connection to device.
@@ -507,11 +510,11 @@ def main(args): # {{{
     # with the state machine.
     verb("Connecting to device")
     with open(getDevicePath(args), "w+b") as device:
-        rd = functools.partial(hwReadRegs, device)
-        wr = functools.partial(hwWriteRegs, device)
+        rd:Callable = functools.partial(hwReadRegs, device)
+        wr:Callable = functools.partial(hwWriteRegs, device)
 
         verb("Reading RO registers...", end='')
-        hwRegsRO = rd((HwReg.Precision,
+        hwRegsRO:Dict[HwReg, Any] = rd((HwReg.Precision,
                      HwReg.MetricA,
                      HwReg.MetricB,
                      HwReg.MaxNInputs,
@@ -521,19 +524,19 @@ def main(args): # {{{
         verb("Done")
 
         # Fill in missing values of parameter domains.
-        mapGuiRegToDomain.update({
-            GuiReg.NInputs: mapGuiRegToDomain[GuiReg.NInputs] %
+        mapGuiRegToDomain_.update({
+            GuiReg.NInputs: mapGuiRegToDomain_[GuiReg.NInputs] %
                 hwRegsRO[HwReg.MaxNInputs],
-            GuiReg.WindowLength: mapGuiRegToDomain[GuiReg.WindowLength] %
+            GuiReg.WindowLength: mapGuiRegToDomain_[GuiReg.WindowLength] %
                 hwRegsRO[HwReg.MaxWindowLengthExp],
-            GuiReg.SampleRate: mapGuiRegToDomain[GuiReg.SampleRate] %
+            GuiReg.SampleRate: mapGuiRegToDomain_[GuiReg.SampleRate] %
                 hwRegsRO[HwReg.MaxSampleRateNegExp],
-            GuiReg.SampleJitter: mapGuiRegToDomain[GuiReg.SampleJitter] %
+            GuiReg.SampleJitter: mapGuiRegToDomain_[GuiReg.SampleJitter] %
                 hwRegsRO[HwReg.MaxSampleJitterNegExp],
         })
 
         verb("Initializing RW registers...", end='')
-        initRegsRW = {
+        initRegsRW:Dict[HwReg, Any] = {
             HwReg.NInputs:              args.init_nInputs,
             HwReg.WindowLengthExp:      args.init_windowLengthExp,
             HwReg.SampleRateNegExp:     args.init_sampleRateNegExp,
@@ -542,7 +545,7 @@ def main(args): # {{{
         }
         wr(initRegsRW)
         verb("Checking...", end='')
-        hwRegsRW = rd(initRegsRW.keys())
+        hwRegsRW:Dict[HwReg, Any] = rd(initRegsRW.keys())
         # TODO: uncomment
         #assert all(initRegsRW[k] == v for k,v in hwRegsRW.items()), hwRegsRW
         verb("Done")

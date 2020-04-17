@@ -6,6 +6,7 @@ from functools import partial
 import inspect
 import os
 import struct
+import sys
 
 # PyPI library imports
 import toml

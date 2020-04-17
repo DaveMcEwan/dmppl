@@ -12,19 +12,22 @@
 # these methods:
 # 1. Argument `-b,--bitfile`
 # 2. Environment variable `$CORRELATOR_BITFILE`
-# 3. The last item of the list `correlator.*.bin`
+# 3. The last item of the list `./correlator.*.bin`
+# 4. './correlator.bin`
 #
 # After programming, the board presents itself as a USB serial device.
 # The device to connect to is found using the first of these methods:
 # 1. Argument `-d,--device`
 # 2. Environment variable `$CORRELATOR_DEVICE`
-# 3. The last item of the list `/dev/ttyUSB*`
+# 3. The last item of the list `/dev/ttyACM*`
 
 import argparse
 import curses
 import enum
 import functools
+import glob
 import locale
+import os
 import sys
 import time
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -128,21 +131,45 @@ mapMetricIntToStr:Dict[int, str] = { # {{{
     6: "Ṫmt",
 } # }}}
 
-def getBitfilePath(args) -> str: # {{{
+def getBitfilePath(argBitfile) -> str: # {{{
 
-    ret = "foo"
+    envBitfile = os.environ.get("CORRELATOR_BITFILE")
+    orderedBitfiles = sorted(glob.glob("correlator.*.bin"))
+
+    if argBitfile is not None:
+        ret = argBitfile
+    elif envBitfile is not None:
+        ret = envBitfile
+    elif len(orderedBitfiles) > 0:
+        ret = orderedBitfiles[-1]
+    else:
+        ret = os.sep.join((os.path.dirname(os.path.abspath(__file__)),
+                           "correlator.bin"))
+
     return ret
 # }}} def getBitfilePath
 
-def getDevicePath(args) -> str: # {{{
+def getDevicePath(argDevice) -> str: # {{{
 
-    ret = "/dev/null"
+    envDevice = os.environ.get("CORRELATOR_DEVICE")
+    orderedDevices = sorted(glob.glob("/dev/ttyACM*"))
+
+    if argDevice is not None:
+        ret = argDevice
+    elif envDevice is not None:
+        ret = envDevice
+    elif len(orderedDevices) > 0:
+        ret = orderedDevices[-1]
+    else:
+        ret = "/dev/null" # Useful for debug.
+        # TODO: raise OSError("Device not found. Use --help for details.")
+
     return ret
 # }}} def getDevicePath
 
-def uploadBitfile(args): # {{{
+def uploadBitfile(argBitfile): # {{{
 
-    bitfile = getBitfilePath(args)
+    bitfile = getBitfilePath(argBitfile)
 
     return 0
 # }}} def uploadBitfile
@@ -479,12 +506,17 @@ argparser = argparse.ArgumentParser(
 argparser.add_argument("-b", "--bitfile",
     type=str,
     default=None,
-    help="Bitfile for FPGA implementing correlator hardware.")
+    help="Bitfile for FPGA implementing correlator hardware."
+         " If None then try using environment variable `$CORRELATOR_BITFILE`;"
+         " Then try using the last item of `./correlator.*.bin`;"
+         " Then try using the bundled bitfile.")
 
 argparser.add_argument("-d", "--device",
     type=str,
     default=None,
-    help="Serial device to connect to (immediately after progrmming).")
+    help="Serial device to connect to (immediately after progrmming)."
+         " If None then try using environment variable `$CORRELATOR_DEVICE`;"
+         " Then try using the last item of `/dev/ttyACM*`.")
 
 def argparseNInputs(s): # {{{
     i = int(s)
@@ -576,17 +608,17 @@ def main(args) -> int: # {{{
     locale.setlocale(locale.LC_ALL, '')
 
     verb("Uploading bitfile...", end='')
-    uploadBitfile(args)
+    uploadBitfile(args.bitfile)
     verb("Done")
 
-    # TODO: Search for device every 100ms instead of just sleeping, with 1s
-    # timeout to give useful error message.
-    #time.sleep(1) # Allow OS to enumerate USB.
+    # Allow OS time to enumerate USB before looking for device.
+    time.sleep(0.25) # seconds
+    devicePath = getDevicePath(args.device)
 
     # Keep lock on device to prevent other processes from accidentally messing
     # with the state machine.
-    verb("Connecting to device")
-    with open(getDevicePath(args), "w+b") as device:
+    verb("Connecting to device %s" % devicePath)
+    with open(devicePath, "w+b") as device:
         rd:Callable = functools.partial(hwReadRegs, device)
         wr:Callable = functools.partial(hwWriteRegs, device)
 

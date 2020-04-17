@@ -58,8 +58,8 @@ class HwReg(enum.Enum): # {{{
 
 @enum.unique
 class SampleMode(enum.Enum): # {{{
-    Nonjitter   = enum.auto()
-    Nonperiodic = enum.auto()
+    NonJitter   = enum.auto()
+    NonPeriodic = enum.auto()
 # }}} class SampleMode
 
 @enum.unique
@@ -74,11 +74,10 @@ class GuiReg(enum.Enum): # {{{
     UpdateMode      = enum.auto()
 
     # Derived from hardware
-    Enable          = enum.auto()
     NInputs         = enum.auto()
     WindowLength    = enum.auto()
-    SampleMode      = enum.auto()
     SampleRate      = enum.auto()
+    SampleMode      = enum.auto()
     SampleJitter    = enum.auto()
 # }}} Enum GuiReg
 
@@ -100,9 +99,6 @@ mapGuiRegToDomain_:Dict[GuiReg, str] = { # {{{
     # Controls no hardware register (GUI state only).
     GuiReg.UpdateMode: "∊ {%s}" % ", ".join(m.name for m in UpdateMode),
 
-    # Controls register "NInputs" (toggle between 0 and previous NInputs).
-    GuiReg.Enable: "∊ {True, False}",
-
     # Controls register "NInputs".
     # Domain defined by HwReg.MaxNInputs
     GuiReg.NInputs: "∊ ℤ ∩ [2, %d]",
@@ -111,12 +107,12 @@ mapGuiRegToDomain_:Dict[GuiReg, str] = { # {{{
     # Domain defined by HwReg.MaxWindowLengthExp
     GuiReg.WindowLength: "(samples) = 2**w; w ∊ ℤ ∩ [1, %d]",
 
-    # Controls register "SampleMode".
-    GuiReg.SampleMode: "∊ {%s}" % ", ".join(m.name for m in SampleMode),
-
     # Controls register "SampleRateNegExp".
     # Domain defined by HwReg.MaxSampleRateNegExp
     GuiReg.SampleRate: "(kHz) = %d/2**r; r ∊ ℤ ∩ [0, %%d]" % maxSampleRate_kHz,
+
+    # Controls register "SampleMode".
+    GuiReg.SampleMode: "∊ {%s}" % ", ".join(m.name for m in SampleMode),
 
     # Controls register "SampleJitterNegExp".
     # Domain defined by HwReg.MaxSampleJitterNegExp
@@ -163,7 +159,7 @@ def hwReadRegs(device, keys) -> Dict[HwReg, Any]: # {{{
         HwReg.NInputs                   : 5,
         HwReg.WindowLengthExp           : 6,
         HwReg.SampleRateNegExp          : 7,
-        HwReg.SampleMode                : SampleMode.Nonjitter,
+        HwReg.SampleMode                : SampleMode.NonJitter,
         HwReg.SampleJitterNegExp        : 8,
     }
     return {k: dummyRegs[k] for k in keys}
@@ -179,7 +175,7 @@ def hwRegsToGuiRegs(hwRegs:Dict[HwReg, Any]) -> Dict[GuiReg, Any]: # {{{
     windowLength:int = 2**hwRegs[HwReg.WindowLengthExp]
 
     sampleJitter:Optional[int] = None \
-        if hwRegs[HwReg.SampleMode] == SampleMode.Nonjitter else \
+        if hwRegs[HwReg.SampleMode] == SampleMode.NonJitter else \
         (windowLength // 2**hwRegs[HwReg.SampleJitterNegExp])
 
     sampleRate = float(maxSampleRate_kHz) / 2**hwRegs[HwReg.SampleRateNegExp]
@@ -187,8 +183,8 @@ def hwRegsToGuiRegs(hwRegs:Dict[HwReg, Any]) -> Dict[GuiReg, Any]: # {{{
     ret = {
         GuiReg.NInputs:      hwRegs[HwReg.NInputs],
         GuiReg.WindowLength: windowLength,
-        GuiReg.SampleMode:   hwRegs[HwReg.SampleMode],
         GuiReg.SampleRate:   sampleRate,
+        GuiReg.SampleMode:   hwRegs[HwReg.SampleMode],
         GuiReg.SampleJitter: '-' if sampleJitter is None else sampleJitter,
     }
     return ret
@@ -207,9 +203,6 @@ def updateRegs(selectIdx:int,
             if UpdateMode.Batch == guiRegs_[GuiReg.UpdateMode] else \
             UpdateMode.Batch
 
-    elif GuiReg.Enable == gr:
-        guiRegs_[GuiReg.Enable] = not guiRegs_[GuiReg.Enable]
-
     elif GuiReg.NInputs == gr:
         n = hwRegs_[HwReg.NInputs]
         m = (n-1) if decrNotIncr else (n+1)
@@ -222,19 +215,19 @@ def updateRegs(selectIdx:int,
         lo, hi = 1, hwRegs_[HwReg.MaxWindowLengthExp]
         hwRegs_[HwReg.WindowLengthExp] = max(lo, min(m, hi))
 
-    elif GuiReg.SampleMode == gr:
-        hwRegs_[HwReg.SampleMode] = SampleMode.Nonperiodic \
-            if SampleMode.Nonjitter == hwRegs_[HwReg.SampleMode] else \
-            SampleMode.Nonjitter
-
     elif GuiReg.SampleRate == gr:
         n = hwRegs_[HwReg.SampleRateNegExp]
         m = (n+1) if decrNotIncr else (n-1)
         lo, hi = 0, hwRegs_[HwReg.MaxSampleRateNegExp]
         hwRegs_[HwReg.SampleRateNegExp] = max(lo, min(m, hi))
 
+    elif GuiReg.SampleMode == gr:
+        hwRegs_[HwReg.SampleMode] = SampleMode.NonPeriodic \
+            if SampleMode.NonJitter == hwRegs_[HwReg.SampleMode] else \
+            SampleMode.NonJitter
+
     elif GuiReg.SampleJitter == gr and \
-         guiRegs_[GuiReg.SampleMode] == SampleMode.Nonperiodic:
+         guiRegs_[GuiReg.SampleMode] == SampleMode.NonPeriodic:
         n = hwRegs_[HwReg.SampleJitterNegExp]
         m = (n+1) if decrNotIncr else (n-1)
         lo, hi = 1, hwRegs_[HwReg.MaxSampleJitterNegExp]
@@ -398,8 +391,7 @@ def gui(scr, device, hwRegs): # {{{
     wr:Callable = functools.partial(hwWriteRegs, device)
 
     guiRegs_:Dict[GuiReg, Any] = hwRegsToGuiRegs(hwRegs)
-    guiRegs_.update({GuiReg.UpdateMode: UpdateMode.Batch,
-                     GuiReg.Enable: True})
+    guiRegs_.update({GuiReg.UpdateMode: UpdateMode.Batch})
     assert all(k in guiRegs_.keys() for k in GuiReg)
     selectIdx_ = 0
     outstanding_ = False
@@ -430,7 +422,7 @@ def gui(scr, device, hwRegs): # {{{
         # Map keypress/character to action.
         if curses.KEY_UP == c and 0 < selectIdx_:
             keyAction:KeyAction = KeyAction.NavigateUp
-        elif curses.KEY_DOWN == c and 6 > selectIdx_:
+        elif curses.KEY_DOWN == c and (len(GuiReg)-1) > selectIdx_:
             keyAction:KeyAction = KeyAction.NavigateDown
         elif curses.KEY_LEFT == c:
             keyAction:KeyAction = KeyAction.ModifyDecrease
@@ -533,9 +525,9 @@ argparser.add_argument("--init-sampleRateNegExp",
 def argparseSampleMode(s): # {{{
     i = s.lower()
     if "periodic" == i:
-        ret = SampleMode.Nonjitter
+        ret = SampleMode.NonJitter
     elif "nonperiodic" == i:
-        ret = SampleMode.Nonperiodic
+        ret = SampleMode.NonPeriodic
     else:
         msg = "Sample mode must be in {PERIODIC, NONPERIODIC}"
         raise argparse.ArgumentTypeError(msg)
@@ -543,7 +535,7 @@ def argparseSampleMode(s): # {{{
 # }}} def argparseSampleMode
 argparser.add_argument("--init-sampleMode",
     type=argparseSampleMode,
-    default=SampleMode.Nonjitter,
+    default=SampleMode.NonJitter,
     help="Sample periodically or non-periodically (using pseudo-random jitter)")
 
 def argparseSampleJitterNegExp(s): # {{{

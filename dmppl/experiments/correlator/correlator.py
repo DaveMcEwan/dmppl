@@ -96,7 +96,6 @@ listGuiReg:List[GuiReg] = list(r for i,r in enumerate(GuiReg))
 
 # NOTE: Some values are carefully updated with string substitution on the
 # initial read of the RO registers.
-# TODO: Should be enum called GuiReg
 mapGuiRegToDomain_:Dict[GuiReg, str] = { # {{{
     # Controls no hardware register (GUI state only).
     GuiReg.UpdateMode: "∊ {%s}" % ", ".join(m.name for m in UpdateMode),
@@ -194,6 +193,60 @@ def hwRegsToGuiRegs(hwRegs:Dict[HwReg, Any]) -> Dict[GuiReg, Any]: # {{{
     }
     return ret
 # }}} def hwRegsToGuiRegs
+
+def updateRegs(selectIdx:int,
+               guiRegs_:Dict[GuiReg, Any],
+               hwRegs_:Dict[HwReg, Any],
+               decrNotIncr:bool) -> None: # {{{
+    '''Update state in guiRegs_ and hwRegs_ in response to keypress.
+    '''
+    gr:GuiReg = listGuiReg[selectIdx]
+
+    if GuiReg.UpdateMode == gr:
+        guiRegs_[GuiReg.UpdateMode] = UpdateMode.Interactive \
+            if UpdateMode.Batch == guiRegs_[GuiReg.UpdateMode] else \
+            UpdateMode.Batch
+
+    elif GuiReg.Enable == gr:
+        guiRegs_[GuiReg.Enable] = not guiRegs_[GuiReg.Enable]
+
+    elif GuiReg.NInputs == gr:
+        n = hwRegs_[HwReg.NInputs]
+        m = (n-1) if decrNotIncr else (n+1)
+        lo, hi = 2, hwRegs_[HwReg.MaxNInputs]
+        hwRegs_[HwReg.NInputs] = max(lo, min(m, hi))
+
+    elif GuiReg.WindowLength == gr:
+        n = hwRegs_[HwReg.WindowLengthExp]
+        m = (n-1) if decrNotIncr else (n+1)
+        lo, hi = 1, hwRegs_[HwReg.MaxWindowLengthExp]
+        hwRegs_[HwReg.WindowLengthExp] = max(lo, min(m, hi))
+
+    elif GuiReg.SampleMode == gr:
+        hwRegs_[HwReg.SampleMode] = SampleMode.Nonperiodic \
+            if SampleMode.Nonjitter == hwRegs_[HwReg.SampleMode] else \
+            SampleMode.Nonjitter
+
+    elif GuiReg.SampleRate == gr:
+        n = hwRegs_[HwReg.SampleRateNegExp]
+        m = (n+1) if decrNotIncr else (n-1)
+        lo, hi = 0, hwRegs_[HwReg.MaxSampleRateNegExp]
+        hwRegs_[HwReg.SampleRateNegExp] = max(lo, min(m, hi))
+
+    elif GuiReg.SampleJitter == gr and \
+         guiRegs_[GuiReg.SampleMode] == SampleMode.Nonperiodic:
+        n = hwRegs_[HwReg.SampleJitterNegExp]
+        m = (n+1) if decrNotIncr else (n-1)
+        lo, hi = 1, hwRegs_[HwReg.MaxSampleJitterNegExp]
+        hwRegs_[HwReg.SampleJitterNegExp] = max(lo, min(m, hi))
+
+    else:
+        pass
+
+    guiRegs_.update(hwRegsToGuiRegs(hwRegs_))
+
+    return
+# }}} def updateRegs
 
 class FullWindow(CursesWindow): # {{{
     '''The "full" window is a rectangle in the middle of the screen.
@@ -329,61 +382,6 @@ class InputWindow(CursesWindow): # {{{
 
         return # No return value
     # }}} def draw
-
-    def updateState(self,
-                    selectIdx:int,
-                    guiRegs_:Dict[GuiReg, Any],
-                    hwRegs_:Dict[HwReg, Any],
-                    decrNotIncr:bool) -> None: # {{{
-        '''Update state in guiRegs and hwRegs_ in response to keypress.
-        '''
-        gr:GuiReg = listGuiReg[selectIdx]
-
-        if GuiReg.UpdateMode == gr:
-            guiRegs_[GuiReg.UpdateMode] = UpdateMode.Interactive \
-                if UpdateMode.Batch == guiRegs_[GuiReg.UpdateMode] else \
-                UpdateMode.Batch
-
-        elif GuiReg.Enable == gr:
-            guiRegs_[GuiReg.Enable] = not guiRegs_[GuiReg.Enable]
-
-        elif GuiReg.NInputs == gr:
-            n = hwRegs_[HwReg.NInputs]
-            m = (n-1) if decrNotIncr else (n+1)
-            lo, hi = 2, hwRegs_[HwReg.MaxNInputs]
-            hwRegs_[HwReg.NInputs] = max(lo, min(m, hi))
-
-        elif GuiReg.WindowLength == gr:
-            n = hwRegs_[HwReg.WindowLengthExp]
-            m = (n-1) if decrNotIncr else (n+1)
-            lo, hi = 1, hwRegs_[HwReg.MaxWindowLengthExp]
-            hwRegs_[HwReg.WindowLengthExp] = max(lo, min(m, hi))
-
-        elif GuiReg.SampleMode == gr:
-            hwRegs_[HwReg.SampleMode] = SampleMode.Nonperiodic \
-                if SampleMode.Nonjitter == hwRegs_[HwReg.SampleMode] else \
-                SampleMode.Nonjitter
-
-        elif GuiReg.SampleRate == gr:
-            n = hwRegs_[HwReg.SampleRateNegExp]
-            m = (n+1) if decrNotIncr else (n-1)
-            lo, hi = 0, hwRegs_[HwReg.MaxSampleRateNegExp]
-            hwRegs_[HwReg.SampleRateNegExp] = max(lo, min(m, hi))
-
-        elif GuiReg.SampleJitter == gr and \
-             guiRegs_[GuiReg.SampleMode] == SampleMode.Nonperiodic:
-            n = hwRegs_[HwReg.SampleJitterNegExp]
-            m = (n+1) if decrNotIncr else (n-1)
-            lo, hi = 1, hwRegs_[HwReg.MaxSampleJitterNegExp]
-            hwRegs_[HwReg.SampleJitterNegExp] = max(lo, min(m, hi))
-
-        else:
-            pass
-
-        guiRegs_.update(hwRegsToGuiRegs(hwRegs_))
-
-        return
-    # }}} def updateState
 # }}} class InputWindow
 
 def gui(scr, device, hwRegs): # {{{
@@ -451,9 +449,9 @@ def gui(scr, device, hwRegs): # {{{
         elif keyAction == KeyAction.NavigateDown:
             selectIdx_ += 1
         elif keyAction == KeyAction.ModifyDecrease:
-            inpt.updateState(selectIdx_, guiRegs_, hwRegs_, True)
+            updateRegs(selectIdx_, guiRegs_, hwRegs_, True)
         elif keyAction == KeyAction.ModifyIncrease:
-            inpt.updateState(selectIdx_, guiRegs_, hwRegs_, False)
+            updateRegs(selectIdx_, guiRegs_, hwRegs_, False)
         elif keyAction == KeyAction.Quit:
             break
         else:

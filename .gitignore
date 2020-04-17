@@ -20,3 +20,6 @@ coverage*_html_report/*
 
 # Experiment results.
 **/*results/*
+
+# Spyder IDE
+.spyproject/*

@@ -392,7 +392,7 @@ def gui(scr, device, hwRegs): # {{{
     - scr: All available screen space.
     - full: Rectangle in the centre of scr.
     - inpt: Rectangle below title for dynamic inputs.
-    - otpt: Rectangle above status for dynamic outputs.
+    - otpt: Rectangle above status for dynamic outputs (unimplemented).
 
     Each of the window objects is refreshed individually.
     '''
@@ -425,50 +425,6 @@ def gui(scr, device, hwRegs): # {{{
     inpt.draw(guiRegs_)
     inpt.win.keypad(True)
     inpt.win.refresh()
-
-    ## Fill remaining lines
-    #otpt:CursesWindow = CursesWindow(full.win,
-    #    nLines=full.nLines-4-len(GuiReg)-1, nChars=full.nChars-2,
-    #    colorPair=whiteRed,
-    #    beginY=inpt.nLines+1, beginX=1)
-    #for i in range(otpt.linesHeight):
-    #    otpt.drawStr(str(i)[-1]*otpt.charsWidth, x=1, y=otpt.lineTop+i)
-    ##otpt.win.box()
-    #otpt.win.refresh()
-
-#    # {{{ Layout test/example
-#
-#    # 0000-+
-#    # |1111|
-#    # |+--+|
-#    # ||22||
-#    # |+--+|
-#    # |    5
-#    # |    |
-#    # +7777+
-#
-#    tst1 = curses.newwin(8, 6, 0, 1)
-#    tst1.box()
-#    tst1.addstr(0, 0, "0000") # Overwrites topLeft box
-#    tst1.addstr(1, 1, "1111") # Nicely contained
-#    tst1.addstr(7, 1, "7777") # Overwrites bottom box
-#    tst1.addstr(5, 5, "5")    # Overwrites right box
-#    tst1.refresh()
-#
-#    tst2 = curses.newwin(3, 4, 2, 2)
-#    tst2.box()
-#    tst2.addstr(1, 1, "22")
-#    tst2.refresh()
-#
-#    tst3 = curses.newwin(1, 4, 1, 10)
-#    tst3.box()
-#    tst3.refresh()
-#
-#    tst4 = curses.newwin(1, 10, 3, 10)
-#    tst4.addstr(0, 0, full.win.encoding)
-#    tst4.refresh()
-#
-#    # }}} Layout test/example
 
     while 1:
         c = inpt.win.getch() # Calls refresh for this and derived windows.

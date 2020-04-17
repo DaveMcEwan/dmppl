@@ -54,10 +54,17 @@ class HwReg(enum.Enum): # {{{
     # Dynamic, RW
     NInputs                 = enum.auto()
     WindowLengthExp         = enum.auto()
+    WindowShape             = enum.auto()
     SampleRateNegExp        = enum.auto()
     SampleMode              = enum.auto()
     SampleJitterNegExp      = enum.auto()
 # }}} Enum HwReg
+
+@enum.unique
+class WindowShape(enum.Enum): # {{{
+    Rectangular = enum.auto()
+    Logdrop     = enum.auto()
+# }}} class WindowShape
 
 @enum.unique
 class SampleMode(enum.Enum): # {{{
@@ -79,6 +86,7 @@ class GuiReg(enum.Enum): # {{{
     # Derived from hardware
     NInputs         = enum.auto()
     WindowLength    = enum.auto()
+    WindowShape     = enum.auto()
     SampleRate      = enum.auto()
     SampleMode      = enum.auto()
     SampleJitter    = enum.auto()
@@ -109,6 +117,9 @@ mapGuiRegToDomain_:Dict[GuiReg, str] = { # {{{
     # Controls register "WindowLengthExp".
     # Domain defined by HwReg.MaxWindowLengthExp
     GuiReg.WindowLength: "(samples) = 2**w; w ∊ ℤ ∩ [1, %d]",
+
+    # Controls register "WindowShape".
+    GuiReg.WindowShape: "∊ {%s}" % ", ".join(s.name for s in WindowShape),
 
     # Controls register "SampleRateNegExp".
     # Domain defined by HwReg.MaxSampleRateNegExp
@@ -185,6 +196,7 @@ def hwReadRegs(device, keys) -> Dict[HwReg, Any]: # {{{
         HwReg.MaxSampleJitterNegExp     : 31,
         HwReg.NInputs                   : 5,
         HwReg.WindowLengthExp           : 6,
+        HwReg.WindowShape               : WindowShape.Rectangular,
         HwReg.SampleRateNegExp          : 7,
         HwReg.SampleMode                : SampleMode.NonJitter,
         HwReg.SampleJitterNegExp        : 8,
@@ -210,6 +222,7 @@ def hwRegsToGuiRegs(hwRegs:Dict[HwReg, Any]) -> Dict[GuiReg, Any]: # {{{
     ret = {
         GuiReg.NInputs:      hwRegs[HwReg.NInputs],
         GuiReg.WindowLength: windowLength,
+        GuiReg.WindowShape:  hwRegs[HwReg.WindowShape],
         GuiReg.SampleRate:   sampleRate,
         GuiReg.SampleMode:   hwRegs[HwReg.SampleMode],
         GuiReg.SampleJitter: '-' if sampleJitter is None else sampleJitter,
@@ -241,6 +254,11 @@ def updateRegs(selectIdx:int,
         m = (n-1) if decrNotIncr else (n+1)
         lo, hi = 1, hwRegs_[HwReg.MaxWindowLengthExp]
         hwRegs_[HwReg.WindowLengthExp] = max(lo, min(m, hi))
+
+    elif GuiReg.WindowShape == gr:
+        hwRegs_[HwReg.WindowShape] = WindowShape.Rectangular \
+            if WindowShape.Logdrop == hwRegs_[HwReg.WindowShape] else \
+            WindowShape.Logdrop
 
     elif GuiReg.SampleRate == gr:
         n = hwRegs_[HwReg.SampleRateNegExp]
@@ -542,6 +560,22 @@ argparser.add_argument("--init-windowLengthExp",
     default=10,
     help="windowLength = 2**windowLengthExp  (samples)")
 
+def argparseWindowShape(s): # {{{
+    i = s.lower()
+    if "rectangular" == i:
+        ret = WindowShape.Rectangular
+    elif "logdrop" == i:
+        ret = WindowShape.Logdrop
+    else:
+        msg = "Window shape must be in {RECTANGULAR, LOGDROP}"
+        raise argparse.ArgumentTypeError(msg)
+    return ret
+# }}} def argparseWindowShape
+argparser.add_argument("--init-windowShape",
+    type=argparseWindowShape,
+    default=WindowShape.Rectangular,
+    help="Shape of sampling window function.")
+
 def argparseSampleRateNegExp(s): # {{{
     i = int(s)
     if not (0 <= i <= 99):
@@ -648,6 +682,7 @@ def main(args) -> int: # {{{
         initRegsRW:Dict[HwReg, Any] = {
             HwReg.NInputs:              args.init_nInputs,
             HwReg.WindowLengthExp:      args.init_windowLengthExp,
+            HwReg.WindowShape:          args.init_windowShape,
             HwReg.SampleRateNegExp:     args.init_sampleRateNegExp,
             HwReg.SampleMode:           args.init_sampleMode,
             HwReg.SampleJitterNegExp:   args.init_sampleJitterNegExp,

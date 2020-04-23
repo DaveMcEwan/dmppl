@@ -163,7 +163,7 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=["numpy", "toml", "pyyaml"],  # Optional
+    install_requires=["numpy", "toml", "pyyaml", "pyserial"],  # Optional
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
@@ -200,6 +200,7 @@ setup(
     # platform.
     entry_points={  # Optional
         "console_scripts": [
+            "bytePipe-utils=dmppl.scripts.bytePipe_utils:entryPoint",
             "vcd-utils=dmppl.scripts.vcd_utils:entryPoint",
             "parvec=dmppl.scripts.parvec:entryPoint",
             "beamer-times=dmppl.scripts.beamer_times:entryPoint",

@@ -21,6 +21,7 @@
 # 2. Environment variable `$CORRELATOR_DEVICE`
 # 3. The last item of the list `/dev/ttyACM*`
 
+# Standard library
 import argparse
 import curses
 import enum
@@ -28,11 +29,17 @@ import functools
 import glob
 import locale
 import os
+import subprocess
 import sys
 import time
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
+
+# PyPI
+import serial
 
 from dmppl.base import run, verb, dbg
+from dmppl.bytePipe import BpAddrs, BpAddrValues, BpMem, \
+    bpReadSequential, bpWriteSequential, bpPrintMem, bpAddrValuesToMem
 from dmppl.color import CursesWindow, cursesInitPairs, \
     whiteBlue, whiteRed, greenBlack
 
@@ -40,36 +47,38 @@ __version__ = "0.1.0"
 
 maxSampleRate_kHz:int = 48000
 
+# NOTE: Must match dmpvl/prj/correlator/bpReg.v
 @enum.unique
 class HwReg(enum.Enum): # {{{
     # Static, RO
-    Precision               = enum.auto()
-    MetricA                 = enum.auto()
-    MetricB                 = enum.auto()
-    MaxNInputs              = enum.auto()
-    MaxWindowLengthExp      = enum.auto()
-    MaxSampleRateNegExp     = enum.auto()
-    MaxSampleJitterNegExp   = enum.auto()
+    Precision               = 0
+    MetricA                 = 1
+    MetricB                 = 2
+    MaxNInputs              = 3
+    MaxWindowLengthExp      = 4
+    MaxSampleRateNegExp     = 5
+    MaxSampleJitterNegExp   = 6
 
     # Dynamic, RW
-    NInputs                 = enum.auto()
-    WindowLengthExp         = enum.auto()
-    WindowShape             = enum.auto()
-    SampleRateNegExp        = enum.auto()
-    SampleMode              = enum.auto()
-    SampleJitterNegExp      = enum.auto()
+    NInputs                 = 7
+    WindowLengthExp         = 8
+    WindowShape             = 9
+    SampleRateNegExp        = 10
+    SampleMode              = 11
+    SampleJitterNegExp      = 12
 # }}} Enum HwReg
+mapHwAddrToHwReg:Dict[int, HwReg] = {e.value: e for e in HwReg}
 
 @enum.unique
 class WindowShape(enum.Enum): # {{{
-    Rectangular = enum.auto()
-    Logdrop     = enum.auto()
+    Rectangular = 0
+    Logdrop     = 1
 # }}} class WindowShape
 
 @enum.unique
 class SampleMode(enum.Enum): # {{{
-    NonJitter   = enum.auto()
-    NonPeriodic = enum.auto()
+    NonJitter   = 0
+    NonPeriodic = 1
 # }}} class SampleMode
 
 @enum.unique
@@ -172,41 +181,58 @@ def getDevicePath(argDevice) -> str: # {{{
     elif len(orderedDevices) > 0:
         ret = orderedDevices[-1]
     else:
-        ret = "/dev/null" # Useful for debug.
-        # TODO: raise OSError("Device not found. Use --help for details.")
+        raise OSError("Device not found. Use --help for details.")
 
     return ret
 # }}} def getDevicePath
 
-def uploadBitfile(argBitfile): # {{{
+def uploadBitfile(bitfile): # {{{
 
-    bitfile = getBitfilePath(argBitfile)
+    p = subprocess.run(("tinyprog", "-p", bitfile))
 
-    return 0
+    return p.returncode
 # }}} def uploadBitfile
 
-def hwReadRegs(device, keys) -> Dict[HwReg, Any]: # {{{
-    dummyRegs = {
-        HwReg.Precision                 : 8,
-        HwReg.MetricA                   : 3,
-        HwReg.MetricB                   : 4,
-        HwReg.MaxNInputs                : 5,
-        HwReg.MaxWindowLengthExp        : 31,
-        HwReg.MaxSampleRateNegExp       : 31,
-        HwReg.MaxSampleJitterNegExp     : 31,
-        HwReg.NInputs                   : 5,
-        HwReg.WindowLengthExp           : 6,
-        HwReg.WindowShape               : WindowShape.Rectangular,
-        HwReg.SampleRateNegExp          : 7,
-        HwReg.SampleMode                : SampleMode.NonJitter,
-        HwReg.SampleJitterNegExp        : 8,
-    }
-    return {k: dummyRegs[k] for k in keys}
+def hwReadRegs(rd, keys:Iterable[int]) -> Dict[HwReg, Any]: # {{{
+    values = rd([k.value for k in keys])
+    assert len(keys) == len(values)
+
+    ret_ = {}
+    for k,(a,v) in zip(keys, values):
+        assert isinstance(k, HwReg), k
+        assert isinstance(a, int), a
+        assert isinstance(v, int), v
+        assert a == k.value, (a, k.value)
+
+        if HwReg.SampleMode == k:
+            ret_[k] = SampleMode.NonJitter \
+                if 0 == v else \
+                SampleMode.NonPeriodic
+        elif HwReg.WindowShape == k:
+            ret_[k] = WindowShape.Rectangular \
+                if 0 == v else \
+                WindowShape.Logdrop
+        else:
+            ret_[k] = v
+
+    return ret_
 # }}} def hwReadRegs
 
-def hwWriteRegs(device, keyValues): # {{{
+def hwWriteRegs(wr, keyValues:Dict[HwReg, Any]): # {{{
 
-    return 0
+    addrValues_ = []
+    for k,v in keyValues.items():
+        addr = k.value
+
+        if isinstance(v, enum.Enum):
+            addrValues_.append((addr, v.value))
+        else:
+            assert isinstance(v, int), v
+            addrValues_.append((addr, v))
+
+    ret = wr(addrValues_)
+
+    return ret
 # }}} def hwWriteRegs
 
 def hwRegsToGuiRegs(hwRegs:Dict[HwReg, Any]) -> Dict[GuiReg, Any]: # {{{
@@ -301,7 +327,7 @@ class FullWindow(CursesWindow): # {{{
     |Status...                    |
     +----------- ... -------------+
     '''
-    def drawTitle(self, device, hwRegs) -> None: # {{{
+    def drawTitle(self, deviceName, hwRegs) -> None: # {{{
         '''Draw the static title section.
         Intended to be called only once.
 
@@ -309,7 +335,7 @@ class FullWindow(CursesWindow): # {{{
         '''
 
         appName:str = "Correlator"
-        devicePath:str = device.name
+        devicePath:str = deviceName
         precision:str = "%db" % hwRegs[HwReg.Precision]
         metricA:str = mapMetricIntToStr[hwRegs[HwReg.MetricA]]
         metricB:str = mapMetricIntToStr[hwRegs[HwReg.MetricB]]
@@ -422,7 +448,7 @@ class InputWindow(CursesWindow): # {{{
     # }}} def draw
 # }}} class InputWindow
 
-def gui(scr, device, hwRegs): # {{{
+def gui(scr, deviceName, rd, wr, hwRegs): # {{{
     '''
     Window objects:
     - scr: All available screen space.
@@ -432,8 +458,6 @@ def gui(scr, device, hwRegs): # {{{
 
     Each of the window objects is refreshed individually.
     '''
-    rd:Callable = functools.partial(hwReadRegs, device)
-    wr:Callable = functools.partial(hwWriteRegs, device)
 
     guiRegs_:Dict[GuiReg, Any] = hwRegsToGuiRegs(hwRegs)
     guiRegs_.update({GuiReg.UpdateMode: UpdateMode.Batch})
@@ -449,7 +473,7 @@ def gui(scr, device, hwRegs): # {{{
         nLines=len(GuiReg)+6, nChars=80,
         colorPair=whiteBlue)
     full.win.box()
-    full.drawTitle(device, hwRegs)
+    full.drawTitle(deviceName, hwRegs)
     full.drawStatus()
     full.win.refresh()
 
@@ -498,8 +522,8 @@ def gui(scr, device, hwRegs): # {{{
         # actual values reported from hardware.
         if guiRegs_[GuiReg.UpdateMode] == UpdateMode.Interactive or \
            keyAction == KeyAction.SendUpdate:
-            wr(hwRegs_)
-            hwRegs_:Dict[HwReg, Any] = hwRegs_ # TODO: rd(hwRegs_.keys())
+            _ = wr(hwRegs_)
+            hwRegs_:Dict[HwReg, Any] = rd(hwRegs_.keys())
             guiRegs_.update(hwRegsToGuiRegs(hwRegs_))
             outstanding_ = False
         elif guiRegs_[GuiReg.UpdateMode] == UpdateMode.Batch and \
@@ -528,6 +552,11 @@ argparser.add_argument("-b", "--bitfile",
          " If None then try using environment variable `$CORRELATOR_BITFILE`;"
          " Then try using the last item of `./correlator.*.bin`;"
          " Then try using the bundled bitfile.")
+
+argparser.add_argument("--no-prog",
+    action="store_true",
+    help="Don't attempt to program a bitfile."
+         " Assume there's already a programmed device available.")
 
 argparser.add_argument("-d", "--device",
     type=str,
@@ -641,20 +670,44 @@ def main(args) -> int: # {{{
 
     locale.setlocale(locale.LC_ALL, '')
 
-    verb("Uploading bitfile...", end='')
-    uploadBitfile(args.bitfile)
-    verb("Done")
+    if args.no_prog:
+        devicePath = getDevicePath(args.device)
+    else:
+        bitfile = getBitfilePath(args.bitfile)
+        verb("Uploading bitfile %s ..." % bitfile, end='')
+        assert 0 == uploadBitfile(bitfile)
+        verb("Done")
 
-    # Allow OS time to enumerate USB before looking for device.
-    time.sleep(0.25) # seconds
-    devicePath = getDevicePath(args.device)
+        # Allow OS time to enumerate USB before looking for device.
+        nAttempts = 10
+        waitTime = 1 # seconds
+        verb("Waiting up to %0.01fs..." % (nAttempts * waitTime), end='')
+
+        maybeDevicePath_:Optional[str] = None
+        for _ in range(nAttempts):
+            time.sleep(waitTime)
+            try:
+                maybeDevicePath_ = getDevicePath(args.device)
+                break
+            except OSError:
+                pass
+
+        if maybeDevicePath_ is None:
+            return 1
+        else:
+            devicePath = maybeDevicePath_
+
+        verb("Done")
+
 
     # Keep lock on device to prevent other processes from accidentally messing
     # with the state machine.
     verb("Connecting to device %s" % devicePath)
-    with open(devicePath, "w+b") as device:
-        rd:Callable = functools.partial(hwReadRegs, device)
-        wr:Callable = functools.partial(hwWriteRegs, device)
+    with serial.Serial(devicePath, timeout=1.0, write_timeout=1.0) as device:
+        rdBytePipe:Callable = functools.partial(bpReadSequential, device)
+        wrBytePipe:Callable = functools.partial(bpWriteSequential, device)
+        rd:Callable = functools.partial(hwReadRegs, rdBytePipe)
+        wr:Callable = functools.partial(hwWriteRegs, wrBytePipe)
 
         verb("Reading RO registers...", end='')
         hwRegsRO:Dict[HwReg, Any] = rd((HwReg.Precision,
@@ -690,13 +743,12 @@ def main(args) -> int: # {{{
         wr(initRegsRW)
         verb("Checking...", end='')
         hwRegsRW:Dict[HwReg, Any] = rd(initRegsRW.keys())
-        # TODO: uncomment
-        #assert all(initRegsRW[k] == v for k,v in hwRegsRW.items()), hwRegsRW
+        assert all(initRegsRW[k] == v for k,v in hwRegsRW.items()), hwRegsRW
         verb("Done")
 
         try:
             verb("Starting GUI (curses)...")
-            curses.wrapper(gui, device, {**hwRegsRO, **hwRegsRW})
+            curses.wrapper(gui, device.name, rd, wr, {**hwRegsRO, **hwRegsRW})
             verb("GUI Done")
         except KeyboardInterrupt:
             verb("KeyboardInterrupt. Exiting.")

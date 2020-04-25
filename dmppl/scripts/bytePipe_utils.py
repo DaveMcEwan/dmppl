@@ -39,7 +39,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, \
 # PyPI
 import serial
 
-# git clone https://github.com/DaveMcEwan/dmppl.git && pip install -e dmppl
+# git clone https://github.com/DaveMcEwan/dmppl.git && pip install -e ./dmppl
 from dmppl.base import run, verb, dbg
 from dmppl.bytePipe import BpAddrs, BpAddrValues, BpMem, \
     bpReadSequential, bpWriteSequential, bpPrintMem, bpAddrValuesToMem

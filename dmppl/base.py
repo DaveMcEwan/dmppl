@@ -188,6 +188,55 @@ def fnameAppendExt(fname, ext): # {{{
            (fname + '.' + ext)
 # }}} def fnameAppendExt
 
+def lowerCamelCase(s): # {{{
+#def lowerCamelCase(s:str) -> str:
+    '''Convert a non-empty string to lower camel case.
+
+    Replace punctuation with underscores.
+
+    "foo"               -> "foo"
+    "foOBAR"            -> "foOBAR"
+    "fooBar"            -> "fooBar"
+    "FooBar"            -> "fooBar"
+    "foo bar baz"       -> "fooBarBaz"
+    "foo Bar baz"       -> "fooBarBaz"
+    "foo Bar    baz"    -> "fooBarBaz"
+    "foo Bar 123"       -> "fooBar123"
+    "foo -. Bar baz 123" -> "foo_BarBaz123"
+    "foo# bar baz 123" -> "foo_BarBaz123" TODO: Is this really what I want?
+    "foo#Bar baz 123" -> "foo_BarBaz123"
+    '''
+    assert isinstance(s, str)
+    assert 0 < len(s)
+
+    #words:List[str] = [w for w in s.split() if 0 < len(w)]
+    words = [w for w in s.split() if 0 < len(w)]
+
+    # Python2.7 doesn't support case folding so just use lowercase
+    # which does a similar thing and will probably be good enough for
+    # many usecases.
+    # str.casefold() introduced in Python3.3
+    #firstWord:str = words[0]
+    firstWord = words[0]
+    try:
+        #firstCased:str = firstWord[0].casefold() + firstWord[1:]
+        firstCased = firstWord[0].casefold() + firstWord[1:]
+    except AttributeError:
+        firstCased = firstWord[0].lower() + firstWord[1:]
+
+    #nonFirstCased:List[str] = [w[0].upper() + w[1:] for w in words[1:]]
+    nonFirstCased = [w[0].upper() + w[1:] for w in words[1:]]
+
+
+    #cased:str = ''.join([firstCased] + nonFirstCased)
+    cased = ''.join([firstCased] + nonFirstCased)
+
+    #depunct:str = re.sub(r"\W+", '_', cased)
+    depunct = re.sub(r"\W+", '_', cased)
+
+    return depunct
+# }}} def lowerCamelCase
+
 def product(xs): # {{{
     '''Return the product of a list/tuple of numbers.
     '''
@@ -395,7 +444,7 @@ def rdLines(fname, **kwargs): # {{{
             if kwarg_leftStrip else fd_4
 
         # Python2.7 doesn't support case folding so just use lowercase
-        # which # does a similar thing and will probably be good enough for
+        # which does a similar thing and will probably be good enough for
         # many usecases.
         # str.casefold() introduced in Python3.3
         if kwarg_caseFold:

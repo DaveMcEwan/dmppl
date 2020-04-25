@@ -219,6 +219,54 @@ class Test_fnameAppendExt(unittest.TestCase): # {{{
 
 # }}} class Test_fnameAppendExt
 
+class Test_lowerCamelCase(unittest.TestCase): # {{{
+
+    def test_SingleAllLower(self):
+        result = lowerCamelCase("foo")
+        self.assertEqual(result, "foo")
+
+    def test_SingleMixed0(self):
+        result = lowerCamelCase("foOBAR")
+        self.assertEqual(result, "foOBAR")
+
+    def test_SingleMixed1(self):
+        result = lowerCamelCase("fooBar")
+        self.assertEqual(result, "fooBar")
+
+    def test_SingleUpper(self):
+        result = lowerCamelCase("FooBar")
+        self.assertEqual(result, "fooBar")
+
+    def test_Spaces0(self):
+        result = lowerCamelCase("foo bar baz")
+        self.assertEqual(result, "fooBarBaz")
+
+    def test_Spaces1(self):
+        result = lowerCamelCase("foo Bar baz")
+        self.assertEqual(result, "fooBarBaz")
+
+    def test_Spaces2(self):
+        result = lowerCamelCase("foo Bar    baz")
+        self.assertEqual(result, "fooBarBaz")
+
+    def test_Numbers0(self):
+        result = lowerCamelCase("foo Bar 123")
+        self.assertEqual(result, "fooBar123")
+
+    def test_Punctuation0(self):
+        result = lowerCamelCase("foo -. Bar baz 123")
+        self.assertEqual(result, "foo_BarBaz123")
+
+    def test_Punctuation1(self):
+        result = lowerCamelCase("foo# bar baz 123")
+        self.assertEqual(result, "foo_BarBaz123")
+
+    def test_Punctuation2(self):
+        result = lowerCamelCase("foo#Bar baz 123")
+        self.assertEqual(result, "foo_BarBaz123")
+
+# }}} class Test_lowerCamelCase
+
 class Test_product(unittest.TestCase): # {{{
 
     def test_Int0(self):

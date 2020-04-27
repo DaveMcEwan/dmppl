@@ -41,7 +41,7 @@ import serial
 
 # git clone https://github.com/DaveMcEwan/dmppl.git && pip install -e ./dmppl
 from dmppl.base import run, verb, dbg
-from dmppl.bytePipe import BpAddrs, BpAddrValues, BpMem, \
+from dmppl.bytePipe import BpMem, \
     bpReadSequential, bpWriteSequential, bpPrintMem, bpAddrValuesToMem
 
 __version__ = "0.1.0"
@@ -88,7 +88,11 @@ def uploadBitfile(bitfile): # {{{
     return p.returncode
 # }}} def uploadBitfile
 
-def actionBits(rd, wr, mem): # {{{
+def actionBits(device): # {{{
+    rd:Callable = functools.partial(bpReadSequential, device)
+    wr:Callable = functools.partial(bpWriteSequential, device)
+    mem:Callable = bpAddrValuesToMem
+
     verb("Writing ones to all register locations...", end='')
     _ = mem( wr(list((addr, 0xff) for addr in range(128))) )
     verb("Done")
@@ -108,7 +112,11 @@ def actionBits(rd, wr, mem): # {{{
     return # No return value
 # }}} def actionBits
 
-def actionDump(rd, wr, mem): # {{{
+def actionDump(device): # {{{
+    rd:Callable = functools.partial(bpReadSequential, device)
+    wr:Callable = functools.partial(bpWriteSequential, device)
+    mem:Callable = bpAddrValuesToMem
+
     verb("Reading all register locations...", end='')
     init0:BpMem = mem( rd(list(range(128))) )
     verb("Done")
@@ -118,27 +126,31 @@ def actionDump(rd, wr, mem): # {{{
     return # No return value
 # }}} def actionDump
 
-def actionTest(rd, wr, mem): # {{{
+def actionTest(device): # {{{
+    rd:Callable = functools.partial(bpReadSequential, device)
+    wr:Callable = functools.partial(bpWriteSequential, device)
+    mem:Callable = bpAddrValuesToMem
+
     verb("Reading all register locations...", end='')
     init0:BpMem = mem( rd(list(range(128))) )
     verb("Done")
     bpPrintMem("Initial values", init0)
 
     verb("Writing ones to all register locations...", end='')
-    init1:BpMem = mem( wr(list((addr, 0xff) for addr in range(128))) )
+    init1:BpMem = mem( wr(list((addr, 0xff) for addr in range(1, 128))) )
     verb("Done")
     bpPrintMem("Initial values (again)", init1)
     verb("Checking previous unchanged...", end='')
-    assert all((i0 == i1) for i0,i1 in zip(init0, init1))
+    assert all((i0 == i1) for i0,i1 in zip(init0[1:], init1[1:])), (init0, init1)
     verb("Done")
 
     verb("Writing zeros to all register locations...", end='')
-    ones:BpMem = mem( wr(list((addr, 0x00) for addr in range(128))) )
+    ones:BpMem = mem( wr(list((addr, 0x00) for addr in range(1, 128))) )
     verb("Done")
     bpPrintMem("Ones", ones)
 
     verb("Reading all register locations...", end='')
-    zeros:BpMem = mem( rd(list(range(128))) )
+    zeros:BpMem = mem( rd(list(range(1, 128))) )
     verb("Checking writable bits...", end='')
     symdiff:BpMem = cast(BpMem, tuple(o ^ z for o,z in zip(ones, zeros)))
     verb("Done")
@@ -239,11 +251,7 @@ def main(args) -> int: # {{{
     # with the state machine.
     verb("Connecting to device %s" % devicePath)
     with serial.Serial(devicePath, timeout=1.0, write_timeout=1.0) as device:
-        rd:Callable = functools.partial(bpReadSequential, device)
-        wr:Callable = functools.partial(bpWriteSequential, device)
-        mem:Callable = bpAddrValuesToMem
-
-        actions[args.action](rd, wr, mem)
+        actions[args.action](device)
 
     return 0
 # }}} def main

@@ -51,7 +51,7 @@ class Borg: # {{{
     Useful to avoid passing around large data stuctures.
     '''
 
-    _shared_state = {}
+    _shared_state = {} # type: ignore
 
     def __init__(self):
         self.__dict__ = self._shared_state
@@ -540,7 +540,9 @@ def verb(msg='', end='\n', sv_tm=False, rpt_tm=False): # {{{
     if sv_tm:
         verb.tm_saved = time.time()
 # }}} def verb
-verb.flag = False # Initialise flag to quiet.
+
+# Initialise flag to quiet.
+verb.flag = False # type: ignore
 
 def dbg(x='', *args, **kwargs): # {{{
     '''Print a debug message to STDERR.

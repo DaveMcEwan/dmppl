@@ -1,29 +1,37 @@
 
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, \
-    Tuple, Union, cast
+import itertools
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, \
+    Sequence, Tuple, Union, cast
+
+# mypy bytePipe.py
 
 # {{{ types
 
-BpAddrs = Sequence[int]
-BpAddrValues = Sequence[Tuple[int, int]]
+BpAddr = int
+BpValue = int
+BpAddrs = Sequence[BpAddr]
+BpValues = Sequence[BpValue]
+BpAddrValue = Tuple[BpAddr, BpValue]
+BpAddrValues = Sequence[BpAddrValue]
 
 # Specific type for the values of the whole addressable range (128B).
-BpMem = Tuple[int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int,
-              int, int, int, int, int, int, int, int]
+BpMem = \
+    Tuple[BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue,
+          BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue, BpValue]
 
 # }}} types
 

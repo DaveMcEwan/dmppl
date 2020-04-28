@@ -155,8 +155,8 @@ def bpReadPoll(device, addrs:BpAddrs) -> Iterator[BpAddrValue]: # {{{
 
 # }}} def bpReadPoll
 
-def bpReadBurst(device, addr:int, burstSize:int) -> BpValues: # {{{
-    '''Perform a burst read of up to 255 bytes from the same location.
+def bpReadAddr(device, addr:int, nBytes:int) -> BpValues: # {{{
+    '''Perform a stream of burst reads from the same location.
 
     It is intended that some locations are backed by a FIFO, so this allows the
     bandwidth of the underlying channel (USB, RS232, I2C, SPI, etc) to be used
@@ -164,30 +164,82 @@ def bpReadBurst(device, addr:int, burstSize:int) -> BpValues: # {{{
     The underlying channel is assumed to produce data in quantites of whole
     bytes.
     '''
-
-    assert isinstance(burstSize, int), (type(burstSize), burstSize)
-    assert 1 <= burstSize <= 255
-
-    # Initialize burst downcounter.
-    addrValue0:BpAddrValue = bpWriteSequential(device, [(0, burstSize)])[0]
-    value0:BpValue = addrValue0[1]
-
-    # Send read command.
     assert isinstance(addr, int), (type(addr), addr)
-    assert 0 <= addr < 128, addr
-    assert 1 == device.write(bytes([addr]))
+    assert 1 <= addr < 128, addr
 
-    # Retreive bytes.
-    bs = device.read(burstSize)
-    assert (burstSize+1) == len(bs), (burstSize, len(bs), bs)
-    assert value0 == ord(bs[0])
+    assert isinstance(nBytes, int), (type(nBytes), nBytes)
+    assert 0 <= nBytes, nBytes
 
-    # Drop the first byte which is the config/status value at address 0.
-    ret = tuple([ord(b) for b in bs][1:])
-    assert burstSize == len(ret), (burstSize, len(ret), ret)
+    maxBurstRd = 255
 
-    return ret
-# }}} def bpReadBurst
+    nMaxBursts, lastLength = divmod(nBytes, maxBurstRd)
+    assert lastLength < 255
+
+    ret_ = []
+    for _ in range(nMaxBursts):
+
+        # Initialize burst downcounter.
+        addrValue0:BpAddrValue = bpWriteSequential(device, [(0, maxBurstRd)])[0]
+        value0:BpValue = addrValue0[1]
+
+        # Send read command.
+        assert 1 == device.write(bytes([addr]))
+
+        # Retreive bytes.
+        bs = device.read(maxBurstRd+1)
+        assert (maxBurstRd+1) == len(bs), (maxBurstRd+1, len(bs), bs)
+        assert value0 == int(bs[0])
+
+        # Drop the first byte which is the config/status value at address 0.
+        r = [int(b) for b in bs][1:]
+        assert maxBurstRd == len(r), (maxBurstRd, len(r), r)
+
+        ret_ += r
+
+    # Burst overhead is nBytes+5.
+    # Single overhead is nBytes*2, (+1 if address is not setup).
+    minEfficentBurst = 5
+
+    if 0 == lastLength:
+        pass
+
+    elif lastLength >= minEfficentBurst:
+        # Another burst
+
+        # Initialize burst downcounter.
+        addrValue0:BpAddrValue = bpWriteSequential(device, [(0, lastLength)])[0]
+        value0:BpValue = addrValue0[1]
+
+        # Send read command.
+        assert 1 == device.write(bytes([addr]))
+
+        # Retreive bytes.
+        bs = device.read(lastLength+1)
+        assert (lastLength+1) == len(bs), (lastLength+1, len(bs), bs)
+        assert value0 == int(bs[0])
+
+        # Drop the first byte which is the config/status value at address 0.
+        r = [int(b) for b in bs][1:]
+        assert lastLength == len(r), (lastLength, len(r), r)
+
+        ret_ += r
+
+    elif nMaxBursts != 0:
+        # Sequential, where address has already been setup.
+        for _ in range(lastLength):
+            # Send read command
+            assert 1 == device.write(bytes([addr]))
+
+            # Retreive single byte.
+            ret_ += [int(b) for b in device.read(1)]
+
+    else:
+        addrValues = bpReadSequential(device, [addr]*lastLength)
+        ret_ += [v for a,v in addrValues]
+
+    assert nBytes == len(ret_), (nBytes, len(ret_), ret_)
+    return ret_
+# }}} def bpReadAddr
 
 def bpPrintMem(title:str, mem:BpMem) -> None: # {{{
 

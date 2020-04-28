@@ -42,7 +42,8 @@ import serial
 # git clone https://github.com/DaveMcEwan/dmppl.git && pip install -e ./dmppl
 from dmppl.base import run, verb, dbg
 from dmppl.bytePipe import BpMem, \
-    bpReset, bpReadSequential, bpWriteSequential, bpPrintMem, bpAddrValuesToMem
+    bpReadSequential, bpWriteSequential, bpReadAddr, \
+    bpReset, bpPrintMem, bpAddrValuesToMem
 
 __version__ = "0.1.0"
 
@@ -200,6 +201,20 @@ def actionPoke(device, args): # {{{
     return # No return value
 # }}} def actionPoke
 
+def actionGet(device, args): # {{{
+
+    addr = abs(int(args.addr)) % 128
+    nBytes = abs(int(args.nBytes))
+    fname = args.file
+
+    verb("Reading %dB @%d into %s..." % (nBytes, addr, fname), end='')
+    with open(fname, 'wb') as fd:
+        fd.write(bytes(bpReadAddr(device, addr, nBytes)))
+    verb("Done")
+
+    return # No return value
+# }}} def actionGet
+
 def actionReset(device, _args): # {{{
 
     verb("Reseting BytePipe FSM...", end='')
@@ -235,23 +250,40 @@ argparser.add_argument("--device",
          " If None then try using environment variable `$BYTEPIPE_DEVICE`;"
          " Then try using the last item of `/dev/ttyACM*`.")
 
-def argparseInt(s): # {{{
+def argparseInt(s, width=None): # {{{
     assert isinstance(s, str), (type(s), s)
+    assert width is None or isinstance(width, int), (type(width), width)
+
+    hiOpen = None if width is None else 2**width
+
     i = int(s, 16) if s.startswith("0x") else int(s, 10)
-    if not (0 <= i < 256):
-        msg = "Integer must be in [0, 256)"
+
+    if width is None:
+        pass
+    elif not (0 <= i < hiOpen):
+        msg = "Integer must be in [0, %d)" % hiOpen
         raise argparse.ArgumentTypeError(msg)
     return i
 # }}} def argparseInt
 argparser.add_argument("-a", "--addr",
-    type=argparseInt,
+    type=functools.partial(argparseInt, width=7),
     default=0,
     help="Address for peek,poke actions. (7b)")
 
 argparser.add_argument("-d", "--data",
-    type=argparseInt,
+    type=functools.partial(argparseInt, width=8),
     default=0,
     help="Data for poke action. (8b)")
+
+argparser.add_argument("-n", "--nBytes",
+    type=argparseInt,
+    default=0,
+    help="Number of bytes to send/receive using put/get.")
+
+argparser.add_argument("-f", "--file",
+    type=str,
+    default="bp.bin",
+    help="Filepath of source/sink using put/get.")
 
 actions = {
     "bits": actionBits,
@@ -260,6 +292,7 @@ actions = {
     "reset": actionReset,
     "peek": actionPeek,
     "poke": actionPoke,
+    "get": actionGet,
 }
 argparser.add_argument("action",
     nargs='?',

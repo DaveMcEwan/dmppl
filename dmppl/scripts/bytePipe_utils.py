@@ -42,7 +42,7 @@ import serial
 # git clone https://github.com/DaveMcEwan/dmppl.git && pip install -e ./dmppl
 from dmppl.base import run, verb, dbg
 from dmppl.bytePipe import BpMem, \
-    bpReadSequential, bpWriteSequential, bpPrintMem, bpAddrValuesToMem
+    bpReset, bpReadSequential, bpWriteSequential, bpPrintMem, bpAddrValuesToMem
 
 __version__ = "0.1.0"
 
@@ -94,15 +94,15 @@ def actionBits(device): # {{{
     mem:Callable = bpAddrValuesToMem
 
     verb("Writing ones to all register locations...", end='')
-    _ = mem( wr(list((addr, 0xff) for addr in range(128))) )
+    _ = mem( wr(list((addr, 0xff) for addr in range(1, 128))) )
     verb("Done")
 
     verb("Writing zeros to all register locations...", end='')
-    ones:BpMem = mem( wr(list((addr, 0x00) for addr in range(128))) )
+    ones:BpMem = mem( wr(list((addr, 0x00) for addr in range(1, 128))) )
     verb("Done")
 
     verb("Reading all register locations...", end='')
-    zeros:BpMem = mem( rd(list(range(128))) )
+    zeros:BpMem = mem( rd(list(range(1, 128))) )
     verb("Checking writable bits...", end='')
     symdiff:BpMem = cast(BpMem, tuple(o ^ z for o,z in zip(ones, zeros)))
     verb("Done")
@@ -158,14 +158,23 @@ def actionTest(device): # {{{
     bpPrintMem("Writable bits", symdiff)
 
     verb("Writing unique values to all register locations...", end='')
-    _ = mem( wr(list((addr, addr+10) for addr in range(128))) )
+    _ = mem( wr(list((addr, addr+10) for addr in range(1, 128))) )
     verb("Reading back...", end='')
-    addrPlus10:BpMem = mem( rd(list(range(128))) )
+    addrPlus10:BpMem = mem( rd(list(range(1, 128))) )
     verb("Done")
     bpPrintMem("mem[addr] <-- (addr+10)", addrPlus10)
 
     return # No return value
 # }}} def actionTest
+
+def actionReset(device): # {{{
+
+    verb("Reseting BytePipe FSM...", end='')
+    bpReset(device)
+    verb("Done")
+
+    return # No return value
+# }}} def actionReset
 
 # {{{ argparser
 
@@ -197,6 +206,7 @@ actions = {
     "bits": actionBits,
     "dump": actionDump,
     "test": actionTest,
+    "reset": actionReset,
 }
 argparser.add_argument("action",
     nargs='?',

@@ -55,6 +55,31 @@ def bpAddrValuesToMem(addrValues:BpAddrValues) -> BpMem: # {{{
     return ret
 # }}} def bpAddrValuesToMem
 
+def bpReset(device) -> None: # {{{
+    '''Reset BytePipe FSM to a known/idle state.
+
+    Most extreme case where a write burst has been initiated and expecting
+    to receive 256 bytes.
+    These 256 bytes may be write burst data (to an unknown address), or
+    commands to read address 0 when there is no write burst outstanding.
+    To prevent buffer levels causing too much backpressure, must intersperse
+    writes with reads which are allowed to timeout.
+    '''
+
+    deviceTimeout = device.timeout
+    device.timeout = 0.01
+
+    for i in range(256):
+        try:
+            _ = bpReadSequential(device, [0])
+        except:
+            pass
+
+    device.timeout = deviceTimeout
+
+    return
+# }}} def bpReset
+
 def bpReadSequential(device, addrs:BpAddrs) -> BpAddrValues: # {{{
 
     ret_ = []

@@ -10,7 +10,7 @@
 # the SystemVerilog2005 implementation
 # The bitfile to immediately program the board with is found using the first of
 # these methods:
-# 1. Argument `-b,--bitfile`
+# 1. Argument `--bitfile`
 # 2. Environment variable `$BYTEPIPE_BITFILE`
 # 3. The last item of the list `./usbfsBpRegMem.*.bin`
 # 4. './usbfsBpRegMem.bin`
@@ -18,7 +18,7 @@
 #
 # After programming, the board presents itself as a USB serial device.
 # The device to connect to is found using the first of these methods:
-# 1. Argument `-d,--device`
+# 1. Argument `--device`
 # 2. Environment variable `$BYTEPIPE_DEVICE`
 # 3. The last item of the list `/dev/ttyACM*`
 
@@ -88,7 +88,7 @@ def uploadBitfile(bitfile): # {{{
     return p.returncode
 # }}} def uploadBitfile
 
-def actionBits(device): # {{{
+def actionBits(device, _args): # {{{
     rd:Callable = functools.partial(bpReadSequential, device)
     wr:Callable = functools.partial(bpWriteSequential, device)
     mem:Callable = bpAddrValuesToMem
@@ -112,7 +112,7 @@ def actionBits(device): # {{{
     return # No return value
 # }}} def actionBits
 
-def actionDump(device): # {{{
+def actionDump(device, _args): # {{{
     rd:Callable = functools.partial(bpReadSequential, device)
     wr:Callable = functools.partial(bpWriteSequential, device)
     mem:Callable = bpAddrValuesToMem
@@ -126,7 +126,7 @@ def actionDump(device): # {{{
     return # No return value
 # }}} def actionDump
 
-def actionTest(device): # {{{
+def actionTest(device, _args): # {{{
     rd:Callable = functools.partial(bpReadSequential, device)
     wr:Callable = functools.partial(bpWriteSequential, device)
     mem:Callable = bpAddrValuesToMem
@@ -167,7 +167,40 @@ def actionTest(device): # {{{
     return # No return value
 # }}} def actionTest
 
-def actionReset(device): # {{{
+def actionPeek(device, args): # {{{
+    rd:Callable = functools.partial(bpReadSequential, device)
+
+    addr = abs(int(args.addr)) % 128
+
+    verb("Peeking @%d..." % addr, end='')
+    addrValue:BpAddrValue = rd([addr])[0]
+    rdAddr, value = addrValue
+    assert addr == rdAddr, (addr, rdAddr)
+    verb("Done")
+
+    print("%02x" % value)
+
+    return # No return value
+# }}} def actionPeek
+
+def actionPoke(device, args): # {{{
+    wr:Callable = functools.partial(bpWriteSequential, device)
+
+    addr = abs(int(args.addr)) % 128
+    value = abs(int(args.data)) % 256
+
+    assert 0 != addr, "Writing @0 reserved for burst."
+
+    verb("Poking %d@%d..." % (value, addr), end='')
+    addrValue:BpAddrValue = wr([(addr, value)])[0]
+    rdAddr, value = addrValue
+    assert addr == rdAddr, (addr, rdAddr)
+    verb("Done")
+
+    return # No return value
+# }}} def actionPoke
+
+def actionReset(device, _args): # {{{
 
     verb("Reseting BytePipe FSM...", end='')
     bpReset(device)
@@ -182,7 +215,7 @@ argparser = argparse.ArgumentParser(
     formatter_class = argparse.ArgumentDefaultsHelpFormatter
 )
 
-argparser.add_argument("-b", "--bitfile",
+argparser.add_argument("--bitfile",
     type=str,
     default=None,
     help="Bitfile for FPGA implementing hardware."
@@ -195,26 +228,50 @@ argparser.add_argument("--no-prog",
     help="Don't attempt to program a bitfile."
          " Assume there's already a programmed device available.")
 
-argparser.add_argument("-d", "--device",
+argparser.add_argument("--device",
     type=str,
     default=None,
     help="Serial device to connect to (immediately after progrmming)."
          " If None then try using environment variable `$BYTEPIPE_DEVICE`;"
          " Then try using the last item of `/dev/ttyACM*`.")
 
+def argparseInt(s): # {{{
+    assert isinstance(s, str), (type(s), s)
+    i = int(s, 16) if s.startswith("0x") else int(s, 10)
+    if not (0 <= i < 256):
+        msg = "Integer must be in [0, 256)"
+        raise argparse.ArgumentTypeError(msg)
+    return i
+# }}} def argparseInt
+argparser.add_argument("-a", "--addr",
+    type=argparseInt,
+    default=0,
+    help="Address for peek,poke actions. (7b)")
+
+argparser.add_argument("-d", "--data",
+    type=argparseInt,
+    default=0,
+    help="Data for poke action. (8b)")
+
 actions = {
     "bits": actionBits,
     "dump": actionDump,
     "test": actionTest,
     "reset": actionReset,
+    "peek": actionPeek,
+    "poke": actionPoke,
 }
 argparser.add_argument("action",
     nargs='?',
     choices=actions.keys(),
     default="bits",
-    help="Perform a full test,"
-         " just dump the memory contents,"
-         " or identify all writable bits.")
+    help="Perform an action:"
+         " Attempt to identify writable bits;"
+         " Dump the contents of each location;"
+         " Run a test;"
+         " Reset the BytePipe FSM;"
+         " Peek the value at --addr;"
+         " Poke the value from --data to --addr;")
 
 # }}} argparser
 
@@ -261,7 +318,7 @@ def main(args) -> int: # {{{
     # with the state machine.
     verb("Connecting to device %s" % devicePath)
     with serial.Serial(devicePath, timeout=1.0, write_timeout=1.0) as device:
-        actions[args.action](device)
+        actions[args.action](device, args)
 
     return 0
 # }}} def main

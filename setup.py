@@ -205,6 +205,7 @@ setup(
             "parvec=dmppl.scripts.parvec:entryPoint",
             "beamer-times=dmppl.scripts.beamer_times:entryPoint",
             "svg2png=dmppl.scripts.svg2png:entryPoint",
+            "plotCsv=dmppl.scripts.plotCsv:entryPoint",
         ],
     },
 

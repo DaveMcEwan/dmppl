@@ -127,46 +127,19 @@ def actionDump(device, _args): # {{{
     return # No return value
 # }}} def actionDump
 
-def actionTest(device, _args): # {{{
-    rd:Callable = functools.partial(bpReadSequential, device)
-    wr:Callable = functools.partial(bpWriteSequential, device)
-    mem:Callable = bpAddrValuesToMem
+def actionGet(device, args): # {{{
 
-    verb("Reading all register locations...", end='')
-    init0:BpMem = mem( rd(list(range(128))) )
-    verb("Done")
-    bpPrintMem("Initial values", init0)
+    addr = abs(int(args.addr)) % 128
+    nBytes = abs(int(args.nBytes))
+    fname = args.file
 
-    verb("Writing ones to all register locations...", end='')
-    init1:BpMem = mem( wr(list((addr, 0xff) for addr in range(1, 128))) )
+    verb("Reading %dB @%d into %s..." % (nBytes, addr, fname), end='')
+    with open(fname, 'wb') as fd:
+        fd.write(bytes(bpReadAddr(device, addr, nBytes)))
     verb("Done")
-    bpPrintMem("Initial values (again)", init1)
-    verb("Checking previous unchanged...", end='')
-    assert all((i0 == i1) for i0,i1 in zip(init0[1:], init1[1:])), (init0, init1)
-    verb("Done")
-
-    verb("Writing zeros to all register locations...", end='')
-    ones:BpMem = mem( wr(list((addr, 0x00) for addr in range(1, 128))) )
-    verb("Done")
-    bpPrintMem("Ones", ones)
-
-    verb("Reading all register locations...", end='')
-    zeros:BpMem = mem( rd(list(range(1, 128))) )
-    verb("Checking writable bits...", end='')
-    symdiff:BpMem = cast(BpMem, tuple(o ^ z for o,z in zip(ones, zeros)))
-    verb("Done")
-    bpPrintMem("Zeros", zeros)
-    bpPrintMem("Writable bits", symdiff)
-
-    verb("Writing unique values to all register locations...", end='')
-    _ = mem( wr(list((addr, addr+10) for addr in range(1, 128))) )
-    verb("Reading back...", end='')
-    addrPlus10:BpMem = mem( rd(list(range(1, 128))) )
-    verb("Done")
-    bpPrintMem("mem[addr] <-- (addr+10)", addrPlus10)
 
     return # No return value
-# }}} def actionTest
+# }}} def actionGet
 
 def actionPeek(device, args): # {{{
     rd:Callable = functools.partial(bpReadSequential, device)
@@ -201,20 +174,6 @@ def actionPoke(device, args): # {{{
     return # No return value
 # }}} def actionPoke
 
-def actionGet(device, args): # {{{
-
-    addr = abs(int(args.addr)) % 128
-    nBytes = abs(int(args.nBytes))
-    fname = args.file
-
-    verb("Reading %dB @%d into %s..." % (nBytes, addr, fname), end='')
-    with open(fname, 'wb') as fd:
-        fd.write(bytes(bpReadAddr(device, addr, nBytes)))
-    verb("Done")
-
-    return # No return value
-# }}} def actionGet
-
 def actionReset(device, _args): # {{{
 
     verb("Reseting BytePipe FSM...", end='')
@@ -223,6 +182,49 @@ def actionReset(device, _args): # {{{
 
     return # No return value
 # }}} def actionReset
+
+def actionTest(device, _args): # {{{
+    rd:Callable = functools.partial(bpReadSequential, device)
+    wr:Callable = functools.partial(bpWriteSequential, device)
+    mem:Callable = bpAddrValuesToMem
+
+    verb("Reading all register locations...", end='')
+    init0:BpMem = mem( rd(list(range(128))) )
+    verb("Done")
+    bpPrintMem("Initial values", init0)
+
+    verb("Writing ones to all register locations...", end='')
+    init1:BpMem = mem( wr(list((addr, 0xff) for addr in range(1, 128))) )
+    verb("Done")
+    bpPrintMem("Initial values (again)", init1)
+    verb("Checking previous unchanged...", end='')
+    allUnchanged:bool = all((i0 == i1) for i0,i1 in zip(init0[1:], init1[1:]))
+    verb("Done")
+    if not allUnchanged:
+        verb("Warning: Some values changed!")
+
+    verb("Writing zeros to all register locations...", end='')
+    ones:BpMem = mem( wr(list((addr, 0x00) for addr in range(1, 128))) )
+    verb("Done")
+    bpPrintMem("Ones", ones)
+
+    verb("Reading all register locations...", end='')
+    zeros:BpMem = mem( rd(list(range(1, 128))) )
+    verb("Checking writable bits...", end='')
+    symdiff:BpMem = cast(BpMem, tuple(o ^ z for o,z in zip(ones, zeros)))
+    verb("Done")
+    bpPrintMem("Zeros", zeros)
+    bpPrintMem("Writable bits", symdiff)
+
+    verb("Writing unique values to all register locations...", end='')
+    _ = mem( wr(list((addr, addr+10) for addr in range(1, 128))) )
+    verb("Reading back...", end='')
+    addrPlus10:BpMem = mem( rd(list(range(1, 128))) )
+    verb("Done")
+    bpPrintMem("mem[addr] <-- (addr+10)", addrPlus10)
+
+    return # No return value
+# }}} def actionTest
 
 # {{{ argparser
 
@@ -288,11 +290,11 @@ argparser.add_argument("-f", "--file",
 actions = {
     "bits": actionBits,
     "dump": actionDump,
-    "test": actionTest,
-    "reset": actionReset,
+    "get": actionGet,
     "peek": actionPeek,
     "poke": actionPoke,
-    "get": actionGet,
+    "reset": actionReset,
+    "test": actionTest,
 }
 argparser.add_argument("action",
     nargs='?',

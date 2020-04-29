@@ -205,7 +205,7 @@ def _bpWriteBurst(device, addr:int, nBytes:int, data:BpValues) -> BpValue: # {{{
     return ret
 # }}} def _bpWriteBurst
 
-def bpReadAddr(device, addr:int, nBytes:int) -> BpValues: # {{{
+def bpReadAddr(device, addr:int, nBytes:int, recordTime:bool=False) -> BpValues: # {{{
     '''Perform a stream of burst reads from the same location.
 
     It is intended that some locations are backed by a FIFO, so this allows the
@@ -225,9 +225,18 @@ def bpReadAddr(device, addr:int, nBytes:int) -> BpValues: # {{{
     nMaxBursts, lastLength = divmod(nBytes, maxBurstRd)
     assert lastLength < maxBurstRd
 
+    if recordTime:
+        from time import time_ns # Python3.7+
+        bytesDone:int = 0
+        fd = open("bpRecordTime.csv", 'w')
+
     ret_ = []
     for _ in range(nMaxBursts):
         ret_ += _bpReadBurst(device, addr, maxBurstRd)
+
+        if recordTime:
+            bytesDone += maxBurstRd
+            fd.write("%d,%d\n" % (time_ns(), bytesDone))
 
     # Burst overhead is nBytes+5.
     # Single overhead is nBytes*2, (+1 if address is not setup).
@@ -253,11 +262,17 @@ def bpReadAddr(device, addr:int, nBytes:int) -> BpValues: # {{{
         addrValues = bpReadSequential(device, [addr]*lastLength)
         ret_ += [v for a,v in addrValues]
 
+    if recordTime:
+        if 0 < lastLength:
+            bytesDone += lastLength
+            fd.write("%d,%d\n" % (time_ns(), bytesDone))
+        fd.close()
+
     assert nBytes == len(ret_), (nBytes, len(ret_), ret_)
     return ret_
 # }}} def bpReadAddr
 
-def bpWriteAddr(device, addr:int, nBytes:int, data) -> None: # {{{
+def bpWriteAddr(device, addr:int, nBytes:int, data, recordTime:bool=False) -> None: # {{{
     '''Perform a stream of burst writes to the same location.
 
     It is intended that some locations are backed by a FIFO, so this allows the
@@ -280,6 +295,11 @@ def bpWriteAddr(device, addr:int, nBytes:int, data) -> None: # {{{
     # Convert input data to iterator.
     d = iter(data)
 
+    if recordTime:
+        from time import time_ns # Python3.7+
+        bytesDone:int = 0
+        fd = open("bpRecordTime.csv", 'w')
+
     ret_ = []
     for _ in range(nMaxBursts):
 
@@ -287,6 +307,10 @@ def bpWriteAddr(device, addr:int, nBytes:int, data) -> None: # {{{
         bs = [next(d) for _ in range(maxBurstWr)]
 
         _ = _bpWriteBurst(device, addr, maxBurstWr, bs)
+
+        if recordTime:
+            bytesDone += maxBurstWr
+            fd.write("%d,%d\n" % (time_ns(), bytesDone))
 
     # Burst overhead is nBytes+5.
     # Single overhead is nBytes*3.
@@ -306,6 +330,12 @@ def bpWriteAddr(device, addr:int, nBytes:int, data) -> None: # {{{
     else:
         addrValues = [(addr, next(d)) for _ in range(lastLength)]
         _ = bpWriteSequential(device, addrValues)
+
+    if recordTime:
+        if 0 < lastLength:
+            bytesDone += lastLength
+            fd.write("%d,%d\n" % (time_ns(), bytesDone))
+        fd.close()
 
     return # No return value
 # }}} def bpWriteAddr

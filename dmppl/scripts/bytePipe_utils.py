@@ -136,7 +136,7 @@ def actionGet(device, args): # {{{
 
     verb("Reading %dB @%d to %s..." % (nBytes, addr, fname), end='')
     with open(fname, 'wb') as fd:
-        fd.write(bytes(bpReadAddr(device, addr, nBytes)))
+        fd.write(bytes(bpReadAddr(device, addr, nBytes, args.record_time)))
     verb("Done")
 
     return # No return value
@@ -183,7 +183,7 @@ def actionPut(device, args): # {{{
 
     verb("Writing %dB @%d from %s..." % (nBytes, addr, fname), end='')
     with open(fname, 'rb') as fd:
-        bpWriteAddr(device, addr, nBytes, fd.read(nBytes))
+        bpWriteAddr(device, addr, nBytes, fd.read(nBytes), args.record_time)
     verb("Done")
 
     return # No return value
@@ -301,6 +301,10 @@ argparser.add_argument("-f", "--file",
     type=str,
     default="bp.bin",
     help="Filepath of source/sink using put/get.")
+
+argparser.add_argument("--record-time",
+    action="store_true",
+    help="Record progress for put/get to `bpRecordTime.csv`.")
 
 actions = {
     "bits": actionBits,

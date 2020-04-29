@@ -80,17 +80,21 @@ def bpReset(device) -> None: # {{{
     return
 # }}} def bpReset
 
+def _bpGetValue(device) -> BpValue: # {{{
+    return int(device.read(1)[0])
+# }}} def _bpGetValue
+
 def bpReadSequential(device, addrs:BpAddrs) -> BpAddrValues: # {{{
 
     ret_ = []
     for i,addr in enumerate(addrs):
 
-        # Send read command
+        # Send read command.
         assert isinstance(addr, int), (type(addr), addr)
         assert 0 <= addr < 128, (i, addr)
         assert 1 == device.write(bytes([addr]))
 
-        value:int = ord(device.read(1))
+        value:int = _bpGetValue(device)
 
         # First return value is discarded.
         if 0 == i:
@@ -100,7 +104,7 @@ def bpReadSequential(device, addrs:BpAddrs) -> BpAddrValues: # {{{
 
     # Last address/value.
     assert 1 == device.write(bytes([addrs[-1]]))
-    ret_.append((addrs[-1], ord(device.read(1))))
+    ret_.append((addrs[-1], _bpGetValue(device)))
 
     # Finalize return value.
     ret = tuple(ret_)
@@ -117,12 +121,12 @@ def bpWriteSequential(device, addrValues:BpAddrValues) -> BpAddrValues: # {{{
     ret_ = []
     for i,(addr,value) in enumerate(addrValues):
 
-        # Send write command
+        # Send write command.
         assert isinstance(addr, int), (type(addr), addr)
         assert 0 <= addr < 128, (i, addr)
         assert 2 == device.write(bytes([addr + 128, value]))
 
-        ret_.append((addr, ord(device.read(1))))
+        ret_.append((addr, _bpGetValue(device)))
 
     # Finalize return value.
     ret:BpAddrValues = tuple(ret_)
@@ -144,7 +148,7 @@ def bpReadPoll(device, addrs:BpAddrs) -> Iterator[BpAddrValue]: # {{{
         assert 0 <= addr < 128, (i, addr)
         assert 1 == device.write(bytes([addr]))
 
-        value:int = ord(device.read(1))
+        value:int = _bpGetValue(device)
 
         # First return value is discarded.
         if 0 == i:
@@ -180,6 +184,26 @@ def _bpReadBurst(device, addr:int, nBytes:int) -> BpValues: # {{{
 
     return ret
 # }}} def _bpReadBurst
+
+def _bpWriteBurst(device, addr:int, nBytes:int, data:BpValues) -> BpValue: # {{{
+    assert isinstance(addr, int), (type(addr), addr)
+    assert 1 <= addr < 128, addr
+
+    assert isinstance(nBytes, int), (type(nBytes), nBytes)
+    assert 0 <= nBytes <= 256, nBytes
+
+    # Initialize burst downcounter.
+    addrValue0:BpAddrValue = bpWriteSequential(device, [(0, nBytes-1)])[0]
+    value0:BpValue = addrValue0[1]
+
+    # Send write command and burst data.
+    assert (nBytes+1) == device.write(bytes([addr + 128] + data[:nBytes+1]))
+
+    # Retreive last returned byte.
+    ret:int = _bpGetValue(device)
+
+    return ret
+# }}} def _bpWriteBurst
 
 def bpReadAddr(device, addr:int, nBytes:int) -> BpValues: # {{{
     '''Perform a stream of burst reads from the same location.
@@ -223,7 +247,7 @@ def bpReadAddr(device, addr:int, nBytes:int) -> BpValues: # {{{
             assert 1 == device.write(bytes([addr]))
 
             # Retreive single byte.
-            ret_ += [int(b) for b in device.read(1)]
+            ret_.append(_bpGetValue(device))
 
     else:
         addrValues = bpReadSequential(device, [addr]*lastLength)
@@ -232,6 +256,59 @@ def bpReadAddr(device, addr:int, nBytes:int) -> BpValues: # {{{
     assert nBytes == len(ret_), (nBytes, len(ret_), ret_)
     return ret_
 # }}} def bpReadAddr
+
+def bpWriteAddr(device, addr:int, nBytes:int, data) -> None: # {{{
+    '''Perform a stream of burst writes to the same location.
+
+    It is intended that some locations are backed by a FIFO, so this allows the
+    bandwidth of the underlying channel (USB, RS232, I2C, SPI, etc) to be used
+    efficiently.
+    The underlying channel is assumed to produce data in quantites of whole
+    bytes.
+    '''
+    assert isinstance(addr, int), (type(addr), addr)
+    assert 1 <= addr < 128, addr
+
+    assert isinstance(nBytes, int), (type(nBytes), nBytes)
+    assert 0 <= nBytes, nBytes
+
+    maxBurstWr = 256
+
+    nMaxBursts, lastLength = divmod(nBytes, maxBurstWr)
+    assert lastLength < maxBurstWr
+
+    # Convert input data to iterator.
+    d = iter(data)
+
+    ret_ = []
+    for _ in range(nMaxBursts):
+
+        # Retreive bytes from iterator source.
+        bs = [next(d) for _ in range(maxBurstWr)]
+
+        _ = _bpWriteBurst(device, addr, maxBurstWr, bs)
+
+    # Burst overhead is nBytes+5.
+    # Single overhead is nBytes*3.
+    minEfficentBurst = 3
+
+    if 0 == lastLength:
+        pass
+
+    elif lastLength >= minEfficentBurst:
+        # Another burst.
+
+        # Retreive bytes from iterator source.
+        bs = [next(d) for _ in range(lastLength)]
+
+        _ = _bpWriteBurst(device, addr, lastLength, bs)
+
+    else:
+        addrValues = [(addr, next(d)) for _ in range(lastLength)]
+        _ = bpWriteSequential(device, addrValues)
+
+    return # No return value
+# }}} def bpWriteAddr
 
 def bpPrintMem(title:str, mem:BpMem) -> None: # {{{
 

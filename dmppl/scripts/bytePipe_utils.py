@@ -42,7 +42,7 @@ import serial
 # git clone https://github.com/DaveMcEwan/dmppl.git && pip install -e ./dmppl
 from dmppl.base import run, verb, dbg
 from dmppl.bytePipe import BpMem, \
-    bpReadSequential, bpWriteSequential, bpReadAddr, \
+    bpReadSequential, bpWriteSequential, bpReadAddr, bpWriteAddr, \
     bpReset, bpPrintMem, bpAddrValuesToMem
 
 __version__ = "0.1.0"
@@ -129,11 +129,12 @@ def actionDump(device, _args): # {{{
 
 def actionGet(device, args): # {{{
 
+
     addr = abs(int(args.addr)) % 128
     nBytes = abs(int(args.nBytes))
     fname = args.file
 
-    verb("Reading %dB @%d into %s..." % (nBytes, addr, fname), end='')
+    verb("Reading %dB @%d to %s..." % (nBytes, addr, fname), end='')
     with open(fname, 'wb') as fd:
         fd.write(bytes(bpReadAddr(device, addr, nBytes)))
     verb("Done")
@@ -173,6 +174,20 @@ def actionPoke(device, args): # {{{
 
     return # No return value
 # }}} def actionPoke
+
+def actionPut(device, args): # {{{
+
+    addr = abs(int(args.addr)) % 128
+    nBytes = abs(int(args.nBytes))
+    fname = args.file
+
+    verb("Writing %dB @%d from %s..." % (nBytes, addr, fname), end='')
+    with open(fname, 'rb') as fd:
+        bpWriteAddr(device, addr, nBytes, fd.read(nBytes))
+    verb("Done")
+
+    return # No return value
+# }}} def actionPut
 
 def actionReset(device, _args): # {{{
 
@@ -293,6 +308,7 @@ actions = {
     "get": actionGet,
     "peek": actionPeek,
     "poke": actionPoke,
+    "put": actionPut,
     "reset": actionReset,
     "test": actionTest,
 }

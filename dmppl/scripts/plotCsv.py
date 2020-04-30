@@ -65,6 +65,16 @@ argparser.add_argument("--ylabel",
     type=str,
     default=None)
 
+argparser.add_argument("--xlim",
+    type=str,
+    default=None,
+    help="Limits for X-axis like '0.1,5.5'.")
+
+argparser.add_argument("--ylim",
+    type=str,
+    default=None,
+    help="Limits for Y-axis like '0.1,5.5'.")
+
 argparser.add_argument("--baseX",
     action="store_true",
     help="Set --addX to negative top value of left column.")
@@ -143,6 +153,14 @@ def main(args) -> int: # {{{
 
     if args.ylabel:
         plt.ylabel(args.ylabel)
+
+    if args.xlim:
+        xLo, xHi = args.xlim.split(',')
+        plt.xlim(float(xLo), float(xHi))
+
+    if args.ylim:
+        yLo, yHi = args.ylim.split(',')
+        plt.ylim(float(yLo), float(yHi))
 
     if args.title:
         plt.title(args.title)

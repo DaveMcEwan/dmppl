@@ -39,7 +39,11 @@ argparser.add_argument("--title",
 
 argparser.add_argument("--pdf",
     action="store_true",
-    help="Create PDF instead of PNG.")
+    help="Create PDF as well as PNG.")
+
+argparser.add_argument("--svg",
+    action="store_true",
+    help="Create SVG as well as PNG.")
 
 argparser.add_argument("--markers",
     type=str,
@@ -80,9 +84,6 @@ def main(args) -> int: # {{{
     '''
     '''
 
-    fnamePng = fnameAppendExt(args.output, "png")
-    fnamePdf = fnameAppendExt(args.output, "pdf")
-
     fignum = 0
 
     # figsize used to set dimensions in inches.
@@ -97,9 +98,11 @@ def main(args) -> int: # {{{
     if args.ylabel:
         plt.ylabel(args.ylabel)
 
-    if args.xlim:
-        xLo, xHi = args.xlim.split(',')
-        plt.xlim(float(xLo), float(xHi))
+    _xLo, _xHi = args.xlim.split(',')
+    xLo, xHi = float(_xLo), float(_xHi)
+    plt.xlim(xLo, xHi)
+
+    plt.xticks(list(range(int(xLo), int(xHi)+1, 8)))
 
     if args.ylim:
         yLo, yHi = args.ylim.split(',')
@@ -112,15 +115,15 @@ def main(args) -> int: # {{{
 
     dataset = np.fromfile(args.input, dtype=np.uint8)
 
-
-    plt.xticks(list(range(0, 256, 8)))
     sns.distplot(dataset, bins=list(range(256)))
 
+    plt.savefig(fnameAppendExt(args.output, "png"), bbox_inches="tight")
 
     if args.pdf:
         plt.savefig(fnameAppendExt(args.output, "pdf"), bbox_inches="tight")
-    else:
-        plt.savefig(fnameAppendExt(args.output, "png"), bbox_inches="tight")
+
+    if args.svg:
+        plt.savefig(fnameAppendExt(args.output, "svg"), bbox_inches="tight")
 
     plt.close()
 

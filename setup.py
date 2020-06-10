@@ -42,8 +42,8 @@ installRequires = [
     "joblib"        "~=0.14.1", # 2019-12-10
     "numpy"         "~=1.16.5", # 2019-08-28
     "prettytable"   "~=0.7.2",  # 2013-04-07
-    "pyserial"      "==3.4",    # 2017-07-23
-    "pyyaml"        "~=20.4.0", # 2020-04-02
+    "pyserial"      "~=3.4",    # 2017-07-23
+    "pyyaml"        "~=5.3.1",  # 2020-03-18
     "toml"          "~=0.10.0", # 2018-10-04
 ]
 if vPyMajor >= 3 and vPyMinor >= 6:
@@ -56,7 +56,7 @@ if vPyMajor >= 3 and vPyMinor >= 6:
         "pydot"         "~=1.4.1",  # 2018-12-12
         "seaborn"       "~=0.10.0", # 2020-01-24
         #"tensorflow"    "~=2.0.0",  # 2019-09-30, Massive
-        "tinyprog"      "==1.0.23", # 2018-09-21
+        "tinyprog"      "==1.0.21", # 2018-08-29
     ]
 
 # Refuse to install unless the Python interpreter meets these requirements.

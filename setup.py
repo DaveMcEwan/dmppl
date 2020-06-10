@@ -8,11 +8,14 @@ https://github.com/pypa/sampleproject
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
 from os import path
+import sys
 # io.open is needed for projects that support Python 2.7
 # It ensures open() defaults to text mode with universal newlines,
 # and accepts an argument to specify the text encoding
 # Python 3 only projects can skip this import
 from io import open
+
+vPyMajor, vPyMinor, _, _, _ = sys.version_info
 
 _curd = path.abspath(path.dirname(__file__))
 
@@ -32,6 +35,41 @@ with open(_version_fname, 'r') as fd:
         if not line.startswith('#'):
             version = line.strip()
             break
+
+# All the things I want immediately available when I clone and install into
+# a new venv.
+installRequires = [
+    "joblib"        "~=0.14.1", # 2019-12-10
+    "numpy"         "~=1.16.5", # 2019-08-28
+    "prettytable"   "~=0.7.2",  # 2013-04-07
+    "pyserial"      "==3.4",    # 2017-07-23
+    "pyyaml"        "~=20.4.0", # 2020-04-02
+    "toml"          "~=0.10.0", # 2018-10-04
+]
+if vPyMajor >= 3 and vPyMinor >= 6:
+    installRequires += [
+        "coverage"      "~=5.0.4",  # 2020-03-16
+        "graphviz"      "~=0.13.2", # 2019-11-08
+        #"matplotlib"    "~=2.2.5",  # 2020-03-05, Compatible with Python2.7
+        "matplotlib"    "~=3.2.1",  # 2020-03-18
+        "mypy"          ">=0.770",  # 2020-11-03
+        "pydot"         "~=1.4.1",  # 2018-12-12
+        "seaborn"       "~=0.10.0", # 2020-01-24
+        #"tensorflow"    "~=2.0.0",  # 2019-09-30, Massive
+        "tinyprog"      "==1.0.23", # 2018-09-21
+    ]
+
+# Refuse to install unless the Python interpreter meets these requirements.
+pythonRequires = ", ".join((
+    ">=2.7",
+    "!=3.0.*",
+    "!=3.1.*",
+    "!=3.2.*",
+    "!=3.3.*",
+    "!=3.4.*",
+    #"!=3.5.*",
+    "<4",
+))
 
 # Arguments marked as "Required" below must be included for upload to PyPI.
 # Fields marked as "Optional" may be commented out.
@@ -109,7 +147,7 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
 
         # Indicate who your project is intended for
         "Intended Audience :: Developers",
@@ -125,12 +163,11 @@ setup(
         # that you indicate whether you support Python 2, Python 3 or both.
         # These classifiers are *not* checked by 'pip install'. See instead
         # 'python_requires' below.
-        "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
     ],
 
     # This field adds keywords for your project which will appear on the
@@ -155,7 +192,7 @@ setup(
     # and refuse to install the project if the version does not match. If you
     # do not support Python 2, you can simplify this to '>=3.5' or similar, see
     # https://packaging.python.org/guides/distributing-packages-using-setuptools/#python-requires
-    python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4",
+    python_requires=pythonRequires,
 
     # This field lists other packages that your project depends on to run.
     # Any package you put here will be installed by pip when your project is
@@ -163,7 +200,7 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=["numpy", "toml", "pyyaml", "pyserial"],  # Optional
+    install_requires=installRequires,  # Optional
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"

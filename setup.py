@@ -15,7 +15,7 @@ import sys
 # Python 3 only projects can skip this import
 from io import open
 
-vMajor, vMinor, _, _, _ = sys.version_info
+vPyMajor, vPyMinor, _, _, _ = sys.version_info
 
 _curd = path.abspath(path.dirname(__file__))
 
@@ -46,7 +46,7 @@ installRequires = [
     "pyyaml"        "~=20.4.0", # 2020-04-02
     "toml"          "~=0.10.0", # 2018-10-04
 ]
-if vMajor >= 3 and vMinor >= 6:
+if vPyMajor >= 3 and vPyMinor >= 6:
     installRequires += [
         "coverage"      "~=5.0.4",  # 2020-03-16
         "graphviz"      "~=0.13.2", # 2019-11-08

@@ -255,9 +255,9 @@ argparser.add_argument("--bitfile",
          " Then try using the last item of `./usbfsBpRegMem.*.bin`;"
          " Then try using the bundled bitfile.")
 
-argparser.add_argument("--no-prog",
+argparser.add_argument("--prog",
     action="store_true",
-    help="Don't attempt to program a bitfile."
+    help="Attempt to program a bitfile."
          " Assume there's already a programmed device available.")
 
 argparser.add_argument("--device",
@@ -319,7 +319,7 @@ actions = {
 argparser.add_argument("action",
     nargs='?',
     choices=actions.keys(),
-    default="bits",
+    default="dump",
     help="Perform an action:"
          " Attempt to identify writable bits;"
          " Dump the contents of each location;"
@@ -339,9 +339,7 @@ def main(args) -> int: # {{{
 
     locale.setlocale(locale.LC_ALL, '')
 
-    if args.no_prog:
-        devicePath = getDevicePath(args.device)
-    else:
+    if args.prog:
         bitfile = getBitfilePath(args.bitfile)
         verb("Uploading bitfile %s ..." % bitfile, end='')
         assert 0 == uploadBitfile(bitfile)
@@ -367,6 +365,8 @@ def main(args) -> int: # {{{
             devicePath = maybeDevicePath_
 
         verb("Done")
+    else:
+        devicePath = getDevicePath(args.device)
 
 
     # Keep lock on device to prevent other processes from accidentally messing

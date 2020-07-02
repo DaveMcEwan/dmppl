@@ -168,7 +168,7 @@ def _bpReadBurst(device, addr:int, nBytes:int) -> BpValues: # {{{
 
     # Initialize burst downcounter.
     addrValue0:BpAddrValue = bpWriteSequential(device, [(0, nBytes)])[0]
-    value0:BpValue = addrValue0[1]
+    #value0:BpValue = addrValue0[1]
 
     # Send read command.
     assert 1 == device.write(bytes([addr]))
@@ -176,7 +176,6 @@ def _bpReadBurst(device, addr:int, nBytes:int) -> BpValues: # {{{
     # Retreive bytes.
     bs = device.read(nBytes+1)
     assert (nBytes+1) == len(bs), (nBytes+1, len(bs), bs)
-    assert value0 == int(bs[0])
 
     # Drop the first byte which is the config/status value at address 0.
     ret = [int(b) for b in bs][1:]
@@ -194,7 +193,7 @@ def _bpWriteBurst(device, addr:int, nBytes:int, data:BpValues) -> BpValue: # {{{
 
     # Initialize burst downcounter.
     addrValue0:BpAddrValue = bpWriteSequential(device, [(0, nBytes-1)])[0]
-    value0:BpValue = addrValue0[1]
+    #value0:BpValue = addrValue0[1]
 
     # Send write command and burst data.
     assert (nBytes+1) == device.write(bytes([addr + 128] + data[:nBytes+1]))

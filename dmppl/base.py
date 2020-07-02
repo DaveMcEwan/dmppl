@@ -4,6 +4,7 @@ from __future__ import print_function
 import errno
 import fileinput
 import functools
+import itertools
 import operator
 import os
 import re
@@ -268,6 +269,18 @@ def compose(f, g, unpack=False): # {{{
     return composition
 # }}} def compose
 
+def grouper(iterable, n:int, fillvalue=None):
+    '''Collect data into fixed-length chunks or blocks.
+
+    E.g.
+        grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
+
+    https://docs.python.org/3/library/itertools.html#itertools-recipes
+    NOTE: Also provided by https://pypi.org/project/more-itertools/
+    '''
+    return itertools.zip_longest(*([iter(iterable)] * n), fillvalue=fillvalue)
+# }}} def grouper
+
 def utf8NameToHtml(name): # {{{
     '''Return the HTML entity for a UTF character name.
     '''
@@ -389,10 +402,90 @@ def notCommentLine(s, c='#'): # {{{
     return not isCommentLine(s, c)
 # }}} def notCommentLine
 
-def rdLines(fname, **kwargs): # {{{
-    '''Open a file in text mode, yield lines.
+def wrLines(fname, lines, **kwargs): # {{{
+    '''Open a file in text write mode, write lines from iterator.
 
     If fname is None then use STDOUT.
+    Each line is passed through a series of filters and mappings (configurable
+    with kwargs) before being written.
+
+    Keyword arguments control behaviour:
+        expandTabs = { True | False }
+            Transform tab characters into spaces.
+        deduplicateSpaces = { True | False }
+            Collapse multiple spaces to single space.
+        rightStrip = { True | False }
+            Remove trailing whitespace.
+        leftStrip = { True | False }
+            Remove leading whitespace.
+        caseFold = { True | False }
+            Transform to lowercase but more aggressive with unicode.
+            On Python2 this only converts to lowercase.
+        lineEnd = <str>
+            Line separator string.
+        lineFlush = { True | False }
+            Force flush after each line is written.
+
+    Return tuple with number of lines written and boolean indicating true for
+    success.
+    '''
+    kwarg_expandTabs          = kwargs.get("expandTabs",          False)
+    kwarg_deduplicateSpaces   = kwargs.get("deduplicateSpaces",   False)
+    kwarg_rightStrip          = kwargs.get("rightStrip",          False)
+    kwarg_leftStrip           = kwargs.get("leftStrip",           False)
+    kwarg_caseFold            = kwargs.get("caseFold",            False)
+    kwarg_lineEnd             = kwargs.get("lineEnd",             '\n')
+    kwarg_lineFlush           = kwargs.get("lineFlush",           False)
+
+    lines_0 = (str.expandtabs(line) for line in lines) \
+        if kwarg_expandTabs else lines
+
+    lines_1 = (deduplicateSpaces(line) for line in lines_0) \
+        if kwarg_deduplicateSpaces else lines_0
+
+    lines_2 = (str.rstrip(line) for line in lines_1) \
+        if kwarg_rightStrip else lines_1
+
+    lines_3 = (str.lstrip(line) for line in lines_2) \
+        if kwarg_leftStrip else lines_2
+
+    # Python2.7 doesn't support case folding so just use lowercase
+    # which does a similar thing and will probably be good enough for
+    # many usecases.
+    # str.casefold() introduced in Python3.3
+    if kwarg_caseFold:
+        try:
+            lines_4 = (str.casefold(line) for line in lines_3)
+        except AttributeError:
+            lines_4 = (str.lower(line) for line in lines_3)
+    else:
+        lines_4 = lines_3
+
+    nLinesWritten_ = 0
+    retSuccess_ = False
+
+    try:
+        fd = sys.stdout if (fname is None) else open(fname, 'w')
+
+        for line in lines_3:
+            print(line, end=kwarg_lineEnd, file=fd, flush=kwarg_lineFlush)
+
+        if fd != sys.stdout:
+            fd.close()
+
+        retSuccess_ = True
+
+    except IOError:
+        pass
+
+    return (nLinesWritten_, retSuccess_)
+
+# }}} def wrLines
+
+def rdLines(fname, **kwargs): # {{{
+    '''Open a file in text read mode, yield lines.
+
+    If fname is None then use STDIN.
     Each line is passed through a series of filters and mappings (configurable
     with kwargs) before yielding.
 

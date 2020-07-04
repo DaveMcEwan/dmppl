@@ -269,7 +269,7 @@ def compose(f, g, unpack=False): # {{{
     return composition
 # }}} def compose
 
-def grouper(iterable, n:int, fillvalue=None):
+def grouper(iterable, n:int, fillvalue=None): # {{{
     '''Collect data into fixed-length chunks or blocks.
 
     E.g.

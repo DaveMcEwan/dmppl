@@ -15,13 +15,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-from dmppl.base import fnameAppendExt, run, verb
+from dmppl.base import fnameAppendExt, run, verb, rdLines
 
 __version__ = "0.1.0"
 
 # {{{ argparser
 
 argparser = argparse.ArgumentParser(
+    description = "plotCsv - Wrapper around np.loadtxt() for quick plotting.",
     formatter_class = argparse.ArgumentDefaultsHelpFormatter
 )
 
@@ -41,6 +42,11 @@ argparser.add_argument("--title",
 argparser.add_argument("--pdf",
     action="store_true",
     help="Create PDF instead of PNG.")
+
+argparser.add_argument("--skiprows",
+    type=int,
+    default=0,
+    help="Skip this many lines, excluding comments.")
 
 argparser.add_argument("--markers",
     type=str,
@@ -167,7 +173,10 @@ def main(args) -> int: # {{{
 
     markers = list(args.markers)
 
-    a = np.loadtxt(args.input, delimiter=',', unpack=True)
+    a = np.loadtxt(rdLines(args.input),
+                   skiprows=args.skiprows,
+                   delimiter=',',
+                   unpack=True)
 
     x = a[0]
 

@@ -244,6 +244,11 @@ setup(
             "svg2png=dmppl.scripts.svg2png:entryPoint",
             "plotCsv=dmppl.scripts.plotCsv:entryPoint",
             "plotDistBytes=dmppl.scripts.plotDistBytes:entryPoint",
+
+            # Correlator experiment included so that dmpvl can rely on these
+            # utilities and makes demos look more professional.
+            "correlator-tui=dmppl.experiments.correlator.correlator_tui:entryPoint",
+            "correlator-record=dmppl.experiments.correlator.correlator_record:entryPoint",
         ],
     },
 

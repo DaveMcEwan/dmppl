@@ -103,7 +103,7 @@ mapTuiRegToDomain_:Dict[TuiReg, str] = { # {{{
 
     # Controls register "SampleJitterExp".
     # Domain defined by HwReg.MaxSampleJitterExp
-    TuiReg.SampleJitter: "(cycles) < 2**j; j ∊ ℤ ∩ [0, %d)",
+    TuiReg.SampleJitter: "(variance) = (2**v - 1)/%d; v ∊ ℤ ∩ [0, %d]",
 
     # Controls register "LedSource".
     TuiReg.LedSource: "∊ {%s}" % ", ".join(s.name for s in LedSource),
@@ -115,7 +115,9 @@ def hwRegsToTuiRegs(hwRegs:Dict[HwReg, Any]) -> Dict[TuiReg, Any]: # {{{
 
     sampleRate = float(maxSampleRate_kHz) / 2**hwRegs[HwReg.SamplePeriodExp]
 
-    sampleJitter:Optional[int] = 2**hwRegs[HwReg.SampleJitterExp]
+    jitterNumerator:int = 2**hwRegs[HwReg.SampleJitterExp] - 1
+    jitterDenominator:int = 2**hwRegs[HwReg.MaxSampleJitterExp]
+    sampleJitter:float = jitterNumerator / jitterDenominator
 
     ret = {
         TuiReg.WindowLength: windowLength,
@@ -160,7 +162,7 @@ def updateRegs(selectIdx:int,
     elif TuiReg.SampleJitter == gr:
         n = hwRegs_[HwReg.SampleJitterExp]
         m = (n-1) if decrNotIncr else (n+1)
-        lo, hi = 0, hwRegs_[HwReg.MaxSampleJitterExp]-1
+        lo, hi = 0, hwRegs_[HwReg.MaxSampleJitterExp]
         hwRegs_[HwReg.SampleJitterExp] = max(lo, min(m, hi))
 
     elif TuiReg.LedSource == gr:
@@ -704,7 +706,7 @@ def main(args) -> int: # {{{
             TuiReg.SampleRate: mapTuiRegToDomain_[TuiReg.SampleRate] %
                 hwRegsRO[HwReg.MaxSamplePeriodExp],
             TuiReg.SampleJitter: mapTuiRegToDomain_[TuiReg.SampleJitter] %
-                hwRegsRO[HwReg.MaxSampleJitterExp],
+                (2**hwRegsRO[HwReg.MaxSampleJitterExp], hwRegsRO[HwReg.MaxSampleJitterExp]),
         })
 
 

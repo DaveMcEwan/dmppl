@@ -62,7 +62,7 @@ argparser.add_argument("-o", "--output",
     help="Output file, or STDOUT if None.")
 
 argparser.add_argument("input",
-    nargs='*',
+    nargs='?',
     type=str,
     help="Beamer/LaTeX file, or STDIN if None.")
 

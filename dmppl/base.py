@@ -2,7 +2,6 @@
 from __future__ import print_function
 
 import errno
-import fileinput
 import functools
 import itertools
 import operator
@@ -517,9 +516,10 @@ def rdLines(fname, **kwargs): # {{{
     kwarg_rightStrip          = kwargs.get("rightStrip",          True)
     kwarg_leftStrip           = kwargs.get("leftStrip",           True)
     kwarg_caseFold            = kwargs.get("caseFold",            False)
+    kwarg_raiseIOError        = kwargs.get("raiseIOError",        False)
 
     try:
-        fd_0 = sys.stdin if (fname is None) else fileinput.input(fname)
+        fd_0 = sys.stdin if (fname is None) else open(fname, 'r')
 
         _notCommentLine = functools.partial(notCommentLine, c=kwarg_commentMark)
         fd_1 = filter(_notCommentLine, fd_0) \
@@ -552,8 +552,14 @@ def rdLines(fname, **kwargs): # {{{
         for line in fd_6:
             yield line
 
-    except IOError:
-        yield None
+        if fname is not None:
+            fd_0.close()
+
+    except IOError as e:
+        if kwarg_raiseIOError:
+            raise e
+        else:
+            yield None
 
 # }}} def rdLines
 

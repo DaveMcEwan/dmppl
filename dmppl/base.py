@@ -269,7 +269,7 @@ def compose(f, g, unpack=False): # {{{
     return composition
 # }}} def compose
 
-def grouper(iterable, n:int, fillvalue=None): # {{{
+def grouper(iterable, n, fillvalue=None): # {{{
     '''Collect data into fixed-length chunks or blocks.
 
     E.g.
@@ -278,6 +278,7 @@ def grouper(iterable, n:int, fillvalue=None): # {{{
     https://docs.python.org/3/library/itertools.html#itertools-recipes
     NOTE: Also provided by https://pypi.org/project/more-itertools/
     '''
+    assert isinstance(n, int), type(n)
     return itertools.zip_longest(*([iter(iterable)] * n), fillvalue=fillvalue)
 # }}} def grouper
 

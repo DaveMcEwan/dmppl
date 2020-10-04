@@ -84,7 +84,7 @@ def main(args) -> int: # {{{
                 rightStrip=True,
                 caseFold=False,
                 raiseIOError=True)
-    regexes:List = [re.compile(line) for line in regexLines]
+    regexes:List = [re.compile(line) for line in regexLines if len(line) > 0]
     verb("Done")
 
     verb("Opening STDIN with optional whitespace preprocessing ...", end='')

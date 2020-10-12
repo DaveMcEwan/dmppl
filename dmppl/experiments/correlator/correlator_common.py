@@ -38,6 +38,8 @@ class HwReg(enum.Enum): # {{{
     SamplePeriodExp         = 11
     SampleJitterExp         = 12
     LedSource               = 13
+    XSource                 = 14
+    YSource                 = 15
 
 # }}} Enum HwReg
 mapHwAddrToHwReg:Dict[int, HwReg] = {e.value: e for e in HwReg}

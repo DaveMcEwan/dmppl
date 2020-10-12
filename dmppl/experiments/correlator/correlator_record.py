@@ -40,7 +40,8 @@ from dmppl.experiments.correlator.correlator_common import __version__, \
     getDevicePath, \
     HwReg, hwReadRegs, hwWriteRegs, \
     calc_bitsPerWindow, \
-    argparse_positiveInteger, argparse_nonNegativeReal, \
+    argparse_positiveInteger, argparse_nonNegativeInteger, \
+    argparse_nonNegativeReal, \
     argparse_WindowLengthExp, argparse_WindowShape, \
     argparse_SamplePeriodExp, argparse_SampleJitterExp, \
     argparse_LedSource
@@ -76,6 +77,9 @@ def pktLines(device, nWindows:int, hwRegs:Dict[HwReg, Any]) -> None: # {{{
         "WindowLengthExp=%d" % hwRegs[HwReg.WindowLengthExp],
         "SamplePeriodExp=%d" % hwRegs[HwReg.SamplePeriodExp],
         "SampleJitterExp=%d" % hwRegs[HwReg.SampleJitterExp],
+        "LedSource=%d"       % hwRegs[HwReg.LedSource],
+        "XSource=%d"         % hwRegs[HwReg.XSource],
+        "YSource=%d"         % hwRegs[HwReg.YSource],
     ))
     yield rpt_
 
@@ -217,6 +221,16 @@ argparser.add_argument("--init-ledSource",
     default=None,
     help="Data source for LED brightness, either string like 'Cov' or integer.")
 
+argparser.add_argument("--init-xSource",
+    type=functools.partial(argparse_nonNegativeInteger, "init-xSource"),
+    default=None,
+    help="Probe number for X input.")
+
+argparser.add_argument("--init-ySource",
+    type=functools.partial(argparse_nonNegativeInteger, "init-ySource"),
+    default=None,
+    help="Probe number for Y input.")
+
 argparser.add_argument("--prng-seed",
     type=int,
     default=None,
@@ -280,6 +294,10 @@ def main(args) -> int: # {{{
             initRegsRW[HwReg.SampleJitterExp] = args.init_sampleJitterExp
         if args.init_ledSource is not None:
             initRegsRW[HwReg.LedSource] = args.init_ledSource
+        if args.init_xSource is not None:
+            initRegsRW[HwReg.XSource] = args.init_xSource
+        if args.init_ySource is not None:
+            initRegsRW[HwReg.YSource] = args.init_ySource
 
 
         if 0 < len(initRegsRW):
@@ -310,6 +328,9 @@ def main(args) -> int: # {{{
             HwReg.WindowShape,
             HwReg.SamplePeriodExp,
             HwReg.SampleJitterExp,
+            HwReg.LedSource,
+            HwReg.XSource,
+            HwReg.YSource,
         ])
         verb("Done")
 

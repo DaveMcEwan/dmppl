@@ -47,7 +47,7 @@ from dmppl.experiments.correlator.correlator_common import __version__, \
     getBitfilePath, getDevicePath, uploadBitfile, \
     HwReg, hwReadRegs, hwWriteRegs, \
     calc_bitsPerWindow, \
-    argparse_nonNegativeReal, \
+    argparse_nonNegativeInteger, argparse_nonNegativeReal, \
     argparse_WindowLengthExp, argparse_WindowShape, \
     argparse_SamplePeriodExp, argparse_SampleJitterExp, \
     argparse_LedSource
@@ -70,6 +70,8 @@ class TuiReg(enum.Enum): # {{{
     SampleRate      = enum.auto()
     SampleJitter    = enum.auto()
     LedSource       = enum.auto()
+    XSource         = enum.auto()
+    YSource         = enum.auto()
 # }}} Enum TuiReg
 
 @enum.unique
@@ -107,6 +109,12 @@ mapTuiRegToDomain_:Dict[TuiReg, str] = { # {{{
 
     # Controls register "LedSource".
     TuiReg.LedSource: "∊ {%s}" % ", ".join(s.name for s in LedSource),
+
+    # Controls register "XSource".
+    TuiReg.XSource: "∊ ℤ ∩ [0, 255]",
+
+    # Controls register "YSource".
+    TuiReg.YSource: "∊ ℤ ∩ [0, 255]",
 } # }}}
 
 def hwRegsToTuiRegs(hwRegs:Dict[HwReg, Any]) -> Dict[TuiReg, Any]: # {{{
@@ -125,6 +133,8 @@ def hwRegsToTuiRegs(hwRegs:Dict[HwReg, Any]) -> Dict[TuiReg, Any]: # {{{
         TuiReg.SampleRate:   sampleRate,
         TuiReg.SampleJitter: sampleJitter,
         TuiReg.LedSource:    hwRegs[HwReg.LedSource],
+        TuiReg.XSource:      hwRegs[HwReg.XSource],
+        TuiReg.YSource:      hwRegs[HwReg.YSource],
     }
     return ret
 # }}} def hwRegsToTuiRegs
@@ -170,6 +180,18 @@ def updateRegs(selectIdx:int,
         m = (n-1) if decrNotIncr else (n+1)
         lo, hi = 0, 7
         hwRegs_[HwReg.LedSource] = LedSource(max(lo, min(m, hi)))
+
+    elif TuiReg.XSource == gr:
+        n = hwRegs_[HwReg.XSource]
+        m = (n-1) if decrNotIncr else (n+1)
+        lo, hi = 0, 255
+        hwRegs_[HwReg.XSource] = max(lo, min(m, hi))
+
+    elif TuiReg.YSource == gr:
+        n = hwRegs_[HwReg.YSource]
+        m = (n-1) if decrNotIncr else (n+1)
+        lo, hi = 0, 255
+        hwRegs_[HwReg.YSource] = max(lo, min(m, hi))
 
     else:
         pass
@@ -411,6 +433,8 @@ class InfoHwRegsWindow(CursesWindow): # {{{
             ("SamplePeriodExp     (RW @ %2d) = %2d", HwReg.SamplePeriodExp),
             ("SampleJitterExp     (RW @ %2d) = %2d", HwReg.SampleJitterExp),
             ("LedSource           (RW @ %2d) = %2d", HwReg.LedSource),
+            ("XSource             (RW @ %2d) = %2d", HwReg.XSource),
+            ("YSource             (RW @ %2d) = %2d", HwReg.YSource),
         )
 
         self.win.clear()
@@ -453,7 +477,7 @@ def tui(scr, deviceName, rd, wr, hwRegs): # {{{
     outstanding_ = False
     hwRegs_ = hwRegs
 
-    infoHwRegs_nLines = 10
+    infoHwRegs_nLines = 12
     infoHwRegs_lineLength = 34
     infoCalcs_nLines = 13
     nInfoLines = 3
@@ -618,6 +642,16 @@ argparser.add_argument("--init-ledSource",
     default=LedSource.WinNum,
     help="Data source for LED brightness, either string like 'Cov' or integer.")
 
+argparser.add_argument("--init-xSource",
+    type=functools.partial(argparse_nonNegativeInteger, "init-xSource"),
+    default=0,
+    help="Probe number for X input.")
+
+argparser.add_argument("--init-ySource",
+    type=functools.partial(argparse_nonNegativeInteger, "init-ySource"),
+    default=1,
+    help="Probe number for Y input.")
+
 argparser.add_argument("--prng-seed",
     type=int,
     default=0xacce55ed,
@@ -717,6 +751,8 @@ def main(args) -> int: # {{{
             HwReg.SamplePeriodExp:      args.init_samplePeriodExp,
             HwReg.SampleJitterExp:      args.init_sampleJitterExp,
             HwReg.LedSource:            args.init_ledSource,
+            HwReg.XSource:              args.init_xSource,
+            HwReg.YSource:              args.init_ySource,
         }
 
         if args.no_init:

@@ -45,7 +45,7 @@ from dmppl.experiments.correlator.correlator_common import __version__, \
     maxSampleRate_kHz, \
     WindowShape, LedSource, \
     getBitfilePath, getDevicePath, uploadBitfile, \
-    HwReg, hwReadRegs, hwWriteRegs, \
+    HwReg, hwReadRegs, hwWriteRegs, nPairDetect, \
     calc_bitsPerWindow, \
     argparse_nonNegativeInteger, argparse_nonNegativeReal, \
     argparse_WindowLengthExp, argparse_WindowShape, \
@@ -63,6 +63,7 @@ class UpdateMode(enum.Enum): # {{{
 class TuiReg(enum.Enum): # {{{
     # Software-only
     UpdateMode      = enum.auto()
+    Pair            = enum.auto()
 
     # Derived from hardware
     WindowLength    = enum.auto()
@@ -86,11 +87,17 @@ class KeyAction(enum.Enum): # {{{
 
 listTuiReg:List[TuiReg] = list(r for i,r in enumerate(TuiReg))
 
+nPair_:int = 0 # Updated by nPairDetect().
+
 # NOTE: Some values are carefully updated with string substitution on the
 # initial read of the RO registers.
 mapTuiRegToDomain_:Dict[TuiReg, str] = { # {{{
     # Controls no hardware register (TUI state only).
     TuiReg.UpdateMode: "∊ {%s}" % ", ".join(m.name for m in UpdateMode),
+
+    # Controls no hardware register (TUI state only).
+    # Domain defined by nPairDetect().
+    TuiReg.Pair: "∊ ℤ ∩ [0, %d)",
 
     # Controls register "WindowLengthExp".
     # Domain defined by HwReg.MaxWindowLengthExp
@@ -151,6 +158,12 @@ def updateRegs(selectIdx:int,
         tuiRegs_[TuiReg.UpdateMode] = UpdateMode.Interactive \
             if UpdateMode.Batch == tuiRegs_[TuiReg.UpdateMode] else \
             UpdateMode.Batch
+
+    elif TuiReg.Pair == gr:
+        n = tuiRegs_[TuiReg.Pair]
+        m = (n-1) if decrNotIncr else (n+1)
+        lo, hi = 0, nPair_ - 1
+        tuiRegs_[TuiReg.Pair] = max(lo, min(m, hi))
 
     elif TuiReg.WindowLength == gr:
         n = hwRegs_[HwReg.WindowLengthExp]
@@ -240,7 +253,7 @@ class FullWindow(CursesWindow): # {{{
         '''Draw the static title section.
         Intended to be called only once.
 
-        <appName> ... <precision> ... <devicePath>
+        <appName> ...  ... <devicePath>
         '''
 
         appName:str = "Correlator"
@@ -459,7 +472,7 @@ class InfoHwRegsWindow(CursesWindow): # {{{
     # }}} def draw
 # }}} class InfoHwRegsWindow
 
-def tui(scr, deviceName, rd, wr, hwRegs): # {{{
+def tui(scr, deviceName, rd, wr, pair, hwRegs): # {{{
     '''
     Window objects:
     - scr: All available screen space.
@@ -471,7 +484,10 @@ def tui(scr, deviceName, rd, wr, hwRegs): # {{{
     '''
 
     tuiRegs_:Dict[TuiReg, Any] = hwRegsToTuiRegs(hwRegs)
-    tuiRegs_.update({TuiReg.UpdateMode: UpdateMode.Batch})
+    tuiRegs_.update({
+        TuiReg.UpdateMode:  UpdateMode.Batch,
+        TuiReg.Pair:        pair,
+    })
     assert all(k in tuiRegs_.keys() for k in TuiReg)
     selectIdx_ = 0
     outstanding_ = False
@@ -556,12 +572,14 @@ def tui(scr, deviceName, rd, wr, hwRegs): # {{{
         isBatch = (tuiRegs_[TuiReg.UpdateMode] == UpdateMode.Batch)
         assert isBatch or isInteractive
 
+        pair = tuiRegs_[TuiReg.Pair]
+
         # Send updates to hardware and readback to ensure display matches the
         # actual values reported from hardware.
         if (isInteractive and actionIsModify) or \
            keyAction == KeyAction.SendUpdate:
-            _ = wr(hwRegs_)
-            hwRegs_:Dict[HwReg, Any] = rd(hwRegs_.keys())
+            _ = wr(pair, hwRegs_)
+            hwRegs_:Dict[HwReg, Any] = rd(pair, hwRegs_.keys())
             tuiRegs_.update(hwRegsToTuiRegs(hwRegs_))
             outstanding_ = False
         elif isBatch and actionIsModify:
@@ -657,6 +675,11 @@ argparser.add_argument("--prng-seed",
     default=0xacce55ed,
     help="Seed for xoshiro128+ PRNG used for sampling jitter.")
 
+argparser.add_argument("--pair",
+    type=functools.partial(argparse_nonNegativeInteger, "pair"),
+    default=0,
+    help="Initial pair to display, may be changed dynamically.")
+
 # }}} argparser
 
 def main(args) -> int: # {{{
@@ -723,8 +746,14 @@ def main(args) -> int: # {{{
         rd:Callable = functools.partial(hwReadRegs, rdBytePipe)
         wr:Callable = functools.partial(hwWriteRegs, wrBytePipe)
 
-        verb("Reading RO registers...", end='')
-        hwRegsRO:Dict[HwReg, Any] = rd((
+        verb("Detecting number of pairs...", end='')
+        global nPair_
+        nPair_ = nPairDetect(rd)
+        pair = args.pair if (args.pair < nPair_) else 0
+        verb("Done")
+
+        verb("Reading pair %d RO registers..." % pair, end='')
+        hwRegsRO:Dict[HwReg, Any] = rd(pair, (
             HwReg.PktfifoDepth,
             HwReg.MaxWindowLengthExp,
             HwReg.WindowPrecision,
@@ -734,7 +763,9 @@ def main(args) -> int: # {{{
         verb("Done")
 
         # Fill in missing values of parameter domains.
+        global mapTuiRegToDomain_
         mapTuiRegToDomain_.update({
+            TuiReg.Pair: mapTuiRegToDomain_[TuiReg.Pair] % nPair_,
             TuiReg.WindowLength: mapTuiRegToDomain_[TuiReg.WindowLength] %
                 hwRegsRO[HwReg.MaxWindowLengthExp],
             TuiReg.SampleRate: mapTuiRegToDomain_[TuiReg.SampleRate] %
@@ -757,13 +788,13 @@ def main(args) -> int: # {{{
 
         if args.no_init:
             verb("Reading RW registers...", end='')
-            hwRegsRW:Dict[HwReg, Any] = rd(initRegsRW.keys())
+            hwRegsRW:Dict[HwReg, Any] = rd(pair, initRegsRW.keys())
             verb("Done")
         else:
             verb("Initializing RW registers...", end='')
-            wr(initRegsRW)
+            wr(0, initRegsRW)
             verb("Checking...", end='')
-            hwRegsRW:Dict[HwReg, Any] = rd(initRegsRW.keys())
+            hwRegsRW:Dict[HwReg, Any] = rd(pair, initRegsRW.keys())
             assert all(initRegsRW[k] == v for k,v in hwRegsRW.items()), hwRegsRW
             verb("Done")
 
@@ -780,7 +811,7 @@ def main(args) -> int: # {{{
 
         try:
             verb("Starting TUI (curses)...")
-            curses.wrapper(tui, device.name, rd, wr, {**hwRegsRO, **hwRegsRW})
+            curses.wrapper(tui, device.name, rd, wr, pair, {**hwRegsRO, **hwRegsRW})
             verb("TUI Done")
         except KeyboardInterrupt:
             verb("KeyboardInterrupt. Exiting.")

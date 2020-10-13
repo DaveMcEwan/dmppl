@@ -68,6 +68,8 @@ mapHwRegToEnum = {
     HwReg.LedSource:    LedSource,
 }
 
+pairStride:int = 16
+
 def getBitfilePath(argBitfile) -> str: # {{{
 
     envBitfile = os.environ.get("CORRELATOR_BITFILE")
@@ -110,14 +112,16 @@ def uploadBitfile(bitfile): # {{{
     return p.returncode
 # }}} def uploadBitfile
 
-def hwReadRegs(rd, keys:Iterable[HwReg]) -> Dict[HwReg, Any]: # {{{
+def hwReadRegs(rd, pairNum:int, keys:Iterable[HwReg]) -> Dict[HwReg, Any]: # {{{
     '''Wrapper for reader function including checks and type conversion.
 
     Reader function must take an iterable of integers representing address,
     and return an iterable of (addr, value) pairs.
     rd :: [int] -> [(int, int)]
     '''
-    values = rd([k.value for k in keys])
+    addrBase:int = pairNum * pairStride
+    addrs:List[int] = [addrBase + k.value for k in keys]
+    values:Iterable[Tuple[int, int]] = rd(addrs)
     assert len(keys) == len(values)
 
     ret_ = {}
@@ -125,7 +129,7 @@ def hwReadRegs(rd, keys:Iterable[HwReg]) -> Dict[HwReg, Any]: # {{{
         assert isinstance(k, HwReg), k
         assert isinstance(a, int), a
         assert isinstance(v, int), v
-        assert a == k.value, (a, k.value)
+        assert a == (addrBase + k.value), (a, k.value, pairNum)
 
         if k in mapHwRegToEnum.keys():
             ret_[k] = mapHwRegToEnum[k](v)
@@ -135,28 +139,42 @@ def hwReadRegs(rd, keys:Iterable[HwReg]) -> Dict[HwReg, Any]: # {{{
     return ret_
 # }}} def hwReadRegs
 
-def hwWriteRegs(wr, keyValues:Dict[HwReg, Any]) -> Dict[HwReg, Any]: # {{{
+def hwWriteRegs(wr, pairNum:int, keyValues:Dict[HwReg, Any]) -> Dict[HwReg, Any]: # {{{
     '''Wrapper for writer function including checks and type conversion.
 
     Writer function must take an iterable of (addr, value) pairs,
     and return an iterable of (addr, value) pairs.
     wr :: [(int, int)] -> [(int, int)]
     '''
+    addrBase:int = pairNum * pairStride
 
-    addrValues_ = []
-    for k,v in keyValues.items():
-        addr = k.value
+    addrValues:List[Tuple[int, int]] = \
+        [(addrBase + k.value, (v.value if isinstance(v, enum.Enum) else v)) \
+         for k,v in keyValues.items()]
 
-        if isinstance(v, enum.Enum):
-            addrValues_.append((addr, v.value))
-        else:
-            assert isinstance(v, int), v
-            addrValues_.append((addr, v))
-
-    ret = wr(addrValues_)
+    ret = wr(addrValues)
 
     return ret
 # }}} def hwWriteRegs
+
+def nPairDetect(rd) -> int: # {{{
+    '''Detect number of pairs available.
+
+    Read the same RO register for all pairs and report back the index of the
+    highest non-zero result.
+
+    Reader function must take an iterable of HwReg representing address,
+    and return an dict of values keyed by address.
+    rd :: [HwReg] -> {HwReg: int}
+    '''
+    pairDetectAddr = HwReg.PktfifoDepth
+    nPairMax:int = 8
+
+    ret:int = max([i+1 for i in range(nPairMax) \
+                     if 0 != rd(i, (pairDetectAddr,))[pairDetectAddr]])
+
+    return ret
+# }}} def nPairDetect
 
 def calc_bitsPerWindow(hwRegs:Dict[HwReg, Any]) -> int: # {{{
 

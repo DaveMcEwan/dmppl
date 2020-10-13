@@ -44,7 +44,7 @@ from dmppl.experiments.correlator.correlator_common import __version__, \
     argparse_nonNegativeReal, \
     argparse_WindowLengthExp, argparse_WindowShape, \
     argparse_SamplePeriodExp, argparse_SampleJitterExp, \
-    argparse_LedSource
+    argparse_PwmSelect
 
 
 def pktLines(device, nWindows:int, pair:int, hwRegs:Dict[HwReg, Any]) -> None: # {{{
@@ -77,9 +77,9 @@ def pktLines(device, nWindows:int, pair:int, hwRegs:Dict[HwReg, Any]) -> None: #
         "WindowLengthExp=%d" % hwRegs[HwReg.WindowLengthExp],
         "SamplePeriodExp=%d" % hwRegs[HwReg.SamplePeriodExp],
         "SampleJitterExp=%d" % hwRegs[HwReg.SampleJitterExp],
-        "LedSource=%s"       % hwRegs[HwReg.LedSource].name,
-        "XSource=%d"         % hwRegs[HwReg.XSource],
-        "YSource=%d"         % hwRegs[HwReg.YSource],
+        "PwmSelect=%s"       % hwRegs[HwReg.PwmSelect].name,
+        "XSelect=%d"         % hwRegs[HwReg.XSelect],
+        "YSelect=%d"         % hwRegs[HwReg.YSelect],
     ))
     yield rpt_
 
@@ -215,18 +215,18 @@ argparser.add_argument("--init-sampleJitterExp",
     default=None,
     help="sampleJitter < 2**sampleJitterExp  (samples)")
 
-argparser.add_argument("--init-ledSource",
-    type=argparse_LedSource,
+argparser.add_argument("--init-pwmSelect",
+    type=argparse_PwmSelect,
     default=None,
     help="Data source for LED brightness, either string like 'Cov' or integer.")
 
-argparser.add_argument("--init-xSource",
-    type=functools.partial(argparse_nonNegativeInteger, "init-xSource"),
+argparser.add_argument("--init-xSelect",
+    type=functools.partial(argparse_nonNegativeInteger, "init-xSelect"),
     default=None,
     help="Probe number for X input.")
 
-argparser.add_argument("--init-ySource",
-    type=functools.partial(argparse_nonNegativeInteger, "init-ySource"),
+argparser.add_argument("--init-ySelect",
+    type=functools.partial(argparse_nonNegativeInteger, "init-ySelect"),
     default=None,
     help="Probe number for Y input.")
 
@@ -302,12 +302,12 @@ def main(args) -> int: # {{{
             initRegsRW[HwReg.SamplePeriodExp] = args.init_samplePeriodExp
         if args.init_sampleJitterExp is not None:
             initRegsRW[HwReg.SampleJitterExp] = args.init_sampleJitterExp
-        if args.init_ledSource is not None:
-            initRegsRW[HwReg.LedSource] = args.init_ledSource
-        if args.init_xSource is not None:
-            initRegsRW[HwReg.XSource] = args.init_xSource
-        if args.init_ySource is not None:
-            initRegsRW[HwReg.YSource] = args.init_ySource
+        if args.init_pwmSelect is not None:
+            initRegsRW[HwReg.PwmSelect] = args.init_pwmSelect
+        if args.init_xSelect is not None:
+            initRegsRW[HwReg.XSelect] = args.init_xSelect
+        if args.init_ySelect is not None:
+            initRegsRW[HwReg.YSelect] = args.init_ySelect
 
 
         if 0 < len(initRegsRW):
@@ -338,9 +338,9 @@ def main(args) -> int: # {{{
             HwReg.WindowShape,
             HwReg.SamplePeriodExp,
             HwReg.SampleJitterExp,
-            HwReg.LedSource,
-            HwReg.XSource,
-            HwReg.YSource,
+            HwReg.PwmSelect,
+            HwReg.XSelect,
+            HwReg.YSelect,
         ])
         verb("Done")
 

@@ -37,9 +37,9 @@ class HwReg(enum.Enum): # {{{
     WindowShape             = 10
     SamplePeriodExp         = 11
     SampleJitterExp         = 12
-    LedSource               = 13
-    XSource                 = 14
-    YSource                 = 15
+    PwmSelect               = 13
+    XSelect                 = 14
+    YSelect                 = 15
 
 # }}} Enum HwReg
 mapHwAddrToHwReg:Dict[int, HwReg] = {e.value: e for e in HwReg}
@@ -51,21 +51,22 @@ class WindowShape(enum.Enum): # {{{
 # }}} class WindowShape
 
 @enum.unique
-class LedSource(enum.Enum): # {{{
+class PwmSelect(enum.Enum): # {{{
     WinNum          = 0
     X               = 1
     Y               = 2
     Isect           = 3
     Symdiff         = 4
     # NOTE: No unicode in enum names.
+    # That allows argparse_PwmSelect to take a string.
     Cov             = 5
     Dep             = 6
     Ham             = 7
-# }}} class LedSource
+# }}} class PwmSelect
 
 mapHwRegToEnum = {
     HwReg.WindowShape:  WindowShape,
-    HwReg.LedSource:    LedSource,
+    HwReg.PwmSelect:    PwmSelect,
 }
 
 pairStride:int = 16
@@ -222,7 +223,7 @@ def argparse_SampleJitterExp(s): # {{{
     return i
 # }}} def argparse_SampleJitterExp
 
-def argparse_LedSource(s): # {{{
+def argparse_PwmSelect(s): # {{{
 
     sClean = s.encode("ascii", "ignore").decode("ascii").casefold()
 
@@ -233,17 +234,17 @@ def argparse_LedSource(s): # {{{
             raise argparse.ArgumentTypeError(msg)
 
     except ValueError:
-        mapNameToInt = {e.name.casefold(): e.value for e in LedSource}
+        mapNameToInt = {e.name.casefold(): e.value for e in PwmSelect}
 
         if sClean not in mapNameToInt.keys():
-            allowedNames = ','.join(e.name for e in LedSource)
+            allowedNames = ','.join(e.name for e in PwmSelect)
             msg = "LED source must be in {%s}" % allowedNames
             raise argparse.ArgumentTypeError(msg)
 
         i = mapNameToInt[sClean]
 
-    return LedSource(i)
-# }}} def argparse_LedSource
+    return PwmSelect(i)
+# }}} def argparse_PwmSelect
 
 def argparse_positiveInteger(nm, s): # {{{
     i = int(s)

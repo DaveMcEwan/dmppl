@@ -43,14 +43,14 @@ from dmppl.color import CursesWindow, cursesInitPairs, \
 
 from dmppl.experiments.correlator.correlator_common import __version__, \
     maxSampleRate_kHz, \
-    WindowShape, LedSource, \
+    WindowShape, PwmSelect, \
     getBitfilePath, getDevicePath, uploadBitfile, \
     HwReg, hwReadRegs, hwWriteRegs, nPairDetect, \
     calc_bitsPerWindow, \
     argparse_nonNegativeInteger, argparse_nonNegativeReal, \
     argparse_WindowLengthExp, argparse_WindowShape, \
     argparse_SamplePeriodExp, argparse_SampleJitterExp, \
-    argparse_LedSource
+    argparse_PwmSelect
 
 
 @enum.unique
@@ -70,9 +70,9 @@ class TuiReg(enum.Enum): # {{{
     WindowShape     = enum.auto()
     SampleRate      = enum.auto()
     SampleJitter    = enum.auto()
-    LedSource       = enum.auto()
-    XSource         = enum.auto()
-    YSource         = enum.auto()
+    PwmSelect       = enum.auto()
+    XSelect         = enum.auto()
+    YSelect         = enum.auto()
 # }}} Enum TuiReg
 
 @enum.unique
@@ -114,14 +114,14 @@ mapTuiRegToDomain_:Dict[TuiReg, str] = { # {{{
     # Domain defined by HwReg.MaxSampleJitterExp
     TuiReg.SampleJitter: "(variance) = (2**v - 1)/%d; v ∊ ℤ ∩ [0, %d]",
 
-    # Controls register "LedSource".
-    TuiReg.LedSource: "∊ {%s}" % ", ".join(s.name for s in LedSource),
+    # Controls register "PwmSelect".
+    TuiReg.PwmSelect: "∊ {%s}" % ", ".join(s.name for s in PwmSelect),
 
-    # Controls register "XSource".
-    TuiReg.XSource: "∊ ℤ ∩ [0, 64)",
+    # Controls register "XSelect".
+    TuiReg.XSelect: "∊ ℤ ∩ [0, 64)",
 
-    # Controls register "YSource".
-    TuiReg.YSource: "∊ ℤ ∩ [0, 64)",
+    # Controls register "YSelect".
+    TuiReg.YSelect: "∊ ℤ ∩ [0, 64)",
 } # }}}
 
 def hwRegsToTuiRegs(hwRegs:Dict[HwReg, Any]) -> Dict[TuiReg, Any]: # {{{
@@ -139,9 +139,9 @@ def hwRegsToTuiRegs(hwRegs:Dict[HwReg, Any]) -> Dict[TuiReg, Any]: # {{{
         TuiReg.WindowShape:  hwRegs[HwReg.WindowShape],
         TuiReg.SampleRate:   sampleRate,
         TuiReg.SampleJitter: sampleJitter,
-        TuiReg.LedSource:    hwRegs[HwReg.LedSource],
-        TuiReg.XSource:      hwRegs[HwReg.XSource],
-        TuiReg.YSource:      hwRegs[HwReg.YSource],
+        TuiReg.PwmSelect:    hwRegs[HwReg.PwmSelect],
+        TuiReg.XSelect:      hwRegs[HwReg.XSelect],
+        TuiReg.YSelect:      hwRegs[HwReg.YSelect],
     }
     return ret
 # }}} def hwRegsToTuiRegs
@@ -188,23 +188,23 @@ def updateRegs(selectIdx:int,
         lo, hi = 0, hwRegs_[HwReg.MaxSampleJitterExp]
         hwRegs_[HwReg.SampleJitterExp] = max(lo, min(m, hi))
 
-    elif TuiReg.LedSource == gr:
-        n = hwRegs_[HwReg.LedSource].value
+    elif TuiReg.PwmSelect == gr:
+        n = hwRegs_[HwReg.PwmSelect].value
         m = (n-1) if decrNotIncr else (n+1)
         lo, hi = 0, 7
-        hwRegs_[HwReg.LedSource] = LedSource(max(lo, min(m, hi)))
+        hwRegs_[HwReg.PwmSelect] = PwmSelect(max(lo, min(m, hi)))
 
-    elif TuiReg.XSource == gr:
-        n = hwRegs_[HwReg.XSource]
+    elif TuiReg.XSelect == gr:
+        n = hwRegs_[HwReg.XSelect]
         m = (n-1) if decrNotIncr else (n+1)
         lo, hi = 0, 63
-        hwRegs_[HwReg.XSource] = max(lo, min(m, hi))
+        hwRegs_[HwReg.XSelect] = max(lo, min(m, hi))
 
-    elif TuiReg.YSource == gr:
-        n = hwRegs_[HwReg.YSource]
+    elif TuiReg.YSelect == gr:
+        n = hwRegs_[HwReg.YSelect]
         m = (n-1) if decrNotIncr else (n+1)
         lo, hi = 0, 63
-        hwRegs_[HwReg.YSource] = max(lo, min(m, hi))
+        hwRegs_[HwReg.YSelect] = max(lo, min(m, hi))
 
     else:
         pass
@@ -445,9 +445,9 @@ class InfoHwRegsWindow(CursesWindow): # {{{
             ("WindowShape         (RW @ %2d) = %2d", HwReg.WindowShape),
             ("SamplePeriodExp     (RW @ %2d) = %2d", HwReg.SamplePeriodExp),
             ("SampleJitterExp     (RW @ %2d) = %2d", HwReg.SampleJitterExp),
-            ("LedSource           (RW @ %2d) = %2d", HwReg.LedSource),
-            ("XSource             (RW @ %2d) = %2d", HwReg.XSource),
-            ("YSource             (RW @ %2d) = %2d", HwReg.YSource),
+            ("PwmSelect           (RW @ %2d) = %2d", HwReg.PwmSelect),
+            ("XSelect             (RW @ %2d) = %2d", HwReg.XSelect),
+            ("YSelect             (RW @ %2d) = %2d", HwReg.YSelect),
         )
 
         self.win.clear()
@@ -655,18 +655,18 @@ argparser.add_argument("--init-sampleJitterExp",
     default=0,
     help="sampleJitter < 2**sampleJitterExp  (cycles)")
 
-argparser.add_argument("--init-ledSource",
-    type=argparse_LedSource,
-    default=LedSource.WinNum,
+argparser.add_argument("--init-pwmSelect",
+    type=argparse_PwmSelect,
+    default=PwmSelect.WinNum,
     help="Data source for LED brightness, either string like 'Cov' or integer.")
 
-argparser.add_argument("--init-xSource",
-    type=functools.partial(argparse_nonNegativeInteger, "init-xSource"),
+argparser.add_argument("--init-xSelect",
+    type=functools.partial(argparse_nonNegativeInteger, "init-xSelect"),
     default=0,
     help="Probe number for X input.")
 
-argparser.add_argument("--init-ySource",
-    type=functools.partial(argparse_nonNegativeInteger, "init-ySource"),
+argparser.add_argument("--init-ySelect",
+    type=functools.partial(argparse_nonNegativeInteger, "init-ySelect"),
     default=1,
     help="Probe number for Y input.")
 
@@ -781,9 +781,9 @@ def main(args) -> int: # {{{
             HwReg.WindowShape:          args.init_windowShape,
             HwReg.SamplePeriodExp:      args.init_samplePeriodExp,
             HwReg.SampleJitterExp:      args.init_sampleJitterExp,
-            HwReg.LedSource:            args.init_ledSource,
-            HwReg.XSource:              args.init_xSource,
-            HwReg.YSource:              args.init_ySource,
+            HwReg.PwmSelect:            args.init_pwmSelect,
+            HwReg.XSelect:              args.init_xSelect,
+            HwReg.YSelect:              args.init_ySelect,
         }
 
         if args.no_init:

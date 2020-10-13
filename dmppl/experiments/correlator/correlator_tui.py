@@ -118,10 +118,10 @@ mapTuiRegToDomain_:Dict[TuiReg, str] = { # {{{
     TuiReg.LedSource: "∊ {%s}" % ", ".join(s.name for s in LedSource),
 
     # Controls register "XSource".
-    TuiReg.XSource: "∊ ℤ ∩ [0, 255]",
+    TuiReg.XSource: "∊ ℤ ∩ [0, 64)",
 
     # Controls register "YSource".
-    TuiReg.YSource: "∊ ℤ ∩ [0, 255]",
+    TuiReg.YSource: "∊ ℤ ∩ [0, 64)",
 } # }}}
 
 def hwRegsToTuiRegs(hwRegs:Dict[HwReg, Any]) -> Dict[TuiReg, Any]: # {{{
@@ -197,13 +197,13 @@ def updateRegs(selectIdx:int,
     elif TuiReg.XSource == gr:
         n = hwRegs_[HwReg.XSource]
         m = (n-1) if decrNotIncr else (n+1)
-        lo, hi = 0, 255
+        lo, hi = 0, 63
         hwRegs_[HwReg.XSource] = max(lo, min(m, hi))
 
     elif TuiReg.YSource == gr:
         n = hwRegs_[HwReg.YSource]
         m = (n-1) if decrNotIncr else (n+1)
-        lo, hi = 0, 255
+        lo, hi = 0, 63
         hwRegs_[HwReg.YSource] = max(lo, min(m, hi))
 
     else:

@@ -38,7 +38,7 @@ from dmppl.experiments.correlator.correlator_common import __version__, \
     maxSampleRate_kHz, \
     WindowShape, \
     getDevicePath, \
-    HwReg, hwReadRegs, hwWriteRegs, detectNPair, \
+    HwReg, hwReadRegs, hwWriteRegs, detectNEngine, \
     calc_bitsPerWindow, \
     argparse_positiveInteger, argparse_nonNegativeInteger, \
     argparse_nonNegativeReal, \
@@ -47,7 +47,7 @@ from dmppl.experiments.correlator.correlator_common import __version__, \
     argparse_PwmSelect
 
 
-def pktLines(device, nWindows:int, pair:int, hwRegs:Dict[HwReg, Any]) -> None: # {{{
+def pktLines(device, nWindows:int, engineNum:int, hwRegs:Dict[HwReg, Any]) -> None: # {{{
     '''Generator yielding lines to be written to output.
     - Display progress/status line.
     - Read up to 50 packets in each burst.
@@ -143,7 +143,7 @@ def pktLines(device, nWindows:int, pair:int, hwRegs:Dict[HwReg, Any]) -> None: #
     # Flush the packet fifo.
     # The cycle this arrives at bpReg is the beginning of time for this dataset.
     verb("Flushing to begin dataset...", end='')
-    wr(pair, {HwReg.PktfifoFlush: 1})
+    wr(engineNum, {HwReg.PktfifoFlush: 1})
     verb("Done")
 
     nWindowsRemaining_ = nWindows
@@ -235,10 +235,10 @@ argparser.add_argument("--prng-seed",
     default=None,
     help="Seed for xoshiro128+ PRNG used for sampling jitter.")
 
-argparser.add_argument("--pair",
-    type=functools.partial(argparse_nonNegativeInteger, "pair"),
+argparser.add_argument("--engine",
+    type=functools.partial(argparse_nonNegativeInteger, "engine"),
     default=0,
-    help="Pair number.")
+    help="Engine number.")
 
 argparser.add_argument("-o", "--output",
     type=str,
@@ -276,14 +276,14 @@ def main(args) -> int: # {{{
         rd:Callable = functools.partial(hwReadRegs, rdBytePipe)
         wr:Callable = functools.partial(hwWriteRegs, wrBytePipe)
 
-        verb("Detecting number of pairs...", end='')
-        nPair:int = detectNPair(rd)
-        assert args.pair < nPair, "--pair must be less than %d" % nPair
-        pair:int = args.pair
+        verb("Detecting number of engines...", end='')
+        nEngine:int = detectNEngine(rd)
+        assert args.engine < nEngine, "--engine must be less than %d" % nEngine
+        engineNum:int = args.engine
         verb("Done")
 
         verb("Reading RO registers...", end='')
-        hwRegsRO:Dict[HwReg, Any] = rd(pair, (
+        hwRegsRO:Dict[HwReg, Any] = rd(engineNum, (
             HwReg.PktfifoDepth,
             HwReg.MaxWindowLengthExp,
             HwReg.WindowPrecision,
@@ -312,9 +312,9 @@ def main(args) -> int: # {{{
 
         if 0 < len(initRegsRW):
             verb("Initializing RW registers...", end='')
-            wr(pair, initRegsRW)
+            wr(engineNum, initRegsRW)
             verb("Checking...", end='')
-            hwRegsRW:Dict[HwReg, Any] = rd(pair, initRegsRW.keys())
+            hwRegsRW:Dict[HwReg, Any] = rd(engineNum, initRegsRW.keys())
             assert all(initRegsRW[k] == v for k,v in hwRegsRW.items()), hwRegsRW
             verb("Done")
 
@@ -333,7 +333,7 @@ def main(args) -> int: # {{{
 
 
         verb("Reading RW registers...", end='')
-        hwRegsRW:Dict[HwReg, Any] = rd(pair, [
+        hwRegsRW:Dict[HwReg, Any] = rd(engineNum, [
             HwReg.WindowLengthExp,
             HwReg.WindowShape,
             HwReg.SamplePeriodExp,
@@ -348,7 +348,7 @@ def main(args) -> int: # {{{
             verb("Recording...")
             nLinesWritten, wrSuccess = \
                 wrLines(args.output, pktLines(device,
-                                              args.nWindows, pair,
+                                              args.nWindows, engineNum,
                                               {**hwRegsRO, **hwRegsRW}))
             verb("Recording %s" % ("complete" if wrSuccess else "FAILURE"))
         except KeyboardInterrupt:

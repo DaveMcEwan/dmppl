@@ -69,7 +69,7 @@ mapHwRegToEnum = {
     HwReg.PwmSelect:    PwmSelect,
 }
 
-pairAddrStride:int = 16
+engineAddrStride:int = 16
 
 def getBitfilePath(argBitfile) -> str: # {{{
 
@@ -113,14 +113,14 @@ def uploadBitfile(bitfile): # {{{
     return p.returncode
 # }}} def uploadBitfile
 
-def hwReadRegs(rd, pairNum:int, keys:Iterable[HwReg]) -> Dict[HwReg, Any]: # {{{
+def hwReadRegs(rd, engineNum:int, keys:Iterable[HwReg]) -> Dict[HwReg, Any]: # {{{
     '''Wrapper for reader function including checks and type conversion.
 
     Reader function must take an iterable of integers representing address,
     and return an iterable of (addr, value) pairs.
     rd :: [int] -> [(int, int)]
     '''
-    addrBase:int = pairNum * pairAddrStride
+    addrBase:int = engineNum * engineAddrStride
     addrs:List[int] = [addrBase + k.value for k in keys]
     values:Iterable[Tuple[int, int]] = rd(addrs)
     assert len(keys) == len(values)
@@ -130,7 +130,7 @@ def hwReadRegs(rd, pairNum:int, keys:Iterable[HwReg]) -> Dict[HwReg, Any]: # {{{
         assert isinstance(k, HwReg), k
         assert isinstance(a, int), a
         assert isinstance(v, int), v
-        assert a == (addrBase + k.value), (a, k.value, pairNum)
+        assert a == (addrBase + k.value), (a, k.value, engineNum)
 
         if k in mapHwRegToEnum.keys():
             ret_[k] = mapHwRegToEnum[k](v)
@@ -140,14 +140,14 @@ def hwReadRegs(rd, pairNum:int, keys:Iterable[HwReg]) -> Dict[HwReg, Any]: # {{{
     return ret_
 # }}} def hwReadRegs
 
-def hwWriteRegs(wr, pairNum:int, keyValues:Dict[HwReg, Any]) -> Dict[HwReg, Any]: # {{{
+def hwWriteRegs(wr, engineNum:int, keyValues:Dict[HwReg, Any]) -> Dict[HwReg, Any]: # {{{
     '''Wrapper for writer function including checks and type conversion.
 
     Writer function must take an iterable of (addr, value) pairs,
     and return an iterable of (addr, value) pairs.
     wr :: [(int, int)] -> [(int, int)]
     '''
-    addrBase:int = pairNum * pairAddrStride
+    addrBase:int = engineNum * engineAddrStride
 
     addrValues:List[Tuple[int, int]] = \
         [(addrBase + k.value, (v.value if isinstance(v, enum.Enum) else v)) \
@@ -158,24 +158,24 @@ def hwWriteRegs(wr, pairNum:int, keyValues:Dict[HwReg, Any]) -> Dict[HwReg, Any]
     return ret
 # }}} def hwWriteRegs
 
-def detectNPair(rd) -> int: # {{{
-    '''Detect number of pairs available.
+def detectNEngine(rd) -> int: # {{{
+    '''Detect number of engines available.
 
-    Read the same RO register for all pairs and report back the index of the
+    Read the same RO register for all engines and report back the index of the
     highest non-zero result.
 
     Reader function must take an iterable of HwReg representing address,
     and return an dict of values keyed by address.
     rd :: [HwReg] -> {HwReg: int}
     '''
-    pairDetectAddr = HwReg.PktfifoDepth
-    nPairMax:int = 8
+    engineDetectAddr = HwReg.PktfifoDepth
+    nEngineMax:int = 8
 
-    ret:int = max([i+1 for i in range(nPairMax) \
-                     if 0 != rd(i, (pairDetectAddr,))[pairDetectAddr]])
+    ret:int = max([i+1 for i in range(nEngineMax) \
+                     if 0 != rd(i, (engineDetectAddr,))[engineDetectAddr]])
 
     return ret
-# }}} def detectNPair
+# }}} def detectNEngine
 
 def calc_bitsPerWindow(hwRegs:Dict[HwReg, Any]) -> int: # {{{
 

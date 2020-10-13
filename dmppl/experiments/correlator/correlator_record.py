@@ -38,7 +38,7 @@ from dmppl.experiments.correlator.correlator_common import __version__, \
     maxSampleRate_kHz, \
     WindowShape, \
     getDevicePath, \
-    HwReg, hwReadRegs, hwWriteRegs, nPairDetect, \
+    HwReg, hwReadRegs, hwWriteRegs, detectNPair, \
     calc_bitsPerWindow, \
     argparse_positiveInteger, argparse_nonNegativeInteger, \
     argparse_nonNegativeReal, \
@@ -277,7 +277,7 @@ def main(args) -> int: # {{{
         wr:Callable = functools.partial(hwWriteRegs, wrBytePipe)
 
         verb("Detecting number of pairs...", end='')
-        nPair:int = nPairDetect(rd)
+        nPair:int = detectNPair(rd)
         assert args.pair < nPair, "--pair must be less than %d" % nPair
         pair:int = args.pair
         verb("Done")

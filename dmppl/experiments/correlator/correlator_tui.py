@@ -45,7 +45,7 @@ from dmppl.experiments.correlator.correlator_common import __version__, \
     maxSampleRate_kHz, \
     WindowShape, PwmSelect, \
     getBitfilePath, getDevicePath, uploadBitfile, \
-    HwReg, hwReadRegs, hwWriteRegs, nPairDetect, \
+    HwReg, hwReadRegs, hwWriteRegs, detectNPair, \
     calc_bitsPerWindow, \
     argparse_nonNegativeInteger, argparse_nonNegativeReal, \
     argparse_WindowLengthExp, argparse_WindowShape, \
@@ -87,7 +87,7 @@ class KeyAction(enum.Enum): # {{{
 
 listTuiReg:List[TuiReg] = list(r for i,r in enumerate(TuiReg))
 
-nPair_:int = 0 # Updated by nPairDetect().
+nPair_:int = 0 # Updated by detectNPair().
 
 # NOTE: Some values are carefully updated with string substitution on the
 # initial read of the RO registers.
@@ -96,7 +96,7 @@ mapTuiRegToDomain_:Dict[TuiReg, str] = { # {{{
     TuiReg.UpdateMode: "∊ {%s}" % ", ".join(m.name for m in UpdateMode),
 
     # Controls no hardware register (TUI state only).
-    # Domain defined by nPairDetect().
+    # Domain defined by detectNPair().
     TuiReg.Pair: "∊ ℤ ∩ [0, %d)",
 
     # Controls register "WindowLengthExp".
@@ -748,7 +748,7 @@ def main(args) -> int: # {{{
 
         verb("Detecting number of pairs...", end='')
         global nPair_
-        nPair_ = nPairDetect(rd)
+        nPair_ = detectNPair(rd)
         pair = args.pair if (args.pair < nPair_) else 0
         verb("Done")
 

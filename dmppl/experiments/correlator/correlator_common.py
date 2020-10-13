@@ -69,7 +69,7 @@ mapHwRegToEnum = {
     HwReg.PwmSelect:    PwmSelect,
 }
 
-pairStride:int = 16
+pairAddrStride:int = 16
 
 def getBitfilePath(argBitfile) -> str: # {{{
 
@@ -120,7 +120,7 @@ def hwReadRegs(rd, pairNum:int, keys:Iterable[HwReg]) -> Dict[HwReg, Any]: # {{{
     and return an iterable of (addr, value) pairs.
     rd :: [int] -> [(int, int)]
     '''
-    addrBase:int = pairNum * pairStride
+    addrBase:int = pairNum * pairAddrStride
     addrs:List[int] = [addrBase + k.value for k in keys]
     values:Iterable[Tuple[int, int]] = rd(addrs)
     assert len(keys) == len(values)
@@ -147,7 +147,7 @@ def hwWriteRegs(wr, pairNum:int, keyValues:Dict[HwReg, Any]) -> Dict[HwReg, Any]
     and return an iterable of (addr, value) pairs.
     wr :: [(int, int)] -> [(int, int)]
     '''
-    addrBase:int = pairNum * pairStride
+    addrBase:int = pairNum * pairAddrStride
 
     addrValues:List[Tuple[int, int]] = \
         [(addrBase + k.value, (v.value if isinstance(v, enum.Enum) else v)) \
@@ -158,7 +158,7 @@ def hwWriteRegs(wr, pairNum:int, keyValues:Dict[HwReg, Any]) -> Dict[HwReg, Any]
     return ret
 # }}} def hwWriteRegs
 
-def nPairDetect(rd) -> int: # {{{
+def detectNPair(rd) -> int: # {{{
     '''Detect number of pairs available.
 
     Read the same RO register for all pairs and report back the index of the
@@ -175,7 +175,7 @@ def nPairDetect(rd) -> int: # {{{
                      if 0 != rd(i, (pairDetectAddr,))[pairDetectAddr]])
 
     return ret
-# }}} def nPairDetect
+# }}} def detectNPair
 
 def calc_bitsPerWindow(hwRegs:Dict[HwReg, Any]) -> int: # {{{
 

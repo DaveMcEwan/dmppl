@@ -48,6 +48,11 @@ argparser.add_argument("--skiprows",
     default=0,
     help="Skip this many lines, excluding comments.")
 
+argparser.add_argument("--delimiter",
+    type=str,
+    default=',',
+    help="Column delimiter.")
+
 argparser.add_argument("--markers",
     type=str,
     default=".ox^s*",
@@ -175,7 +180,7 @@ def main(args) -> int: # {{{
 
     a = np.loadtxt(rdLines(args.input),
                    skiprows=args.skiprows,
-                   delimiter=',',
+                   delimiter=args.delimiter,
                    unpack=True)
 
     x = a[0]

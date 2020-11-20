@@ -82,6 +82,7 @@ class KeyAction(enum.Enum): # {{{
     ModifyIncrease      = enum.auto()
     ModifyDecrease      = enum.auto()
     SendUpdate          = enum.auto()
+    Refresh             = enum.auto()
     Quit                = enum.auto()
 # }}} Enum KeyAction
 
@@ -546,6 +547,8 @@ def tui(scr, deviceName, rd, wr, engineNum, hwRegs): # {{{
             keyAction:KeyAction = KeyAction.ModifyIncrease
         elif curses.KEY_ENTER == c or ord('\n') == c:
             keyAction:KeyAction = KeyAction.SendUpdate
+        elif ord('r') == c or ord('R') == c:
+            keyAction:KeyAction = KeyAction.Refresh
         elif ord('q') == c or ord('Q') == c:
             keyAction:KeyAction = KeyAction.Quit
         else:
@@ -576,7 +579,11 @@ def tui(scr, deviceName, rd, wr, engineNum, hwRegs): # {{{
 
         # Send updates to hardware and readback to ensure display matches the
         # actual values reported from hardware.
-        if (isInteractive and actionIsModify) or \
+        if keyAction == KeyAction.Refresh:
+            hwRegs_:Dict[HwReg, Any] = rd(engineNum, hwRegs_.keys())
+            tuiRegs_.update(hwRegsToTuiRegs(hwRegs_))
+            outstanding_ = False
+        elif (isInteractive and actionIsModify) or \
            keyAction == KeyAction.SendUpdate:
             _ = wr(engineNum, hwRegs_)
             hwRegs_:Dict[HwReg, Any] = rd(engineNum, hwRegs_.keys())

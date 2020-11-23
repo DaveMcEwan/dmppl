@@ -6,7 +6,6 @@ Library is split into several modules:
 
   - base - Useful in almost every project.
   - color - Color (colour in English) related stuff.
-  - fx - Fixed point arithmetic using NumPy data types.
   - math - Useful for mathematical code.
   - nd - ND-array operations.
   - prng - Pseudo-Random Number Generators. Currently just xoroshiro128+.
@@ -15,6 +14,7 @@ Library is split into several modules:
   - toml - Save/load TOML files with optional compression.
   - vcd - Value Change Dump (from Verilog) reader and writer.
   - yaml - Extended YAML parser, useful for implementing DSLs on top of YAML.
+
 
 Some useful scripts are provided in `dmppl/scripts` which show how to use some
 parts of the library modules.
@@ -28,6 +28,7 @@ parts of the library modules.
     with strict writer.
   - svg2png - Simple wrapper around inkscape to export SVGs to PNGs.
 
+
 Some experiments are given in `dmppl/experiments` which are likely not useful
 to most people.
 
@@ -36,13 +37,13 @@ to most people.
   - eva - (EVent Analysis) Measure and visualize correlations between
     measurements.
     Part of my PhD project.
+  - correlator - Interface to USB/serial/ACM hardware controlling FPGA with
+    SoC-correlation-accelerator.
+    Part of my PhD project.
 
-Uses [semantic versioning](https://semver.org/spec/v2.0.0.html)
 
 Supports multiple versions of Python (2.7, 3.6, 3.7, 3.8).
 
-  - At some point I'll drop support for 2.7 and <3.7, probably when distros stop
-    including them which isn't likely soon.
   - Dropping support for <3.6 allows use of type annotations.
   - Dropping support for <3.8 allows use of newer language features such as the
     walrus operator, and getting rid of version-specific hacks like
@@ -54,10 +55,9 @@ Supports multiple versions of Python (2.7, 3.6, 3.7, 3.8).
     which have built-in Python shells,
     TODO: Collate version dependencies for various programs and decide what I
     want to support: Inkscape, Blender, nextpnr, yosys, ...
-  - pip packages are not specified with versions as it is assumed (naively) that
-    the latest releases won't break anything.
 
-See the `Makefile` to wrap up common actions and provide examples of how to run
+
+See the `Makefile` to wrapup common actions and provide examples of how to run
 things.
 
   - `make venv` to create a virtual environment for each supported version.
@@ -67,12 +67,12 @@ things.
   - `make dist` to build a setuptools distribution.
   - `make clean` to remove all generated files.
 
+
 TODO:
 
-  1. Upload to PyPI.
-  2. mypy
-  3. Integrate relest-ffnn
-  4. Implement vch, vchlite
-  5. Expand documentation here
-  6. Sphinx/readthedocs
-  7. Change convention to snake case for idiomatic Python and rust?
+  1. mypy
+  2. Implement vch, vchlite?
+  3. Expand documentation here
+  4. Sphinx/readthedocs
+
+[semantic versioning](https://semver.org/spec/v2.0.0.html)

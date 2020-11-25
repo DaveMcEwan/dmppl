@@ -5,8 +5,13 @@ import enum
 import glob
 import os
 import subprocess
+import time
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
+# PyPI
+import serial
+
+from dmppl.base import verb, asrtNumber
 from dmppl.bytePipe import BpAddrs, BpAddrValues, BpMem, \
     bpReadSequential, bpWriteSequential, bpPrintMem, bpAddrValuesToMem, \
     bpWriteAddr
@@ -277,4 +282,60 @@ def argparse_nonNegativeReal(nm, s): # {{{
         raise argparse.ArgumentTypeError(msg)
     return i
 # }}} def argparse_nonNegativeReal
+
+class SerialDevice(object): # {{{
+    '''Context manager around PySerial to attempt connection until resource is
+       free.
+    '''
+    def __init__(self, path=None, exclusive=True,
+                       rdTimeout=1.0, wrTimeout=1.0,
+                       connectNAttempt=1, connectTimeout=1.0):
+
+        assert isinstance(path, str), (type(path), path)
+        self.path = str(path)
+        self.exclusive = bool(exclusive)
+        self.rdTimeout = float(rdTimeout)
+        self.wrTimeout = float(wrTimeout)
+
+        asrtNumber(connectNAttempt, geq=1)
+        asrtNumber(connectTimeout, geq=0.01) # Minimum 10ms between attempts.
+        self.connectNAttempt = int(connectNAttempt)
+        self.connectTimeout = float(connectTimeout)
+
+    def __enter__(self):
+
+        exception_ = None
+
+        for i in range(self.connectNAttempt):
+            if 0 != i:
+                time.sleep(self.connectTimeout)
+
+            verb("Attempt %d/%d connecting SerialDevice %s ... " % \
+                 (i+1, self.connectNAttempt, self.path), end='')
+            try:
+
+                self.port = serial.Serial(self.path,
+                                          timeout=self.rdTimeout,
+                                          write_timeout=self.wrTimeout,
+                                          exclusive=self.exclusive)
+                self.port.open()
+            except Exception as e:
+                exception_ = e
+
+            if hasattr(self, "port") and self.port.is_open:
+                verb("Success")
+                break
+            else:
+                verb("Failure")
+
+
+        if not (hasattr(self, "port") and self.port.is_open):
+            raise exception_
+
+        return self.port
+
+    def __exit__(self, exceptionType, exceptionValue, exceptionTraceback):
+        self.port.close()
+
+# }}} class SerialDevice
 

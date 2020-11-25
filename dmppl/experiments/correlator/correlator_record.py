@@ -27,14 +27,12 @@ import sys
 import time
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
-# PyPI
-import serial
-
 from dmppl.base import run, verb, dbg, wrLines, grouper
 from dmppl.bytePipe import bpReadSequential, bpWriteSequential, \
     bpReadAddr, bpWriteAddr
 
 from dmppl.experiments.correlator.correlator_common import __version__, \
+    SerialDevice, \
     maxSampleRate_kHz, \
     WindowShape, \
     getDevicePath, \
@@ -267,10 +265,9 @@ def main(args) -> int: # {{{
 
     # Keep lock on device to prevent other processes from accidentally messing
     # with the state machine.
-    verb("Connecting to device %s" % devicePath)
-    with serial.Serial(devicePath,
-                       timeout=args.timeout,
-                       write_timeout=args.timeout) as device:
+    with SerialDevice(devicePath, exclusive=True,
+                       rdTimeout=args.timeout, wrTimeout=args.timeout,
+                       connectNAttempt=50, connectTimeout=0.2) as device:
         rdBytePipe:Callable = functools.partial(bpReadSequential, device)
         wrBytePipe:Callable = functools.partial(bpWriteSequential, device)
         rd:Callable = functools.partial(hwReadRegs, rdBytePipe)

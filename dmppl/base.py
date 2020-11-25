@@ -78,6 +78,48 @@ class Fragile(object): # {{{
         return error
 # }}} class Fragile
 
+def asrtNumber(*args, **kwargs): # {{{
+    '''Assert args are of correct type and satisfy constraints.
+
+    Optionally use the types,eq,leq,geq,lt,gt keywords.
+    '''
+    if __debug__:
+
+        _types = kwargs.get("types", (int, long, float))
+        noneAllowed = None in _types
+        types = [t for t in _types if t is not None]
+        for i,a in enumerate(args):
+            assert isinstance(a, tuple(types)) or \
+                   ((a is None) if noneAllowed else False), \
+                   (type(a), str(a))
+
+        eq = kwargs.get("eq")
+        if eq is not None:
+            assert all((a == eq) for a in args)
+
+        leq = kwargs.get("leq")
+        if leq is not None:
+            assert all((a <= leq) for a in args)
+
+        geq = kwargs.get("geq")
+        if geq is not None:
+            assert all((a >= geq) for a in args)
+
+        neq = kwargs.get("neq")
+        if neq is not None:
+            assert all((a != neq) for a in args)
+
+        lt = kwargs.get("lt")
+        if lt is not None:
+            assert all((a < lt) for a in args)
+
+        gt = kwargs.get("gt")
+        if gt is not None:
+            assert all((a > gt) for a in args)
+
+    return
+# }}} def asrtNumber
+
 def indexDefault(xs, x, default=None): # {{{
     '''Return the first index of an item in a list, or a default value.
 

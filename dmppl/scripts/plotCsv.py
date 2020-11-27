@@ -56,7 +56,12 @@ argparser.add_argument("--delimiter",
 argparser.add_argument("--markers",
     type=str,
     default=".ox^s*",
-    help="Markers.")
+    help="Markers in matplotlib notation.")
+
+argparser.add_argument("--labels",
+    type=str,
+    default="1,2,3,4,5,6",
+    help="Comma-separated list of labels")
 
 argparser.add_argument("--figsizeX",
     type=int,
@@ -178,6 +183,8 @@ def main(args) -> int: # {{{
 
     markers = list(args.markers)
 
+    labels = list(args.labels.split(','))
+
     a = np.loadtxt(rdLines(args.input),
                    skiprows=args.skiprows,
                    delimiter=args.delimiter,
@@ -217,6 +224,7 @@ def main(args) -> int: # {{{
     ys = a[1:]
     for i,y in enumerate(ys):
         marker = markers[i] if i < len(markers) else ''
+        label = labels[i] if i < len(labels) else None
 
         if args.baseY:
             args.addY = y[0] * -1
@@ -249,8 +257,15 @@ def main(args) -> int: # {{{
 
             y = prdX * prdY
 
-        plt.plot(x, y, marker=marker)
+        kwargsPlot = {"marker": marker}
+        if label is not None:
+            kwargsPlot.update({"label": label})
 
+        plt.plot(x, y, **kwargsPlot)
+
+
+    if 0 < len(labels):
+        plt.legend()
 
     if args.pdf:
         plt.savefig(fnameAppendExt(args.output, "pdf"), bbox_inches="tight")

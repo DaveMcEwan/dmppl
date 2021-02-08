@@ -219,8 +219,7 @@ def systemKnown(system): # {{{
 
     fname_known = joinP(knowns_dir, system["name"] + ".known")
     saveNpy(known, fname_known)
-    np.savetxt(fname_known + ".txt", known.astype(np.int),
-               fmt='%d', delimiter='')
+    #np.savetxt(fname_known + ".txt", known.astype(np.int), fmt='%d', delimiter='')
 
     return known
 # }}} def systemKnown
@@ -245,8 +244,7 @@ def generateSamples(system, n_time): # {{{
 
     #fname_evs_src = joinP(EVSs_dir, sysname + ".evs.src")
     #saveNpy(evs_src, fname_evs_src)
-    #np.savetxt(fname_evs_src + ".txt", evs_src.astype(np.int),
-    #           fmt='%d', delimiter='')
+    #np.savetxt(fname_evs_src + ".txt", evs_src.astype(np.int), fmt='%d', delimiter='')
 
     # Calculate values of dst nodes.
     evs_dst = np.empty((n_dst, n_time), dtype=np.bool)
@@ -270,8 +268,7 @@ def generateSamples(system, n_time): # {{{
 
     evs = np.vstack((evs_src, evs_dst))
     fname_evs_full = joinP(EVSs_dir, sysname + ".evs")
-    np.savetxt(fname_evs_full + ".txt", evs.astype(np.int),
-               fmt='%d', delimiter='')
+    #np.savetxt(fname_evs_full + ".txt", evs.astype(np.int), fmt='%d', delimiter='')
     saveNpy(evs, fname_evs_full)
     return
 # }}} def generateSamples
@@ -414,8 +411,7 @@ def performEstimations(system, evs, n_time): # {{{
 
             for f,(nm,fn) in enumerate(metrics):
                 estimated[f][i][j] = fn(W, evs[j], evs[i])
-                np.savetxt(fname_estimated + ".%s.txt" % nm,
-                           estimated[f], fmt='%0.03f')
+                #np.savetxt(fname_estimated + ".%s.txt" % nm, estimated[f], fmt='%0.03f')
 
     saveNpy(estimated, fname_estimated)
     return

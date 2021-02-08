@@ -347,7 +347,8 @@ def main(args) -> int: # {{{
                 wrLines(args.output, pktLines(device,
                                               args.nWindows, engineNum,
                                               {**hwRegsRO, **hwRegsRW}))
-            verb("Recording %s" % ("complete" if wrSuccess else "FAILURE"))
+            verb("Recording %s" % ("complete" if wrSuccess else
+                                   "FAILURE nLinesWritten=%d" % nLinesWritten))
         except KeyboardInterrupt:
             verb("KeyboardInterrupt. Exiting.")
 

@@ -311,9 +311,9 @@ def exportCsv(system, evs, known, estimated, n_time): # {{{
     assert m == len(evs), (m, len(evs))
     assert known.shape == (m,m), (known.shape, m)
 
-    #W = powsineCoeffs(n_time, 0) # Rectangular
+    W = powsineCoeffs(n_time, 0) # Rectangular
     #W = powsineCoeffs(n_time, 1) # Sine
-    W = powsineCoeffs(n_time, 2) # Raised Cosine
+    #W = powsineCoeffs(n_time, 2) # Raised Cosine
     #W = powsineCoeffs(n_time, 4) # Alternative Blackman
 
     with open(fnameCsv, 'w') as fd:
@@ -398,9 +398,9 @@ def performEstimations(system, evs, n_time): # {{{
 
     m = system["m"]
 
-    #W = powsineCoeffs(n_time, 0) # Rectangular
+    W = powsineCoeffs(n_time, 0) # Rectangular
     #W = powsineCoeffs(n_time, 1) # Sine
-    W = powsineCoeffs(n_time, 2) # Raised Cosine
+    #W = powsineCoeffs(n_time, 2) # Raised Cosine
     #W = powsineCoeffs(n_time, 4) # Alternative Blackman
 
     # Calculate similarity metrics.

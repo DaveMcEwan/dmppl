@@ -8,6 +8,10 @@
 #   source ../../venv3.7/bin/activate
 #   python relest.py TRAIN exportcsv             # Default 1000 systems
 #   python relest.py -q TEST exportcsv           # Quick run with 20 systems
+#
+# OR generate datasets in parts:
+#   for d in `seq 1 11`; do python relest.py RUN$d exportcsv; done
+#
 #   mv TRAIN/csv/combined.csv ./combinedTrain.csv
 #   mv TEST/csv/combined.csv ./combinedTest.csv
 # Then create and fit several models to compare:

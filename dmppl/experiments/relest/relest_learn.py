@@ -10,7 +10,10 @@
 #   python relest.py -q TEST exportcsv           # Quick run with 20 systems
 #
 # OR generate datasets in parts:
-#   for d in `seq 1 11`; do python relest.py RUN$d exportcsv; done
+#   for d in `seq 1 5`; do
+#     python relest.py RUN$d exportcsv;
+#     cp RUN$d/csv/combined.csv datasets/combined$d.csv;
+#   done
 #
 #   mv TRAIN/csv/combined.csv ./combinedTrain.csv
 #   mv TEST/csv/combined.csv ./combinedTest.csv

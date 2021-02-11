@@ -42,7 +42,9 @@
 
 from __future__ import absolute_import, division, print_function
 
+import argparse
 from contextlib import redirect_stdout
+import datetime
 import itertools
 import json
 import os
@@ -58,12 +60,7 @@ from tensorflow.python.framework import constant_op
 from tensorflow.python.ops import clip_ops
 from tensorflow.python.ops import math_ops
 
-# Sweep over a large range of models, rather than just a select few.
-# Useful during initial experimentation.
-sweepNotChosen = False
-
-# Quickly run with one input combination and one model.
-debugMode = False
+__version__ = "0.0.0"
 
 # Activations:
 # hard_sigmoid  = 0 if x < -2.5, 1 if x > 2.5, (2x+5)/10 otherwise
@@ -82,7 +79,8 @@ chosenModelParams = (
     (8, "sigmoid",      8, "sigmoid",       "sigmoid"), # sigm8_sigm8
    #(8, "relu",         8, "relu",          "sigmoid"), # relu8_relu8
     (8, "tanh",         8, "tanh",          "sigmoid"), # tanh8_tanh8
-) if not debugMode else ((4, "qsig", 2, "qsig", "sigmoid"),)
+)
+quickdbgChosenModelParams = ((4, "qsig", 2, "qsig", "sigmoid"),)
 
 # Use sweepModelParams to sweep a selection of model parameters.
 # 5*4*5*4=400 models
@@ -91,9 +89,7 @@ numbers, activations = \
     ("hard_sigmoid", "sigmoid", "relu", "tanh")
 sweepModelParams = list(itertools.product((numbers, activations, numbers, activations, ["sigmoid"])))
 
-modelParams = sweepModelParams if sweepNotChosen else chosenModelParams
-
-inputCombinations = {
+chosenInputCombinations = {
 #    # Throw everything we have at the problem and hope it sticks!
 #    "fullassist": ["E[X]", "E[Y]", "E[X*Y]", "E[|X-Y|]", "E[X|Y]", "E[Y|X]",
 #                   "Cls(X,Y)", "Cos(X,Y)", "Cov(X,Y)", "Dep(X,Y)", "Ham(X,Y)",
@@ -123,12 +119,13 @@ inputCombinations = {
                 "Cov(X,Y)", "Dep(X,Y)", "Tmt(X,Y)"],
     "assistC": ["E[X]", "E[Y]", "E[X*Y]", # No counters for E[|X-Y|]
                 "Cov(X,Y)", "Dep(X,Y)", "Tmt(X,Y)"],
-} if not debugMode else {"tst": ["E[X]", "E[Y]", "E[X*Y]"]}
+}
+quickdbgInputCombinations = {"quickdbg": ["E[X]", "E[Y]", "E[X*Y]"]}
 
 defaultLogdir = "tf.results"
 
 def getMetric(fname): # {{{
-    '''Read in a JSON file created by createModels() and return a callable which
+    '''Read in a JSON file created by main() and return a callable which
     with the same API as ndCov(win, x, y) et al.
 
     This can be fed back into relest.py for plotting
@@ -197,14 +194,17 @@ def getMetric(fname): # {{{
 def getDatasets(**kwargs): # {{{
     # https://www.tensorflow.org/tutorials/load_data/csv
 
+    fnameDatasetTrain = kwargs.get("fnameDatasetTrain", "combinedTrain.csv")
+    fnameDatasetTest = kwargs.get("fnameDatasetTest", "combinedTest.csv")
     inputCombination = kwargs.get("selectColumns", "fullassist")
+    inputCombinations = kwargs.get("inputCombinations")
     selectColumns = ["known"] + inputCombinations[inputCombination]
 
     # NOTE: make_csv_dataset is experimental. Look out for API change.
     # NOTE: Reader is very strict! Can't cope with multi-char delimiter.
 
     raw_dataset_train = tf.data.experimental.make_csv_dataset(
-        "combinedTrain.csv",
+        fnameDatasetTrain,
         batch_size=64,
         label_name="known", # NOTE: Must be in `select_columns`
         select_columns=selectColumns,
@@ -214,7 +214,7 @@ def getDatasets(**kwargs): # {{{
     )
 
     raw_dataset_test = tf.data.experimental.make_csv_dataset(
-        "combinedTest.csv",
+        fnameDatasetTest,
         batch_size=64,
         label_name="known", # NOTE: Must be in `select_columns`
         select_columns=selectColumns,
@@ -262,6 +262,7 @@ def buildModel(inputCombination, **kwargs): # {{{
         return clip_ops.clip_by_value(_y1, 0.0, 1.0)
     # }}} def qsig
 
+    inputCombinations = kwargs.get("inputCombinations")
     n1, n2 = kwargs.get("n1", 8), kwargs.get("n2", 8)
     a1, a2 = kwargs.get("a1", "qsig"), kwargs.get("a2", "qsig")
     ao = kwargs.get("ao", "qsig")
@@ -375,16 +376,59 @@ def fitModel(model, dataset, **kwargs): # {{{
               callbacks=fitCallbacks)
 # }}} def fitModel
 
-def createModels(): # {{{
+# {{{ argparser
+
+argparser = argparse.ArgumentParser(
+    description = "relest-learn - Learn FFNN-based metrics from relest dataset.",
+    formatter_class = argparse.ArgumentDefaultsHelpFormatter
+)
+
+nowStr = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+
+argparser.add_argument("--dataset_train",
+    type=str,
+    default="combinedTrain.csv",
+    help="Filename of training dataset CSV.")
+
+argparser.add_argument("--dataset_test",
+    type=str,
+    default="combinedTest.csv",
+    help="Filename of validation dataset CSV.")
+
+argparser.add_argument("-q", "--quickdbg",
+    default=False,
+    action='store_true',
+    help="Run with one input combination and one model.")
+
+argparser.add_argument("--sweep",
+    default=False,
+    action='store_true',
+    help="Sweep over model parameters.")
+
+# }}} argparser
+
+def main(args): # {{{
+
+
+    modelParams = sweepModelParams if \
+        args.sweep else (quickdbgChosenModelParams if \
+        args.quickdbg else chosenModelParams)
+
+    inputCombinations = quickdbgInputCombinations if \
+        args.quickdbg else chosenInputCombinations
 
     for inputCombination in inputCombinations.keys():
 
         nInputs, logdir, dataset_train, dataset_test = \
-            getDatasets(selectColumns=inputCombination)
+            getDatasets(selectColumns=inputCombination,
+                        inputCombinations=inputCombinations,
+                        fnameDatasetTrain=args.dataset_train,
+                        fnameDatasetTest=args.dataset_test)
 
         for i,(n1,a1,n2,a2,ao) in enumerate(modelParams):
 
             model = buildModel(inputCombination,
+                               inputCombinations=inputCombinations,
                                n1=n1, a1=a1,
                                n2=n2, a2=a2,
                                ao=ao,
@@ -428,15 +472,18 @@ def createModels(): # {{{
             )
             print(newMetricName, newMetric(*dummy))
 
-    return
-# }}} def createModels
-
-if __name__ == "__main__":
-    createModels()
-
 #predictions = model.predict(dataset_test)
 #nPred = 20
 #for e, k in zip(predictions[:nPred], list(dataset_test)[0][1][:nPred]):
 #    print(int(k), e[0])
 #
 #print('EVAL: loss={:0.03f}, acc={:0.03f}, mse={:0.03f}'.format(*model.evaluate(dataset_test)))
+
+    return
+# }}} def main
+
+def entryPoint(argv=sys.argv):
+    return run(__name__, argv=argv)
+
+if __name__ == "__main__":
+    sys.exit(entryPoint())

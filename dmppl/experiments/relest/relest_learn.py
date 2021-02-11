@@ -28,6 +28,7 @@
 #   tensorboard --logdir fullassist.results/tf
 #   tensorboard --logdir onchip.results/tf
 #   ...etc
+#   for r in relest_learn.*.results; do tensorboard --logdir $r & done
 #   ...Point browsers to `localhost:6006` and `localhost:6007`
 # Then score and plot specific metrics:
 #   python relest.py -v \

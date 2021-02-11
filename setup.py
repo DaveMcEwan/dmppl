@@ -40,7 +40,8 @@ with open(_version_fname, 'r') as fd:
 # a new venv.
 installRequires = [
     "joblib"        "~=0.14.1", # 2019-12-10
-    "numpy"         "~=1.16.5", # 2019-08-28
+    #"numpy"         "~=1.16.5", # 2019-08-28 # TensorFlow 2.0.0
+    "numpy"         "~=1.19.5", # 2019-08-28 # TensorFlow 2.4.1
     "prettytable"   "~=0.7.2",  # 2013-04-07
     "pyserial"      "~=3.4",    # 2017-07-23
     "pyyaml"        "~=5.3.1",  # 2020-03-18
@@ -56,6 +57,7 @@ if vPyMajor >= 3 and vPyMinor >= 6:
         "pydot"         "~=1.4.1",  # 2018-12-12
         "seaborn"       "~=0.10.0", # 2020-01-24
         #"tensorflow"    "~=2.0.0",  # 2019-09-30, Massive
+        #"tensorflow"    "~=2.4.1",  # 2021-01-21, Massive, access to tensorboard data
         "tinyprog"      "==1.0.21", # 2018-08-29
     ]
 

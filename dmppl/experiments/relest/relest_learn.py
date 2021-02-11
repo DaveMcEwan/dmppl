@@ -315,14 +315,13 @@ def buildModel(inputCombination, **kwargs): # {{{
 
     logdir = kwargs.get("logdir", defaultLogdir)
     fnameTxt = joinP(logdir, modelName+".txt")
-    fnamePng = joinP(logdir, modelName+".png")
-    # TODO: PDF?
+    fnamePdf = joinP(logdir, modelName+".pdf")
 
     with open(fnameTxt, 'w') as fd:
         with redirect_stdout(fd):
             model.summary()
 
-    tf.keras.utils.plot_model(model, to_file=fnamePng, show_shapes=True)
+    tf.keras.utils.plot_model(model, to_file=fnamePdf, show_shapes=True)
 
     return model
 # }}} def buildModel

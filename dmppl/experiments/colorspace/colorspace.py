@@ -1,61 +1,23 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 
-# Event Analysis
 # Dave McEwan 2018-02-22
 #
 # Run like:
-#    ./colorspace2d.py # Then look at pictures in output directory.
+#    ./colorspace.py # Then look at pictures in output directory.
 
 from __future__ import print_function
+
+import argparse
+from itertools import product
+import numpy as np
+from os import sep
 import sys
 
-version_help = "Python 2.7 or 3.4+ required."
-if sys.version_info[0] == 2:
-    assert sys.version_info[1] == 7, version_help
-elif sys.version_info[0] == 3:
-    assert sys.version_info[1] >= 4, version_help
-else:
-    assert False, version_help
-
-import os
-import errno
-import numpy as np
-import itertools
 import png
 
-verbose = False
+from dmppl.base import run, verb, mkDirP
 
-def mkdir_p(path=""): # {{{
-    try:
-        os.makedirs(path)
-    except OSError as e:
-        if e.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
-            raise
-    return
-# }}}
-
-def verb(msg='', end='\n'): # {{{
-    if verbose:
-        print(msg, end=end)
-        sys.stdout.flush()
-# }}}
-
-def dbg(x=''): # {{{
-    if __debug__:
-        func = sys._getframe().f_back.f_code.co_name
-        line = sys._getframe().f_back.f_lineno
-
-        if isinstance(x, list) or isinstance(x, tuple) or isinstance(x, set):
-            msg = ", ".join([str(i) for i in x])
-        elif isinstance(x, dict):
-            msg = ", ".join(["%s: %s" % (str(k), str(x[k])) for k in x])
-        else:
-            msg = str(x)
-
-        print("%s():%s: %s" % (func, line, msg))
-# }}}
+__version__ = "0.0.0"
 
 def cs0(args, fname="cs0.png", rows=512, cols=512,
         color_comb="BRG", invert_origin=False, invert_color=False): # {{{
@@ -69,7 +31,7 @@ def cs0(args, fname="cs0.png", rows=512, cols=512,
 
     coords = np.empty((rows, cols), dtype=np.complex_) # [0+i0, 1+i1]
 
-    for row,col in itertools.product(range(rows), range(cols)):
+    for row,col in product(range(rows), range(cols)):
         coords[row][col] = np.complex_(float(rows - row - 1)/rows + 1j* float(col)/cols)
 
     if invert_origin:
@@ -123,66 +85,50 @@ def cs0(args, fname="cs0.png", rows=512, cols=512,
                    alpha=False,
                    bitdepth=8)
 
-    mkdir_p(args.output_dir)
-    with open(args.output_dir + os.sep + fname, 'wb') as fd:
+    mkDirP(args.output_dir)
+    with open(args.output_dir + sep + fname, 'wb') as fd:
         w.write(fd, RGB)
 # }}}
 
-def get_args(): # {{{
-    '''Parse cmdline arguments and return seed and object from YAML config.
+# {{{ argparser
+
+argparser = argparse.ArgumentParser(
+    description = "colorspace - Generate colorspace plots.",
+    formatter_class = argparse.ArgumentDefaultsHelpFormatter
+)
+
+argparser.add_argument("--output-dir",
+    type=str,
+    default="results",
+    help="Directory in which to store result files.")
+
+argparser.add_argument("--png-gamma",
+    type=float,
+    default=1.0,
+    help="Gamma correction factor for non-binary data.")
+
+# }}} argparser
+
+def main(args): # {{{
     '''
-    import argparse
+    '''
 
-    parser = argparse.ArgumentParser(
-        description = "colorspace - Generate colorspace plots.",
-        formatter_class = argparse.ArgumentDefaultsHelpFormatter
-    )
+    # NOTE: rows/cols here are opposite in PNG world so upper-left and
+    # lower-right corners are swapped.
+    # Therefore BRG may be the default but GRB is how it appears normally.
+    cs0(args, fname="cs0_combGRB.png", color_comb="GRB")
 
-    parser.add_argument("-v", "--verbose",
-                        default=False,
-                        action='store_true',
-                        help="Display progress messages.")
+    cs0(args, fname="cs0_combBRG.png")
+    cs0(args, fname="cs0_combBRG_invcolor.png", invert_color=True)
+    cs0(args, fname="cs0_combBRG_invorigin.png", invert_origin=True)
+    cs0(args, fname="cs0_combRGB.png", color_comb="RGB")
+    cs0(args, fname="cs0_combRBG.png", color_comb="RBG")
 
-    parser.add_argument("--output-dir",
-                        type=str,
-                        default=".",
-                        help="Directory in which to store result files.")
+    return 0
+# }}} def main
 
-    parser.add_argument("--png-gamma",
-                        type=float,
-                        default=1.0,
-                        help="Gamma correction factor for non-binary data.")
-
-    args = parser.parse_args()
-
-    # Global just used to keep verbose printing tidy.
-    global verbose
-    verbose = args.verbose
-
-    return args
-# }}}
+def entryPoint(argv=sys.argv):
+    return run(__name__, argv=argv)
 
 if __name__ == "__main__":
-
-    ret = 1
-    try:
-        args = get_args()
-
-        # NOTE: rows/cols here are opposite in PNG world so upper-left and
-        # lower-right corners are swapped.
-        # Therefore BRG may be the default but GRB is how it appears normally.
-        cs0(args, fname="cs0_combGRB.png", color_comb="GRB")
-
-        cs0(args, fname="cs0_combBRG.png")
-        cs0(args, fname="cs0_combBRG_invcolor.png", invert_color=True)
-        cs0(args, fname="cs0_combBRG_invorigin.png", invert_origin=True)
-        cs0(args, fname="cs0_combRGB.png", color_comb="RGB")
-        cs0(args, fname="cs0_combRBG.png", color_comb="RBG")
-
-    except IOError as e:
-        msg = 'IOError: %s: %s\n' % (e.strerror, e.filename)
-        sys.stderr.write(msg)
-    else:
-        ret = 0
-
-    sys.exit(ret)
+    sys.exit(entryPoint())

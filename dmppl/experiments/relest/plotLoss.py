@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
 
 from glob import glob
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import shutil
 
 from dmppl.base import mkDirP
 
@@ -35,15 +37,6 @@ print(modelNames, len(modelNames))
 colNames = ("Wall time", "Step", "Value")
 
 figsize = (8, 3)
-markers = [
-    '-k',  # solid line black
-    '-b',  # solid line blue
-    '-g',  # solid line green
-    '-r',  # solid line red
-    '-c',  # solid line cyan
-    '-m',  # solid line magenta
-    '-y',  # solid line yellow
-]
 
 dirPlot = dirCsv + ".plots"
 mkDirP(dirPlot)
@@ -58,13 +51,17 @@ for inputCombination in inputCombinations:
                           unpack=True) \
             for m in modelNames}
 
-    plt.figure(figsize=figsize)
+    fig = plt.figure(figsize=figsize)
     for i,(m,csv) in enumerate(csvs.items()):
         plt.plot(csv[0], csv[1], label=m)
     plt.legend(loc="lower left", ncol=2)
     plt.xlim(0, 100)
     plt.ylim(-1, 0)
-    plt.savefig(dirPlot + os.sep + "relestlearn." + inputCombination + ".pdf",
-                bbox_inches="tight")
+    plt.ylabel("Loss")
+    plt.xlabel("Epoch Step")
+
+    fname = dirPlot + os.sep + "relestlearn." + inputCombination + ".pdf"
+    plt.savefig(fname, bbox_inches="tight", pad_inches=0)
     plt.close()
+    shutil.copy(fname, os.environ["HOME"] + "/phd/pres/share/img/")
 

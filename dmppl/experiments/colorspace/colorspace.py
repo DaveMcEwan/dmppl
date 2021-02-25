@@ -3,11 +3,10 @@
 # Dave McEwan 2018-02-22
 #
 # Run like:
-#    ./colorspace.py # Then look at pictures in output directory.
-
-from __future__ import print_function
+#    ./colorspace.py -v # Then look at pictures in output directory.
 
 import argparse
+from functools import partial
 from itertools import product
 import numpy as np
 from os import sep
@@ -19,76 +18,79 @@ from dmppl.base import run, verb, mkDirP
 
 __version__ = "0.0.0"
 
-def cs0(args, fname="cs0.png", rows=512, cols=512,
-        color_comb="BRG", invert_origin=False, invert_color=False): # {{{
-    '''Generate 2D colorspace for points with both dimensions in [0, 1].
-       White at origin means when printed on a white background (like paper)
-       smaller values don't show.
-       Large in both dimension shows as black.
-       Large in one dimension will show as bluey-purple or greeny-yellow.
-       Darker is more significant.
+def cs0(a, b, **kwargs): # {{{
+    '''Return RGB tuple to represent bounded pair of values a,b as color.
+
+    Most useful where a and b combine with magnitude and angle.
+    Higher values of a and b are darker, which looks good on printed paper.
+    Similar perception between normal color vision and protantopes.
+
+    Implementation of colorspace in https://arxiv.org/abs/1905.06386
     '''
+    assert isinstance(a, float), "type(a)=%s" % str(type(a))
+    assert np.isnan(a) or 0.0 <= a <= 1.0, a
+    if np.isnan(a):
+        a = 0.0
 
-    coords = np.empty((rows, cols), dtype=np.complex_) # [0+i0, 1+i1]
+    assert isinstance(b, float), "type(b)=%s" % str(type(b))
+    assert np.isnan(b) or 0.0 <= b <= 1.0, b
+    if np.isnan(b):
+        b = 0.0
 
-    for row,col in product(range(rows), range(cols)):
-        coords[row][col] = np.complex_(float(rows - row - 1)/rows + 1j* float(col)/cols)
+    gamma = float(kwargs.get("gamma", 1.0))
 
-    if invert_origin:
-        coords = 1+1j - 1j*np.conjugate(coords) # Invert origin
+    nBits = int(kwargs.get("nBits", 8))
+    assert nBits > 1
 
-    coords_mag = np.absolute(coords)
-    coords_arg = np.angle(coords)
+    magColor = kwargs.get("magColor", 'r').lower()
+    assert magColor in ('r', 'g', 'b'), magColor
 
-    # NOTE: 1.5 is a nice gamma.
-    # NOTE: Larger gamma means more white at origin,
-    #   intuitively that means more points are ignored.
+    invOrigin = bool(kwargs.get("invOrigin", False))
+    if invOrigin:
+        a, b = (1 - a), (1 - b)
 
-    b = 1-(coords_mag/np.sqrt(2))**args.png_gamma
-    assert np.all(np.greater_equal(b, 0))
-    assert np.all(np.less_equal(b, 1))
+    theta = 1.0 - (np.sqrt(a**2 + b**2) / np.sqrt(2.0))**gamma
+    phi = np.arctan2(a, b)
 
-    a = b**(np.maximum(0, coords_arg - np.pi/4)+1)
-    c = b**(np.maximum(0, np.pi/4 - coords_arg)+1)
-    assert np.all(np.greater_equal(a, 0))
-    assert np.all(np.less_equal(a, 1))
-    assert np.all(np.greater_equal(c, 0))
-    assert np.all(np.less_equal(c, 1))
+    pi4 = 0.25 * np.pi
+    fullBrightness = 2**nBits - 1
 
-    if invert_color:
-        a = 1 - a
-        b = 1 - b
-        c = 1 - c
+    red = int( fullBrightness * theta )
+    green = int( fullBrightness * theta**(1 + max(0, phi - pi4)) )
+    blue = int( fullBrightness * theta**(1 + max(0, pi4 - phi)) )
 
-    # Scale to 8bit depth and assign colors.
-    color_comb = color_comb.upper()
-    if   color_comb[0] == 'R': R = (255 * a).astype(int)
-    elif color_comb[0] == 'G': G = (255 * a).astype(int)
-    elif color_comb[0] == 'B': B = (255 * a).astype(int) # default
-    if   color_comb[1] == 'R': R = (255 * b).astype(int) # default
-    elif color_comb[1] == 'G': G = (255 * b).astype(int)
-    elif color_comb[1] == 'B': B = (255 * b).astype(int)
-    if   color_comb[2] == 'R': R = (255 * c).astype(int)
-    elif color_comb[2] == 'G': G = (255 * c).astype(int) # default
-    elif color_comb[2] == 'B': B = (255 * c).astype(int)
-    assert np.all(np.greater_equal(R, 0))
-    assert np.all(np.less_equal(R, 255))
-    assert np.all(np.greater_equal(G, 0))
-    assert np.all(np.less_equal(G, 255))
-    assert np.all(np.greater_equal(B, 0))
-    assert np.all(np.less_equal(B, 255))
+    if 'b' == magColor:
+        red, green, blue = blue, green, red
+    elif 'g' == magColor:
+        red, green, blue = green, red, blue
+    else:
+        assert 'r' == magColor
 
-    RGB = np.dstack([R, G, B]).reshape((rows, cols*3))
+    # Swap green/blue to keep purble/green in the same corners.
+    if invOrigin:
+        red, green, blue = red, blue, green
 
-    w = png.Writer(height=rows, width=cols,
+    return (red, green, blue)
+# }}} def cs0
+
+def makePng(f, fname, nRows=512, nCols=512): # {{{
+    '''Take a colorspace callable, sweep over all values to create PNG.
+    '''
+    pixArray = np.ndarray((nRows, nCols), dtype=np.uint8)
+    R, G, B = pixArray, pixArray.copy(), pixArray.copy()
+
+    # NOTE: Reflect rows to match PNG coordinate system.
+    for r,c in product(range(nRows), range(nCols)):
+        R[r][c], G[r][c], B[r][c] = f(1 - r/nRows, c/nCols)
+
+    w = png.Writer(height=nRows, width=nCols,
                    greyscale=False,
                    alpha=False,
                    bitdepth=8)
 
-    mkDirP(args.output_dir)
-    with open(args.output_dir + sep + fname, 'wb') as fd:
-        w.write(fd, RGB)
-# }}}
+    with open(fname, 'wb') as fd:
+        w.write(fd, np.dstack([R, G, B]).reshape((nRows, nCols*3)))
+# }}} def makePng
 
 # {{{ argparser
 
@@ -102,9 +104,9 @@ argparser.add_argument("--output-dir",
     default="results",
     help="Directory in which to store result files.")
 
-argparser.add_argument("--png-gamma",
+argparser.add_argument("--gamma",
     type=float,
-    default=1.0,
+    default=1.1,
     help="Gamma correction factor for non-binary data.")
 
 # }}} argparser
@@ -113,16 +115,26 @@ def main(args): # {{{
     '''
     '''
 
-    # NOTE: rows/cols here are opposite in PNG world so upper-left and
-    # lower-right corners are swapped.
-    # Therefore BRG may be the default but GRB is how it appears normally.
-    cs0(args, fname="cs0_combGRB.png", color_comb="GRB")
+    mkDirP(args.output_dir)
+    fdir = args.output_dir + sep
 
-    cs0(args, fname="cs0_combBRG.png")
-    cs0(args, fname="cs0_combBRG_invcolor.png", invert_color=True)
-    cs0(args, fname="cs0_combBRG_invorigin.png", invert_origin=True)
-    cs0(args, fname="cs0_combRGB.png", color_comb="RGB")
-    cs0(args, fname="cs0_combRBG.png", color_comb="RBG")
+    f = partial(cs0, gamma=args.gamma)
+
+    verb("cs0...", end='')
+    makePng(f,                                          fdir+"cs0.png")
+    verb("DONE")
+
+    verb("cs0_invOrigin...", end='')
+    makePng(partial(f, invOrigin=True),                 fdir+"cs0_invOrigin.png")
+    verb("DONE")
+
+    verb("cs0_magB...", end='')
+    makePng(partial(f, gamma=args.gamma, magColor='b'), fdir+"cs0_magB.png")
+    verb("DONE")
+
+    verb("cs0_magG...", end='')
+    makePng(partial(f, gamma=args.gamma, magColor='g'), fdir+"cs0_magG.png")
+    verb("DONE")
 
     return 0
 # }}} def main

@@ -23,12 +23,12 @@ def colorspace1D(a, gamma=1.0, nBits=8): # {{{
     assert isinstance(nBits, int), "type(nBits)=%s" % str(type(nBits))
     assert nBits > 1
 
-    n_levels = 2**nBits - 1
+    fullBrightness = 2**nBits - 1
 
     if np.isnan(a):
         gray = 0
     else:
-        gray = int( n_levels * (1-a)**gamma )
+        gray = int( fullBrightness * (1-a)**gamma )
 
     return gray, gray, gray
 # }}} def colorspace1D
@@ -36,7 +36,10 @@ def colorspace1D(a, gamma=1.0, nBits=8): # {{{
 def colorspace2D(a, b, gamma=1.0, nBits=8): # {{{
     '''Return RGB tuple to represent bounded pair of values a,b as color.
 
-    Higher values of a and b are darker.
+    Most useful where a and b combine with magnitude and angle.
+    Higher values of a and b are darker, which looks good on printed paper.
+    Similar perception between normal color vision and protantopes.
+
     Implementation of colorspace in https://arxiv.org/abs/1905.06386
     '''
     assert isinstance(a, float), "type(a)=%s" % str(type(a))
@@ -54,19 +57,16 @@ def colorspace2D(a, b, gamma=1.0, nBits=8): # {{{
         b = 0.0
 
     theta = 1.0 - (np.sqrt(a**2 + b**2) / np.sqrt(2.0))**gamma
-    phi = np.arctan2(b, a)
+    phi = np.arctan2(a, b)
 
     pi4 = 0.25 * np.pi
-    n_levels = 2**nBits - 1
+    fullBrightness = 2**nBits - 1
 
-    red = int( n_levels * theta )
-    green = int( n_levels * theta**(max(0, pi4 - phi) + 1) )
-    blue = int( n_levels * theta**(max(0, phi - pi4) + 1) )
-    assert 0 <= red <= 255
-    assert 0 <= green <= 255
-    assert 0 <= blue <= 255
+    red = int( fullBrightness * theta )
+    green = int( fullBrightness * theta**(1 + max(0, phi - pi4)) )
+    blue = int( fullBrightness * theta**(1 + max(0, pi4 - phi)) )
 
-    return red, green, blue
+    return (red, green, blue)
 # }}} def colorspace2D
 
 def rgbStr(red, green, blue): # {{{

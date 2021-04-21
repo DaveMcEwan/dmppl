@@ -91,6 +91,16 @@ argparser.add_argument("--ylim",
     default=None,
     help="Limits for Y-axis like '0.1,5.5'.")
 
+argparser.add_argument("--vlines",
+    type=str,
+    default=None,
+    help="Vertical lines like '0,1.8'.")
+
+argparser.add_argument("--hlines",
+    type=str,
+    default=None,
+    help="Horizontal lines like '0,1.8'.")
+
 argparser.add_argument("--baseX",
     action="store_true",
     help="Set --addX to negative top value of left column.")
@@ -153,9 +163,6 @@ def main(args) -> int: # {{{
     '''
     '''
 
-    fnamePng = fnameAppendExt(args.output, "png")
-    fnamePdf = fnameAppendExt(args.output, "pdf")
-
     fignum = 0
 
     # figsize used to set dimensions in inches.
@@ -183,7 +190,7 @@ def main(args) -> int: # {{{
 
     markers = list(args.markers)
 
-    labels = list(args.labels.split(','))
+    labels = list(l for l in args.labels.split(',') if 0 < len(l))
 
     a = np.loadtxt(rdLines(args.input),
                    skiprows=args.skiprows,
@@ -266,6 +273,14 @@ def main(args) -> int: # {{{
 
     if 0 < len(labels):
         plt.legend()
+
+    if args.vlines:
+         for line in args.vlines.split(',')
+            plt.axvline(y=float(line), color="green", linestyle='-', linewidth=1)
+
+    if args.hlines:
+         for line in args.hlines.split(',')
+            plt.axhline(y=float(line), color="green", linestyle='-', linewidth=1)
 
     if args.pdf:
         plt.savefig(fnameAppendExt(args.output, "pdf"), bbox_inches="tight")

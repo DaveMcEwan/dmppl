@@ -28,6 +28,10 @@ def ndAssert(*args, **kwargs): # {{{
     as the NumPy arrays in args to assert comparison properties.
     '''
     if __debug__:
+        # Set to disable all elementwise numpy asserts, like when args is a
+        # dummy because data comes from correlation counters.
+        if kwargs.get("disable_ndAssert", False):
+            return
 
         assertRange = kwargs.get("assertRange", True)
 

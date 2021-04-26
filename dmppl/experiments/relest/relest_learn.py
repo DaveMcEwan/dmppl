@@ -181,10 +181,18 @@ def getMetric(fname): # {{{
         # Standard metrics
         ffnnInput_ = []
         for nm in inputNames:
-            if   "E[X]" == nm:      value = ndEx(win, x, **kwargs)
-            elif "E[Y]" == nm:      value = ndEx(win, y, **kwargs)
-            elif "E[X*Y]" == nm:    value = ndEx(win, ndHadp(x, y, **kwargs), **kwargs)
-            elif "E[|X-Y|]" == nm:  value = ndEx(win, ndAbsDiff(x, y, **kwargs), **kwargs)
+            if   "E[X]" == nm:
+                _x_Ex = kwargs.get("x_Ex", None)
+                value = ndEx(win, x, **kwargs) if _x_Ex is None else _x_Ex
+            elif "E[Y]" == nm:
+                _y_Ex = kwargs.get("y_Ex", None)
+                value = ndEx(win, y, **kwargs) if _y_Ex is None else _y_Ex
+            elif "E[X*Y]" == nm:
+                _xHadpY_Ex = kwargs.get("xHadpY_Ex", None)
+                value = ndEx(win, ndHadp(x, y, **kwargs), **kwargs) if _xHadpY_Ex is None else _xHadpY_Ex
+            elif "E[|X-Y|]" == nm:
+                _xDiffY_Ex = kwargs.get("xDiffY_Ex", None)
+                value = ndEx(win, ndAbsDiff(x, y, **kwargs), **kwargs) if _xDiffY_Ex is None else _xDiffY_Ex
             elif "E[X|Y]" == nm:    value = ndCex(win, x, y, **kwargs)
             elif "E[Y|X]" == nm:    value = ndCex(win, y, x, **kwargs)
             elif "Cls(X,Y)" == nm:  value = ndCls(win, x, y, **kwargs)

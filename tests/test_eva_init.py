@@ -29,7 +29,7 @@ class Test_LoadEvc(unittest.TestCase): # {{{
                 u"fxbits": 123,
                 u"vcdhierprefix": u"somepath.prefix.",
             },
-            u"measure": [
+            u"signal": [
                 {
                     u"name": u"someNormal",
                     u"hook": u"normalHook",
@@ -195,8 +195,8 @@ class Test_EvaInit(unittest.TestCase): # {{{
 
         evaInit(args)
 
-        resultMeasureVcd = rdTxt(path.join(_tstd, "basic2.eva", "measure.vcd"))
-        goldenMeasureVcd = rdTxt(path.join(_tstd, "basic2.measure.golden.vcd"))
+        resultMeasureVcd = rdTxt(path.join(_tstd, "basic2.eva", "signals.vcd"))
+        goldenMeasureVcd = rdTxt(path.join(_tstd, "basic2.signals.golden.vcd"))
         self.assertEqual(goldenMeasureVcd, resultMeasureVcd)
 
 # }}} class Test_EvaInit

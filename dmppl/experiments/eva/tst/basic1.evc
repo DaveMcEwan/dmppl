@@ -1,5 +1,5 @@
 
-[[measure]]
+[[signal]]
 type = "event"
 name = "eventNameOfThree{}"
 hook = "eventHookOfThree[{}]"

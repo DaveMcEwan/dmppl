@@ -47,9 +47,9 @@ def initPaths(argsEvcPath): # {{{
     paths.fname_evcx = joinP(outdir, "evcx.toml")
     paths.fname_cfg = joinP(outdir, "config.toml")
     paths.fname_cln = joinP(outdir, "clean.vcd")
-    paths.fname_mea = joinP(outdir, "measure.vcd")
-    paths.fname_meainfo = joinP(outdir, "measure.info.toml")
-    paths.dname_mea = joinP(outdir, "measure")
+    paths.fname_mea = joinP(outdir, "signals.vcd")
+    paths.fname_meainfo = joinP(outdir, "signals.info.toml")
+    paths.dname_mea = joinP(outdir, "signals")
     paths.dname_identicon = joinP(outdir, "identicon")
 
     paths._INITIALIZED = True
@@ -218,7 +218,7 @@ def meaDtype(name): # {{{
 
     hasValues = name.startswith("normal.")
 
-    # Type corresponds to bit/real in measure.vcd.
+    # Type corresponds to bit/real in signals.vcd.
     # NOTE: int is required instead of bool as newValue is given from VcdReader
     # as a string.
     # int("0") --> 0, bool(0) -- False, bool("0") --> True
@@ -231,23 +231,23 @@ def meaDtype(name): # {{{
 # }}} def meaDtype
 
 def isUnitIntervalMeasure(name): # {{{
-    '''All VCD::bit signals in measure.vcd are usable, but of the VCD::real
+    '''All VCD::bit signals in signals.vcd are usable, but of the VCD::real
        signals, only normal.measure.* are usable.
 
     Other VCD::real signals are not guaranteed to be in [0, 1].
     '''
-    unitEventSiblings = ("measure",)
-    unitBstateSiblings = ("measure", "refl", "rise", "fall",)
-    unitThresholdSiblings = ("measure", "refl", "rise", "fall",)
-    unitNormalSiblings = ("measure",)
+    eventSiblings = ("measure",)
+    bstateSiblings = ("measure", "refl", "rise", "fall",)
+    thresholdSiblings = ("measure", "refl", "rise", "fall",)
+    normalSiblings = ("measure",)
 
     measureType, siblingType, baseName = measureNameParts(name)
 
     ret = \
-        ("event" == measureType and siblingType in unitEventSiblings) or \
-        ("bstate" == measureType and siblingType in unitBstateSiblings) or \
-        ("threshold" == measureType and siblingType in unitThresholdSiblings) or \
-        ("normal" == measureType and siblingType in unitNormalSiblings)
+        ("event" == measureType and siblingType in eventSiblings) or \
+        ("bstate" == measureType and siblingType in bstateSiblings) or \
+        ("threshold" == measureType and siblingType in thresholdSiblings) or \
+        ("normal" == measureType and siblingType in normalSiblings)
 
     return ret
 # }}} def isUnitIntervalMeasure
@@ -255,9 +255,9 @@ def isUnitIntervalMeasure(name): # {{{
 def meaDbFromVcd(): # {{{
     '''Apply post-processing steps to stage0.
 
-    Extract changes from measure.vcd into fast-to-read binary form.
+    Extract changes from signals.vcd into fast-to-read binary form.
 
-    measure.vcd has only 2 datatypes: bit, real
+    signals.vcd has only 2 datatypes: bit, real
 
     Assume initial state for all measurements is 0.:
     All timestamps are 32b non-negative integers.
@@ -403,7 +403,7 @@ def meaSearch(name, targetTime, precNotSucc=True): # {{{
 
 def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
     '''Read EVent Samples (sanitized data written by evaInit to
-       foo.eva/measure/*) in [startTime, finishTime), and return as ndarrays.
+       foo.eva/signals/*) in [startTime, finishTime), and return as ndarrays.
     '''
     names = set(names)
     assert paths._INITIALIZED
@@ -443,7 +443,7 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
 
     bStrideBytes, rStrideBytes = 4, 8
 
-    # Fill by infer/copy bit values from measure.vcd to ndarray.
+    # Fill by infer/copy bit values from signals.vcd to ndarray.
     for i,(nm,startOffset) in enumerate(zip(bNames, bStartOffsets)): # {{{
         prevIdx, prevValue = 0, False
 
@@ -474,7 +474,7 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
             bEvs[i][prevIdx:] = prevValue
     # }}} infer/copy/fill bEvs
 
-    # Fill by infer/copy real values from measure.vcd to ndarray.
+    # Fill by infer/copy real values from signals.vcd to ndarray.
     for i,(nm,startOffset) in enumerate(zip(rNames, rStartOffsets)): # {{{
         prevIdx, prevValue = 0, 0.0
 

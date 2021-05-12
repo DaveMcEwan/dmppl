@@ -18,7 +18,7 @@ deltazoom = 10
 # VCD signal also using {} substitution.
 # The VCD file will be searched for signals with the hierarchical name
 # "module:TOP.probsys0.slv_o_busy" etc.
-[[measure]]
+[[signal]]
 type = "bstate"
 name = "slv.{}"
 hook = "slv_o_{}"
@@ -27,7 +27,7 @@ subs = [
 ]
 
 # Four events all with the same badness.
-[[measure]]
+[[signal]]
 type = "event"
 name = "axi.{}"
 hook = "mon_{}_tfr"
@@ -36,7 +36,7 @@ subs = [
 ]
 
 # Six events specified with the cross product of two substitutions.
-[[measure]]
+[[signal]]
 type = "event"
 name = "axi.{}.{}"
 hook = "mon_{}_{}"
@@ -48,7 +48,7 @@ subs = [
 
 # Eight events specified using range shorthand which is similar to Python.
 # <start>..<stop>[..<step>]
-[[measure]]
+[[signal]]
 type = "event"
 name = "axi.{}.page{}"
 hook = "mon_{}_pagenum[{}]"

@@ -117,9 +117,9 @@ def loadEvc(infoFlag): # {{{
             msg = "%s = %s" % (k, v)
             info(msg, prefix="INFO:EVC:CONFIG: ")
 
-        for m in evc.get("measure", []):
+        for m in evc.get("signal", []):
             msg = "%s <-- %s" % (m["name"], m["hook"])
-            info(msg, prefix="INFO:EVC:MEASURE: ")
+            info(msg, prefix="INFO:EVC:SIGNAL: ")
 
     # }}} def infoEvc
 
@@ -211,7 +211,11 @@ def checkEvc(evc): # {{{
 
     # TODO: Check config values in allowed ranges.
 
-    measureKeys = (
+    # NOTE: Changed from "measure" to "signal".
+    # Both "measure" and "signal" are nouns and verbs, but "measure" is more
+    # common as a verb and "signal" is more common as a noun.
+    # Also, "signal" is likely more intuitive to engineers.
+    signalKeys = (
         "hook", # String: VCD path of measurement data. Required.
         "type", # String: in {event, bstate, threshold, normal}.
         "name", # String: Measurement name.
@@ -239,20 +243,20 @@ def checkEvc(evc): # {{{
         "normal", # Optional {geq, leq}, defaulting to {0, 1}.
     )
 
-    measures = evc.get("measure", [])
-    for measure in measures:
-        assert "hook" in measure.keys()
-        assert "name" in measure.keys()
-        assert "type" in measure.keys()
-        for k,v in measure.items():
-            evcCheckValue(k, measureKeys)
+    signals = evc.get("signal", [])
+    for m in signals:
+        assert "hook" in m.keys()
+        assert "name" in m.keys()
+        assert "type" in m.keys()
+        for k,v in m.items():
+            evcCheckValue(k, signalKeys)
 
             if "type" == k:
                 evcCheckValue(v, measureTypes)
 
                 if "threshold" == v:
-                    leqExists = ("leq" in measure.keys())
-                    geqExists = ("geq" in measure.keys())
+                    leqExists = ("leq" in m.keys())
+                    geqExists = ("geq" in m.keys())
                     assert leqExists or geqExists
 
             # TODO: Check subs
@@ -320,22 +324,23 @@ def expandEvc(evc, cfg, infoFlag): # {{{
 
     evsIdxEvent_, evsIdxBstate_, evsIdxNormal_, evsIdxThreshold_ = 0, 0, 0, 0
     evcx = {}
-    for measure in evc.get("measure", []):
-        subs = measure["subs"] if "subs" in measure else []
-        tp = measure["type"]
+    signals = evc.get("signal", [])
+    for m in signals:
+        subs = m["subs"] if "subs" in m else []
+        tp = m["type"]
 
         if "normal" == tp:
             # Values of geq,leq define clipNorm interval.
-            geq = measure.get("geq", 0)
-            leq = measure.get("leq", 1)
+            geq = m.get("geq", 0)
+            leq = m.get("leq", 1)
             assert isinstance(geq, (int, float)), (type(geq), geq)
             assert isinstance(leq, (int, float)), (type(leq), leq)
             assert geq < leq, (geq, leq)
         elif "threshold" == tp:
             # At least one of geq, leq must be a number.
             # Values of geq,leq used for boundary checks.
-            geq = measure.get("geq", None)
-            leq = measure.get("leq", None)
+            geq = m.get("geq", None)
+            leq = m.get("leq", None)
             assert (geq is not None) or (leq is not None), (geq, leq)
             assert isinstance(geq, (int, float)) or geq is None, (type(geq), geq)
             assert isinstance(leq, (int, float)) or leq is None, (type(leq), leq)
@@ -378,10 +383,10 @@ def expandEvc(evc, cfg, infoFlag): # {{{
 
         subsProd = product(*subs_)
         for subsList in subsProd:
-            fullName = evcSubstitute(measure["name"], subsList)
+            fullName = evcSubstitute(m["name"], subsList)
 
             fullHook = cfg.vcdhierprefix + \
-                evcSubstitute(measure["hook"], subsList)
+                evcSubstitute(m["hook"], subsList)
 
             if "event" == tp:
                 evsIdx = evsIdxEvent_
@@ -805,7 +810,7 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
             # }}} for iVarId,iNewValue in zip(iChangedVarIds, iNewValues)
 
             # Interpolate normal/smooth values up to, current timechunk for
-            # measures which aren't sampled in this timechunk.
+            # measurements which aren't sampled in this timechunk.
             for iVarId,(prevIpolTime, prevIpolValues_) in mapVarIdToHistory_.items():
                 if prevIpolTime == oTime:
                     continue

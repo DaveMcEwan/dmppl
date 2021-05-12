@@ -6,17 +6,17 @@ anotherAttribute = 123 # Other attributes can be added without effect.
 fxbits = 123
 vcdhierprefix = "somepath.prefix."
 
-[[measure]]
+[[signal]]
 hook = "normalHook"
 type = "normal"
 name = "someNormal"
 
-[[measure]]
+[[signal]]
 hook = "bstateHook" # module:TOP.blk0.bstateHook
 type = "bstate"
 name = "someState"
 
-[[measure]]
+[[signal]]
 hook = "some{}.block{}.signal[{}]"
 type = "event"
 name = "FOO{}-{}-{}"

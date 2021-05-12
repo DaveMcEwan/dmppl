@@ -6,7 +6,7 @@ vcdhierprefix = "module:TOP."
 
 # {{{ event
 
-[[measure]]
+[[signal]]
 type = "event"
 name = "occurrerFromEvent{}"
 hook = "event{}"
@@ -14,7 +14,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "event"
 name = "occurrerFromBit{}"
 hook = "bit{}"
@@ -22,7 +22,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "event"
 name = "occurrerFromWire{}"
 hook = "wire{}"
@@ -30,7 +30,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "event"
 name = "occurrerFromReg{}"
 hook = "reg{}"
@@ -38,7 +38,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "event"
 name = "occurrerFromBitVec{}"
 hook = "bitVec{}[0]"
@@ -46,7 +46,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "event"
 name = "occurrerFromWireVec{}"
 hook = "wireVec{}[1]"
@@ -54,7 +54,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "event"
 name = "occurrerFromRegVec{}"
 hook = "regVec{}[2]"
@@ -67,7 +67,7 @@ subs = [
 # {{{ bstate
 
 # Bstate hooks must be of VCD 2-state or 4-state type.
-#[[measure]]
+#[[signal]]
 #type = "bstate"
 #name = "twovalFromEvent{}"
 #hook = "event{}"
@@ -75,7 +75,7 @@ subs = [
 #  ["A", "B"],
 #]
 
-[[measure]]
+[[signal]]
 type = "bstate"
 name = "twovalFromBit{}"
 hook = "bit{}"
@@ -83,7 +83,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "bstate"
 name = "twovalFromWire{}"
 hook = "wire{}"
@@ -91,7 +91,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "bstate"
 name = "twovalFromReg{}"
 hook = "reg{}"
@@ -99,7 +99,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "bstate"
 name = "twovalFromBitVec{}"
 hook = "bitVec{}[0]"
@@ -107,7 +107,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "bstate"
 name = "twovalFromWireVec{}"
 hook = "wireVec{}[1]"
@@ -115,7 +115,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "bstate"
 name = "twovalFromRegVec{}"
 hook = "regVec{}[2]"
@@ -127,7 +127,7 @@ subs = [
 
 # {{{ threshold
 
-[[measure]]
+[[signal]]
 type = "threshold"
 name = "threshGeqFromReal{}"
 hook = "real{}"
@@ -136,7 +136,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "threshold"
 name = "threshLeqFromInteger{}"
 hook = "integer{}"
@@ -145,7 +145,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "threshold"
 name = "threshInsideFromBitVec{}"
 hook = "bitVec{}"
@@ -155,7 +155,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "threshold"
 name = "threshOutsideFromWireVec{}"
 hook = "wireVec{}"
@@ -169,7 +169,7 @@ subs = [
 
 # {{{ normal
 
-[[measure]]
+[[signal]]
 type = "normal"
 name = "normFromReal{}"
 hook = "real{}"
@@ -178,7 +178,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "normal"
 name = "normFromInteger{}"
 hook = "integer{}"
@@ -187,7 +187,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "normal"
 name = "normBitVec{}"
 hook = "bitVec{}"
@@ -197,7 +197,7 @@ subs = [
   ["A", "B"],
 ]
 
-[[measure]]
+[[signal]]
 type = "normal"
 name = "normWireVec{}"
 hook = "wireVec{}"

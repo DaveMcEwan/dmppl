@@ -61,21 +61,21 @@ def popoverUl(ulTitle, links): # {{{
     return fmt.format(ulTitle=ulTitle, lis=''.join(lis)).strip()
 # }}} def popoverUl
 
-def fnDisplay(f, g): # {{{
-    assert f is None or isinstance(f, str), type(f)
-    assert g is None or isinstance(g, str), type(g)
-    assert f or g, (f, g)
-    if f is not None:
-        assert f in metricNames, f
-    if g is not None:
-        assert g in metricNames, g
+def fnDisplay(a, b): # {{{
+    assert a is None or isinstance(a, str), type(a)
+    assert b is None or isinstance(b, str), type(b)
+    assert a or b, (a, b)
+    if a is not None:
+        assert a in metricNames, a
+    if b is not None:
+        assert b in metricNames, b
 
-    fHtml = mapMetricNameToHtml[f] if f else None
-    gHtml = mapMetricNameToHtml[g] if g else None
+    aHtml = mapMetricNameToHtml[a] if a else None
+    bHtml = mapMetricNameToHtml[b] if b else None
 
-    ret = ("{%s,%s}" % (fHtml, gHtml)) \
-        if f and g else \
-        (fHtml if f else gHtml)
+    ret = ("{%s,%s}" % (aHtml, bHtml)) \
+        if a and b else \
+        (aHtml if a else bHtml)
 
     return ret
 # }}} def fnDisplay
@@ -114,13 +114,13 @@ def evaTitleFmt(fnIsEx): # {{{
     return ret
 # }}} def evaTitleFmt
 
-def evaTitleText(f, g, u, x, y): # {{{
+def evaTitleText(a, b, u, x, y): # {{{
     '''Return the title of a data view as a simple string without nested markup.
     '''
     # NOTE: Assertions handled in *Display().
-    fnIsEx = ("Cex" in (f, g)) and (None in (f, g)) # One is Cex, other is None.
+    fnIsEx = ("Cex" in (a, b)) and (None in (a, b)) # One is Cex, other is None.
     return evaTitleFmt(fnIsEx).format(
-        fn=fnDisplay(f, g),
+        fn=fnDisplay(a, b),
         x=xDisplay(x),
         y=yDisplay(y),
         u=uDisplay(u),
@@ -142,7 +142,7 @@ def evaTitleAny(fn, u, x, y, fnIsEx): # {{{
     return evaTitleFmt(fnIsEx).format(fn=fn, x=x, y=y, u=u)
 # }}} def evaTitleAny
 
-def tableTitleRow(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
+def tableTitleRow(a, b, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
     '''Return a string with HTML <tr>.
     '''
     measureNames = vcdInfo["unitIntervalVarNames"]
@@ -166,51 +166,51 @@ def tableTitleRow(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
 
         navPrevNext = ' '.join((
             '<th class="nav_u" colspan="5">',
-            evaLink(f, g, u - winStride, x, y, "prev"),
-            evaLink(f, g, u + winStride, x, y, "next"),
+            evaLink(a, b, u - winStride, x, y, "prev"),
+            evaLink(a, b, u + winStride, x, y, "next"),
             '</th>',
         ))
 
-    # NOTE: f and g must be valid strings containing name of measurement.
-    if f and g:
-        fnLinks = [evaLink(fNm, gNm, u, x, y,
-                           evaTitleText(fNm, gNm, u, x, y),
+    # NOTE: a and b must be valid strings containing name of measurement.
+    if a and b:
+        fnLinks = [evaLink(aNm, bNm, u, x, y,
+                           evaTitleText(aNm, bNm, u, x, y),
                            escapeQuotes=True) \
-                   for fNm in metricNames \
-                   for gNm in metricNames \
-                   if fNm != f and gNm != g and fNm != gNm]
-    elif f:
-        fnLinks = [evaLink(fNm, None, u, x, y,
-                           evaTitleText(fNm, None, u, x, y),
+                   for aNm in metricNames \
+                   for bNm in metricNames \
+                   if aNm != a and bNm != b and aNm != bNm]
+    elif a:
+        fnLinks = [evaLink(aNm, None, u, x, y,
+                           evaTitleText(aNm, None, u, x, y),
                            escapeQuotes=True) \
-                   for fNm in metricNames \
-                   if fNm != f]
-    elif g:
-        fnLinks = [evaLink(None, gNm, u, x, y,
-                           evaTitleText(None, gNm, u, x, y),
+                   for aNm in metricNames \
+                   if aNm != a]
+    elif b:
+        fnLinks = [evaLink(None, bNm, u, x, y,
+                           evaTitleText(None, bNm, u, x, y),
                            escapeQuotes=True) \
-                   for gNm in metricNames \
-                   if gNm != g]
+                   for bNm in metricNames \
+                   if bNm != b]
     else:
         assert False # Checking already performed in evaHtmlString()
-    fnPopover = popoverUl(fnDisplay(f, g), fnLinks)
+    fnPopover = popoverUl(fnDisplay(a, b), fnLinks)
 
-    xLinks = [evaLink(f, g, u, xNm, y,
-                      evaTitleText(f, g, u, xNm, y),
+    xLinks = [evaLink(a, b, u, xNm, y,
+                      evaTitleText(a, b, u, xNm, y),
                       escapeQuotes=True) \
               for xNm in measureNames \
               if xNm != x]
     xPopover = popoverUl(xDisplay(x), xLinks)
 
-    yLinks = [evaLink(f, g, u, x, yNm,
-                      evaTitleText(f, g, u, x, yNm),
+    yLinks = [evaLink(a, b, u, x, yNm,
+                      evaTitleText(a, b, u, x, yNm),
                       escapeQuotes=True) \
               for yNm in measureNames \
               if yNm != y]
     yPopover = popoverUl(yDisplay(y), yLinks)
 
 
-    fnIsEx = ("Cex" in (f, g)) and (None in (f, g)) # One is Cex, other is None.
+    fnIsEx = ("Cex" in (a, b)) and (None in (a, b)) # One is Cex, other is None.
 
     ret = (
         '<tr>',
@@ -223,7 +223,7 @@ def tableTitleRow(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
     return ''.join(r.strip() for r in ret)
 # }}} def tableTitleRow
 
-def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
+def tableHeaderRows(a, b, u, x, y, dsfDeltas, exSibRow): # {{{
     '''Return a string with HTML one or more <tr>.
     '''
     sibThTxtFmt = mapMetricNameToHtml["Ex"] + "[%s]<sub>%s</sub>" # symbol, x/y
@@ -278,9 +278,9 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
              for mt,st,mn in siblings]
 
         sibLinks = \
-            [evaLink(f, g, u, fnm, y, txt) if xNotY else \
-             evaLink(f, g, u, x, fnm, txt) \
-             for fnm,txt in zip(sibNames, sibLinkTxts)]
+            [evaLink(a, b, u, snm, y, txt) if xNotY else \
+             evaLink(a, b, u, x, snm, txt) \
+             for snm,txt in zip(sibNames, sibLinkTxts)]
 
         sibValueTxts = \
             ['<br/> %0.02f' % v for v in values] \
@@ -417,7 +417,7 @@ def tableHeaderRows(f, g, u, x, y, dsfDeltas, exSibRow): # {{{
     return '\n'.join(r.strip() for r in ret)
 # }}} def tableHeaderRows
 
-def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
+def calculateTableData(a, b, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
     '''Read in relevant portion of EVS and calculate values for table cells.
 
     Relevant names:
@@ -463,10 +463,10 @@ def calculateTableData(f, g, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
         assert row.shape == (evsFinishTime - evsStartTime,), \
             (row.shape, evsStartTime, evsFinishTime)
 
-    fMetric, gMetric = \
-        metric(f, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits), \
-        metric(g, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
-    fns = (fMetric, gMetric,) if g else (fMetric,)
+    aMetric, bMetric = \
+        metric(a, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits), \
+        metric(b, cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
+    fns = (aMetric, bMetric) if b else (aMetric,)
     nFns = len(fns)
 
     nRows = len(winUs) if u is None else len(measureNames)
@@ -652,7 +652,7 @@ def measureCompactHtml(name): # {{{
     return spanFmt % (mt, icon, mapSiblingTypeToHtml[st])
 # }}} def measureCompactHtml
 
-def tableDataRows(f, g, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
+def tableDataRows(a, b, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
     measureNames = vcdInfo["unitIntervalVarNames"]
 
     if x and y:
@@ -709,7 +709,7 @@ def tableDataRows(f, g, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
     return '\n'.join(tableDataRow(rowNum) for rowNum in range(nRows))
 # }}} def tableDataRows
 
-def htmlTable(f, g, u, x, y,
+def htmlTable(a, b, u, x, y,
               cfg, dsfDeltas, vcdInfo,
               exSibRow, exSib, varCol, fnUXY): # {{{
     ret_ = []
@@ -717,16 +717,16 @@ def htmlTable(f, g, u, x, y,
     ret_.append('<table>')
 
     # Top-most row with title (with nav popovers), and prev/next.
-    ret_.append(tableTitleRow(f, g, u, x, y,
+    ret_.append(tableTitleRow(a, b, u, x, y,
                                cfg, dsfDeltas, vcdInfo))
 
     # Column headers with delta values. Both hi and lo rows.
-    ret_.append(tableHeaderRows(f, g, u, x, y,
+    ret_.append(tableHeaderRows(a, b, u, x, y,
                                  dsfDeltas,
                                  exSibRow))
 
     # Main data rows.
-    ret_.append(tableDataRows(f, g, u, x, y,
+    ret_.append(tableDataRows(a, b, u, x, y,
                                vcdInfo,
                                exSib, varCol, fnUXY))
 

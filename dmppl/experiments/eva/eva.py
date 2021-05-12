@@ -87,32 +87,32 @@ argparser_httpd.add_argument("-p", "--httpd-port",
     default=8080,
     help="TCP port for server. Use 0 for STDOUT.")
 
-argparser_httpd.add_argument("-f",
+argparser_httpd.add_argument("-a",
     type=str,
     default=metricNames[0],
     choices=metricNames,
-    help="Function f(x|y;u)")
+    help="Function name a(x|y;u)")
 
-argparser_httpd.add_argument("-g",
+argparser_httpd.add_argument("-b",
     type=str,
     default=None,
     choices=metricNames,
-    help="Function g(x|y;u) for 2D colorspace (f, g)")
+    help="Function name b(x|y;u) for 2D colorspace (a, b)")
 
 argparser_httpd.add_argument("-x",
     type=str,
     default=None,
-    help="String measurement name in f(x|y;u), e.g: event.measure.cacheMiss")
+    help="String measurement name in a(x|y;u), e.g: event.measure.cacheMiss")
 
 argparser_httpd.add_argument("-y",
     type=str,
     default=None,
-    help="String measurement name in f(x|y;u), e.g: bstate.rise.cpuIdle")
+    help="String measurement name in a(x|y;u), e.g: bstate.rise.cpuIdle")
 
 argparser_httpd.add_argument("-u",
     type=str, # Int conversion performed later for consistency with HTTPD.
     default=None,
-    help="Non-negative integer time in f(x|y;u), e.g. 9876")
+    help="Non-negative integer time in a(x|y;u), e.g. 9876")
 
 # }}} argparser
 

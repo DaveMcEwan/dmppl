@@ -80,9 +80,9 @@ def htmlTopFmt(body, inlineJs=True, inlineCss=True, bodyOnly=False): # {{{
 def evaHtmlString(args, cfg, request): # {{{
     '''Return a string of HTML.
 
-    f     g     -->
+    a     b     -->
     None  None  Default values
-    None  Func  1D color, swap f,g
+    None  Func  1D color, swap a,b
     Func  None  1D color
     Func  Func  2D color
 
@@ -96,41 +96,41 @@ def evaHtmlString(args, cfg, request): # {{{
     Int   Metr  None  Table varying y over rows, delta over columns
     Int   Metr  Metr  Ignore u
     '''
-    f, g, u, x, y = \
-        request['f'], request['g'], request['u'], request['x'], request['y']
+    a, b, u, x, y = \
+        request['a'], request['b'], request['u'], request['x'], request['y']
 
-    verb("{f,g}(x|y;u) <-- {%s,%s}(%s|%s;%s)" % (f, g, x, y, u))
+    verb("{a,b}(x|y;u) <-- {%s,%s}(%s|%s;%s)" % (a, b, x, y, u))
 
     # In debug mode (without `python -O`) assertions are caught before an
     # Exception can be raised giving a 404.
-    if f is None and g is None:
+    if a is None and b is None:
         # Default values
-        f = metricNames[0]
+        a = metricNames[0]
 
-    elif f is None and isinstance(g, str):
+    elif a is None and isinstance(b, str):
         # 1D color
-        assert g in metricNames, g
+        assert b in metricNames, b
 
-        if g not in metricNames:
+        if b not in metricNames:
             raise EvaHTMLException
 
-        f, g = g, f
-    elif isinstance(f, str) and g is None:
+        a, b = b, a
+    elif isinstance(a, str) and b is None:
         # 1D color
-        assert f in metricNames, f
+        assert a in metricNames, a
 
-        if f not in metricNames:
+        if a not in metricNames:
             raise EvaHTMLException
 
-    elif isinstance(f, str) and isinstance(g, str):
+    elif isinstance(a, str) and isinstance(b, str):
         # 2D color
-        assert f in metricNames, f
-        assert g in metricNames, g
+        assert a in metricNames, a
+        assert b in metricNames, b
 
-        if f not in metricNames:
+        if a not in metricNames:
             raise EvaHTMLException
 
-        if g not in metricNames:
+        if b not in metricNames:
             raise EvaHTMLException
 
     else:
@@ -206,7 +206,7 @@ def evaHtmlString(args, cfg, request): # {{{
 
     if tableNotNetwork:
         xEx, yEx, fnUXY, varCol = \
-            calculateTableData(f, g, u, x, y,
+            calculateTableData(a, b, u, x, y,
                                cfg, dsfDeltas, vcdInfo)
 
         _exSibRow, exSib = \
@@ -218,34 +218,34 @@ def evaHtmlString(args, cfg, request): # {{{
         assert _exSibRow.shape[0] == 1, _exSibRow.shape
         exSibRow = [float(v) for v in _exSibRow[0]]
 
-        body = htmlTable(f, g, u, x, y,
+        body = htmlTable(a, b, u, x, y,
                          cfg, dsfDeltas, vcdInfo,
                          exSibRow, exSib, varCol, fnUXY)
 
     else:
-        edges = calculateEdges(f, g, u,
+        edges = calculateEdges(a, b, u,
                                cfg, dsfDeltas, vcdInfo)
 
         body = svgNetgraph(u, cfg, vcdInfo, edges) \
             if bodyOnly else \
-            htmlNetgraph(f, g, u, cfg, vcdInfo, edges)
+            htmlNetgraph(a, b, u, cfg, vcdInfo, edges)
 
     return htmlTopFmt(body, inlineHead, inlineHead, bodyOnly)
 # }}} def evaHtmlString
 
-def htmlNetgraph(f, g, u, cfg, vcdInfo, edges): # {{{
+def htmlNetgraph(a, b, u, cfg, vcdInfo, edges): # {{{
     winStride = cfg.windowsize - cfg.windowoverlap
 
     ret_ = []
     ret_.append('<div class="title">')
     ret_.append(  '<span>')
-    ret_.append(     evaTitleText(f, g, u, None, None))
+    ret_.append(     evaTitleText(a, b, u, None, None))
     ret_.append(  '</span>')
     ret_.append('</div>')
     ret_.append('<div class="controls">')
     ret_.append(  '<span>')
-    ret_.append(     evaLink(f, g, u - winStride, None, None, "prev"))
-    ret_.append(     evaLink(f, g, u + winStride, None, None, "next"))
+    ret_.append(     evaLink(a, b, u - winStride, None, None, "prev"))
+    ret_.append(     evaLink(a, b, u + winStride, None, None, "next"))
     ret_.append(  '</span>')
     ret_.append('</div>')
     ret_.append('<div class="netgraph">')
@@ -271,7 +271,7 @@ class EvaHTTPRequestHandler(BaseHTTPRequestHandler): # {{{
         '''
         parsed = parse_qs(path.strip("/?")) # Parse query string.
         ret = {k: (parsed[k][0] if k in parsed.keys() else None) \
-               for k in ('f', 'g', 'u', 'x', 'y')}
+               for k in ('a', 'b', 'u', 'x', 'y')}
         return ret
     # }}} def parseGetRequest
 
@@ -389,8 +389,8 @@ def evaHttpd(args): # {{{
         if 0 != args.httpd_port:
             runHttpDaemon(args, cfg)
         else:
-            request = {'f': args.f,
-                       'g': args.g,
+            request = {'a': args.a,
+                       'b': args.b,
                        'u': args.u,
                        'x': args.x,
                        'y': args.y}

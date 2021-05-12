@@ -227,8 +227,8 @@ edgeFmt = ' '.join((
       'X = {dstName}',
       'Y = {srcName}' + _scrDeltaFmt,
       'sampleFactor = {sampleFactor:d}',
-      'f = {f}',
-      'g = {g}',
+      'a = {a}',
+      'b = {b}',
       '',
       mapMetricNameToHtml["Ex"] + '[X] = {dstEx:.2%}',
       mapMetricNameToHtml["Ex"] + '[Y] = {srcEx:.2%}',
@@ -247,7 +247,7 @@ edgeFmt = ' '.join((
 ))
 # }}} Static format strings
 
-def calculateEdges(f, g, u,
+def calculateEdges(a, b, u,
                    cfg, sfDeltas, vcdInfo): # {{{
 
     measureNames = vcdInfo["unitIntervalVarNames"]
@@ -258,9 +258,9 @@ def calculateEdges(f, g, u,
         if 0 == cfg.fxbits else \
         functools.partial(fxFromFloat, nBits=cfg.fxbits)
 
-    epsilonF, epsilonG = \
-        implFloat(cfg.epsilon[f]), \
-        implFloat(cfg.epsilon[g]) if g else None
+    epsilonA, epsilonB = \
+        implFloat(cfg.epsilon[a]), \
+        implFloat(cfg.epsilon[b]) if b else None
 
     assert isinstance(u, int), type(u)
     v = u + cfg.windowsize
@@ -304,9 +304,9 @@ def calculateEdges(f, g, u,
             # Get metric implementations for this window.
             # TODO: LRU cache wrappers for fnEx.
             fnEx = metric("Ex", sfWinSize, cfg.windowalpha, nBits=cfg.fxbits)
-            fnF = metric(f, sfWinSize, cfg.windowalpha, nBits=cfg.fxbits)
-            fnG = metric(g, sfWinSize, cfg.windowalpha, nBits=cfg.fxbits) \
-                if g is not None else None
+            fnA = metric(a, sfWinSize, cfg.windowalpha, nBits=cfg.fxbits)
+            fnB = metric(b, sfWinSize, cfg.windowalpha, nBits=cfg.fxbits) \
+                if b is not None else None
             fnMetrics = \
                 {nm: metric(nm, sfWinSize, cfg.windowalpha, nBits=cfg.fxbits) \
                  for nm in metricNames}
@@ -328,14 +328,14 @@ def calculateEdges(f, g, u,
                 if bnX == bnY:
                     continue
 
-                # Unusual structure only executes fnG() where it has a chance
+                # Unusual structure only executes fnB() where it has a chance
                 # of producing an overall significant result.
-                metF = fnF(xs[nmX], ys[nmY])
-                if g is None:
-                    isSignificant = epsilonF < metF
-                elif epsilonF < metF:
-                    metG = fnG(xs[nmX], ys[nmY])
-                    isSignificant = epsilonG < metG
+                metA = fnA(xs[nmX], ys[nmY])
+                if b is None:
+                    isSignificant = epsilonA < metA
+                elif epsilonA < metA:
+                    metB = fnB(xs[nmX], ys[nmY])
+                    isSignificant = epsilonB < metB
                 else:
                     isSignificant = False
 
@@ -345,8 +345,8 @@ def calculateEdges(f, g, u,
                 edge = {nm: fnMetrics[nm](xs[nmX], ys[nmY]) \
                         for nm in metricNames}
                 edge.update({
-                    'f': f,
-                    'g': g,
+                    'a': a,
+                    'b': b,
                     "dstName": nmX,
                     "srcName": nmY,
                     "srcDelta": d,
@@ -445,15 +445,15 @@ def svgNodes(exs): # {{{
 def svgEdges(edges, nodeCenters): # {{{
 
     for edge in edges:
-        f, g = edge['f'], edge['g']
-        metF, metG = edge[f], edge[g] if g else None
+        a, b = edge['a'], edge['b']
+        metA, metB = edge[a], edge[b] if b else None
 
-        normFG = l2Norm(metF, metG) if g else metF
+        normAB = l2Norm(metA, metB) if b else metA
 
         style = ';'.join((
-            'stroke: #%s' % (rgb2D(metF, metG) if g else rgb1D(metF)),
-            'stroke-width: %0.2f' % normFG * 1,
-            'stroke-opacity: %0.2f' % normFG * 1,
+            'stroke: #%s' % (rgb2D(metA, metB) if b else rgb1D(metA)),
+            'stroke-width: %0.2f' % normAB * 1,
+            'stroke-opacity: %0.2f' % normAB * 1,
         ))
 
         yield edgeFmt.format(

@@ -603,16 +603,16 @@ def timeToEvsIdx(t, evsStartTime): # {{{
     return t - evsStartTime
 # }}} def timeToEvsIdx
 
-def evaLink(f, g, u, x, y, txt, escapeQuotes=False): # {{{
+def evaLink(a, b, u, x, y, txt, escapeQuotes=False): # {{{
     '''Return the link to a data view.
     '''
-    assert f is None or isinstance(f, str), type(f)
-    assert g is None or isinstance(g, str), type(g)
-    if f is not None:
-        assert f in metricNames, f
-    if g is not None:
-        assert g in metricNames, g
-    assert f or g
+    assert a is None or isinstance(a, str), type(a)
+    assert b is None or isinstance(b, str), type(b)
+    if a is not None:
+        assert a in metricNames, a
+    if b is not None:
+        assert b in metricNames, b
+    assert a or b
     assert u is None or isinstance(u, int), type(u)
     assert x is None or isinstance(x, str), type(x)
     assert y is None or isinstance(y, str), type(y)
@@ -621,11 +621,11 @@ def evaLink(f, g, u, x, y, txt, escapeQuotes=False): # {{{
 
     parts_ = []
 
-    if f is not None:
-        parts_.append("f=" + str(f))
+    if a is not None:
+        parts_.append("a=" + str(a))
 
-    if g is not None:
-        parts_.append("g=" + str(g))
+    if b is not None:
+        parts_.append("b=" + str(b))
 
     if u is not None:
         parts_.append("u=" + str(u))

@@ -396,7 +396,7 @@ def svgNodes(exs): # {{{
 
     # {{{ identicons
     # One per sibling group.
-    identiconRadius = sibgrpRadius + 1.5*sibgrpSeparation
+    identiconRadius = sibgrpRadius + 1.2*sibgrpSeparation
 
     _identiconCenters = \
         list(ptsMkPolygon(nPts=len(baseNames), radius=[identiconRadius]))

@@ -279,25 +279,25 @@ class Test_measureSiblings(unittest.TestCase): # {{{
 
     def test_Event0(self):
         self.maxDiff = None
-        result = measureSiblings("event.measure.foo")
+        result = measureSiblings("event.orig.foo")
         golden = (
-            "event.measure.foo",
+            "event.orig.foo",
         )
         self.assertEqual(golden, result)
 
     def test_Event1(self):
         self.maxDiff = None
-        result = measureSiblings("event.measure.foo.bar.baz")
+        result = measureSiblings("event.orig.foo.bar.baz")
         golden = (
-            "event.measure.foo.bar.baz",
+            "event.orig.foo.bar.baz",
         )
         self.assertEqual(golden, result)
 
     def test_Bstate0(self):
         self.maxDiff = None
-        result = measureSiblings("bstate.measure.foo")
+        result = measureSiblings("bstate.orig.foo")
         golden = (
-            "bstate.measure.foo",
+            "bstate.orig.foo",
             "bstate.refl.foo",
             "bstate.rise.foo",
             "bstate.fall.foo",
@@ -308,7 +308,7 @@ class Test_measureSiblings(unittest.TestCase): # {{{
         self.maxDiff = None
         result = measureSiblings("bstate.refl.foo")
         golden = (
-            "bstate.measure.foo",
+            "bstate.orig.foo",
             "bstate.refl.foo",
             "bstate.rise.foo",
             "bstate.fall.foo",
@@ -319,7 +319,7 @@ class Test_measureSiblings(unittest.TestCase): # {{{
         self.maxDiff = None
         result = measureSiblings("bstate.rise.foo")
         golden = (
-            "bstate.measure.foo",
+            "bstate.orig.foo",
             "bstate.refl.foo",
             "bstate.rise.foo",
             "bstate.fall.foo",
@@ -330,7 +330,7 @@ class Test_measureSiblings(unittest.TestCase): # {{{
         self.maxDiff = None
         result = measureSiblings("bstate.fall.foo")
         golden = (
-            "bstate.measure.foo",
+            "bstate.orig.foo",
             "bstate.refl.foo",
             "bstate.rise.foo",
             "bstate.fall.foo",
@@ -339,9 +339,9 @@ class Test_measureSiblings(unittest.TestCase): # {{{
 
     def test_Threshold0(self):
         self.maxDiff = None
-        result = measureSiblings("threshold.measure.foo.bar.baz")
+        result = measureSiblings("threshold.orig.foo.bar.baz")
         golden = (
-            "threshold.measure.foo.bar.baz",
+            "threshold.orig.foo.bar.baz",
             "threshold.refl.foo.bar.baz",
             "threshold.rise.foo.bar.baz",
             "threshold.fall.foo.bar.baz",
@@ -352,7 +352,7 @@ class Test_measureSiblings(unittest.TestCase): # {{{
         self.maxDiff = None
         result = measureSiblings("normal.raw.foo.bar.baz")
         golden = (
-            "normal.measure.foo.bar.baz",
+            "normal.orig.foo.bar.baz",
         )
         self.assertEqual(golden, result)
 

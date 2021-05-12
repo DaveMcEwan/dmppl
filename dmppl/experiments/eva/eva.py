@@ -102,7 +102,7 @@ argparser_httpd.add_argument("-b",
 argparser_httpd.add_argument("-x",
     type=str,
     default=None,
-    help="String measurement name in a(x|y;u), e.g: event.measure.cacheMiss")
+    help="String measurement name in a(x|y;u), e.g: event.orig.cacheMiss")
 
 argparser_httpd.add_argument("-y",
     type=str,

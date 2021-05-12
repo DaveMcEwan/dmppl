@@ -230,24 +230,31 @@ def meaDtype(name): # {{{
     return tp, strideBytes, structFmt
 # }}} def meaDtype
 
+mapMeasureTypeToSiblingTypes = {
+    "event":     ("orig",),
+    "bstate":    ("orig", "refl", "rise", "fall",),
+    "threshold": ("orig", "refl", "rise", "fall",),
+    "normal":    ("orig",),
+}
+
 def isUnitIntervalMeasure(name): # {{{
     '''All VCD::bit signals in signals.vcd are usable, but of the VCD::real
-       signals, only normal.measure.* are usable.
+       signals, only normal.orig.* are usable.
 
     Other VCD::real signals are not guaranteed to be in [0, 1].
     '''
-    eventSiblings = ("measure",)
-    bstateSiblings = ("measure", "refl", "rise", "fall",)
-    thresholdSiblings = ("measure", "refl", "rise", "fall",)
-    normalSiblings = ("measure",)
 
     measureType, siblingType, baseName = measureNameParts(name)
 
     ret = \
-        ("event" == measureType and siblingType in eventSiblings) or \
-        ("bstate" == measureType and siblingType in bstateSiblings) or \
-        ("threshold" == measureType and siblingType in thresholdSiblings) or \
-        ("normal" == measureType and siblingType in normalSiblings)
+        ("event" == measureType and \
+         siblingType in mapMeasureTypeToSiblingTypes["event"]) or \
+        ("bstate" == measureType and \
+         siblingType in mapMeasureTypeToSiblingTypes["bstate"]) or \
+        ("threshold" == measureType and \
+         siblingType in mapMeasureTypeToSiblingTypes["threshold"]) or \
+        ("normal" == measureType and \
+         siblingType in mapMeasureTypeToSiblingTypes["normal"])
 
     return ret
 # }}} def isUnitIntervalMeasure
@@ -524,25 +531,18 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
 # }}} def rdEvs
 
 mapSiblingTypeToHtml = {
-    "measure":      utf8NameToHtml("MIDDLE DOT"),
-    "refl":         utf8NameToHtml("NOT SIGN"),
-    "rise":         utf8NameToHtml("UPWARDS ARROW"),
-    "fall":         utf8NameToHtml("DOWNWARDS ARROW"),
+    "orig": 'f', #utf8NameToHtml("MIDDLE DOT"),
+    "refl": utf8NameToHtml("NOT SIGN"),
+    "rise": utf8NameToHtml("UPWARDS ARROW"),
+    "fall": utf8NameToHtml("DOWNWARDS ARROW"),
 }
 nSibsMax = len(mapSiblingTypeToHtml.keys())
-
-mapMeasureTypeToSiblingTypes = {
-    "event":     ("measure",),
-    "bstate":    ("measure", "refl", "rise", "fall",),
-    "threshold": ("measure", "refl", "rise", "fall",),
-    "normal":    ("measure",),
-}
 
 def measureNameParts(nm): # {{{
     '''measurement name --> measure type, sibling type, base name
 
     E.g: "bstate.refl.foo" -> ("bstate", "refl", "foo")
-    E.g: "event.measure.foo.bar" -> ("event", "measure", "foo.bar")
+    E.g: "event.orig.foo.bar" -> ("event", "orig", "foo.bar")
     '''
 
     nmParts = nm.split('.')
@@ -553,7 +553,7 @@ def measureNameParts(nm): # {{{
     assert measureType in mapMeasureTypeToSiblingTypes.keys(), nm
 
     if "normal" == measureType:
-        assert siblingType in ("raw", "smooth", "measure"), nm
+        assert siblingType in ("raw", "smooth", "orig"), nm
     else:
         assert siblingType in mapMeasureTypeToSiblingTypes[measureType], nm
 
@@ -566,12 +566,12 @@ def measureSiblings(nm): # {{{
     '''Take a measurement name and return a tuple of sibling/related
        measurements which can be used with eva metrics.
 
-    E.g: "bstate.refl.foo" -> ("bstate.measure.foo",
+    E.g: "bstate.refl.foo" -> ("bstate.orig.foo",
                                "bstate.refl.foo",
                                "bstate.fall.foo",
                                "bstate.rise.foo")
 
-    E.g: "event.measure.foo" -> ("event.measure.foo",)
+    E.g: "event.orig.foo" -> ("event.orig.foo",)
     '''
 
     measureType, siblingType, baseName = measureNameParts(nm)

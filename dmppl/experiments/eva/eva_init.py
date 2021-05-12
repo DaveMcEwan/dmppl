@@ -488,7 +488,7 @@ def checkEvcxWithVcd(evcx, vcd, infoFlag): # {{{
 # }}} def checkEvcxWithVcd
 
 def meaVcd(instream, evcx, cfg, infoFlag): # {{{
-    '''Filter input data to sanitized VCD (measure.vcd).
+    '''Filter input data to sanitized VCD (signals.vcd).
 
     Extract measurements of interest, at times of interest.
     Perform interpolation for normal measurements.
@@ -530,10 +530,10 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
         measuresNormal = (nm for nm,v in evcx.items() if "normal" == v["type"])
 
         # Sibling measurements denoted by prefix.
-        prefixesEvent =  ("measure",)
-        prefixesBstate = ("measure", "refl", "rise", "fall",)
-        prefixesNormal = ("raw", "smooth", "measure",)
-        prefixesThreshold = ("measure", "refl", "rise", "fall",)
+        prefixesEvent =  ("orig",)
+        prefixesBstate = ("orig", "refl", "rise", "fall",)
+        prefixesNormal = ("raw", "smooth", "orig",)
+        prefixesThreshold = ("orig", "refl", "rise", "fall",)
 
         namesEvent = \
             ('.'.join(("event", pfx, nm)) \
@@ -576,7 +576,7 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
             clipnormValue = clipNorm(smoothValue, geq, leq)
 
             bq_.append((t, "normal.smooth." + nm, smoothValue))
-            bq_.append((t, "normal.measure." + nm, clipnormValue))
+            bq_.append((t, "normal.orig." + nm, clipnormValue))
 
         zs = [prevIpolValues_[0] if newValue is None else newValue] + prevIpolValues_
         mapVarIdToHistory_[iVarId] = (oTime, zs[:-1])
@@ -586,7 +586,7 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
         clipnormValue = clipNorm(smoothValue, geq, leq)
 
         nq_.append(("normal.smooth." + nm, smoothValue))
-        nq_.append(("normal.measure." + nm, clipnormValue))
+        nq_.append(("normal.orig." + nm, clipnormValue))
 
     # }}} def interpolateNormal
 
@@ -692,13 +692,13 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
                     if "event" == tp: # {{{
                         if "event" == hookType:
                             # vcdi implies event only occurring at this time.
-                            nq_.append(("event.measure." + nm, 1))
+                            nq_.append(("event.orig." + nm, 1))
 
                             # Speculatively reset to 0 in next time.
-                            fq_.append((oTime+1, "event.measure." + nm, 0))
+                            fq_.append((oTime+1, "event.orig." + nm, 0))
                         elif hookType in oneBitTypes:
                             newValue = int(twoStateBool(newValueClean, hookBit))
-                            nq_.append(("event.measure." + nm, newValue))
+                            nq_.append(("event.orig." + nm, newValue))
                         else:
                             # Event measure only made from VCD event, or
                             # 2-state (bit), 4-state types (wire, reg, logic)
@@ -710,7 +710,7 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
                             newValue = twoStateBool(newValueClean, hookBit)
 
                             if prevValue != newValue:
-                                nq_.append(("bstate.measure." + nm, int(newValue)))
+                                nq_.append(("bstate.orig." + nm, int(newValue)))
                                 nq_.append(("bstate.refl." + nm, int(not newValue)))
 
                                 if newValue:
@@ -756,7 +756,7 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
                                      geq <= newValueFloat)
 
                             if prevValue != newValue:
-                                nq_.append(("threshold.measure." + nm, int(newValue)))
+                                nq_.append(("threshold.orig." + nm, int(newValue)))
                                 nq_.append(("threshold.refl." + nm, int(not newValue)))
 
                                 if newValue:

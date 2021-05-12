@@ -16,7 +16,7 @@ $var bit 1 V twovalFromWireB  $end
 $var bit 1 Z twovalFromWireVecA  $end
 $var bit 1 ^ twovalFromWireVecB  $end
 $upscope $end
-$scope module measure $end
+$scope module orig $end
 $var bit 1 / twovalFromBitA  $end
 $var bit 1 3 twovalFromBitB  $end
 $var bit 1 7 twovalFromBitVecA  $end
@@ -60,7 +60,7 @@ $var bit 1 ] twovalFromWireVecB  $end
 $upscope $end
 $upscope $end
 $scope module event $end
-$scope module measure $end
+$scope module orig $end
 $var bit 1 ! occurrerFromBitA  $end
 $var bit 1 " occurrerFromBitB  $end
 $var bit 1 # occurrerFromBitVecA  $end
@@ -78,7 +78,7 @@ $var bit 1 . occurrerFromWireVecB  $end
 $upscope $end
 $upscope $end
 $scope module normal $end
-$scope module measure $end
+$scope module orig $end
 $var real 64 "# normBitVecA [63:0] $end
 $var real 64 "& normBitVecB [63:0] $end
 $var real 64 ") normFromIntegerA [63:0] $end
@@ -120,7 +120,7 @@ $var bit 1 v threshLeqFromIntegerB  $end
 $var bit 1 z threshOutsideFromWireVecA  $end
 $var bit 1 ~ threshOutsideFromWireVecB  $end
 $upscope $end
-$scope module measure $end
+$scope module orig $end
 $var bit 1 _ threshGeqFromRealA  $end
 $var bit 1 c threshGeqFromRealB  $end
 $var bit 1 g threshInsideFromBitVecA  $end

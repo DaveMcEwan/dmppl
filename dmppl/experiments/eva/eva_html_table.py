@@ -544,7 +544,7 @@ def calculateTableData(a, b, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
             else:
                 rowSiblings = measureSiblings(measureNames[rowNum])
 
-                # Some measures have less siblings.
+                # Measures have different numbers of siblings.
                 if colNum < len(rowSiblings):
                     key = rowSiblings[colNum]
                 else:

@@ -31,7 +31,7 @@ cssProps = False
 sibgrpSeparation = 100 # Space between groups of sibling nodes. HEURISTIC
 sibSeparation = 60 # Space between sibling nodes. HEURISTIC
 mapSiblingTypeToLocalCenter = { # heuristic
-    "measure":    (0, 0),
+    "orig": (0, 0),
     "refl": (0, sibSeparation),
     "rise": (sibSeparation, 0),
     "fall": (sibSeparation, sibSeparation),
@@ -104,7 +104,7 @@ _nodeFmt = [
     '</g>',
 ]
 nodeFmts = {
-  "measure": ' '.join(
+  "orig": ' '.join(
     _nodeFmt[:-1] + [ # Insert basename at end of <g>
       '<text x="-25" y="35">{baseName}</text>',
     ] + _nodeFmt[-1:]

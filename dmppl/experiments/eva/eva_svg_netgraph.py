@@ -91,7 +91,7 @@ else:
       '>{symbol}</text>'))
 
 # Node is the collection of all elements representing a measure.
-nodeFmt = ' '.join((
+_nodeFmt = [
     '<g',
         'id="{measureName}"',
         'class="node {siblingType}"',
@@ -99,10 +99,20 @@ nodeFmt = ' '.join((
     '>',
       nodeTitleFmt,
       blobFmt,
-      tombstoneFmt, # Tombstone
+      tombstoneFmt,
       symbolFmt,
     '</g>',
-))
+]
+nodeFmts = {
+  "measure": ' '.join(
+    _nodeFmt[:-1] + [ # Insert basename at end of <g>
+      '<text x="-25" y="35">{baseName}</text>',
+    ] + _nodeFmt[-1:]
+  ),
+  "reflection": ' '.join(_nodeFmt),
+  "rise":       ' '.join(_nodeFmt),
+  "fall":       ' '.join(_nodeFmt),
+}
 
 mapMeasureTypeToTombstoneFill = {
     "event":     "white",
@@ -379,17 +389,18 @@ def svgNodes(exs): # {{{
          for nm in measureNames}
 
     nodes = \
-        (nodeFmt.format(measureName=nm,
-                        siblingType=st,
-                        measureType=mt,
-                        baseName=bn,
-                        centerX=nodeCenters[nm][0],
-                        centerY=nodeCenters[nm][1],
-                        symbolFill=mapMeasureTypeToSymbolFill[mt],
-                        tombstoneFill=mapMeasureTypeToTombstoneFill[mt],
-                        exRgb=rgb1D(exs[nm]),
-                        exValue=exs[nm],
-                        symbol=mapSiblingTypeToHtml[st]) \
+        (nodeFmts[st].format(
+            measureName=nm,
+            siblingType=st,
+            measureType=mt,
+            baseName=bn,
+            centerX=nodeCenters[nm][0],
+            centerY=nodeCenters[nm][1],
+            symbolFill=mapMeasureTypeToSymbolFill[mt],
+            tombstoneFill=mapMeasureTypeToTombstoneFill[mt],
+            exRgb=rgb1D(exs[nm]),
+            exValue=exs[nm],
+            symbol=mapSiblingTypeToHtml[st]) \
          for nm,(mt,st,bn) in zip(measureNames, nameParts))
 
     # }}} nodes

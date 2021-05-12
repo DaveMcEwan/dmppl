@@ -298,7 +298,7 @@ class Test_measureSiblings(unittest.TestCase): # {{{
         result = measureSiblings("bstate.measure.foo")
         golden = (
             "bstate.measure.foo",
-            "bstate.reflection.foo",
+            "bstate.refl.foo",
             "bstate.rise.foo",
             "bstate.fall.foo",
         )
@@ -306,10 +306,10 @@ class Test_measureSiblings(unittest.TestCase): # {{{
 
     def test_Bstate1(self):
         self.maxDiff = None
-        result = measureSiblings("bstate.reflection.foo")
+        result = measureSiblings("bstate.refl.foo")
         golden = (
             "bstate.measure.foo",
-            "bstate.reflection.foo",
+            "bstate.refl.foo",
             "bstate.rise.foo",
             "bstate.fall.foo",
         )
@@ -320,7 +320,7 @@ class Test_measureSiblings(unittest.TestCase): # {{{
         result = measureSiblings("bstate.rise.foo")
         golden = (
             "bstate.measure.foo",
-            "bstate.reflection.foo",
+            "bstate.refl.foo",
             "bstate.rise.foo",
             "bstate.fall.foo",
         )
@@ -331,7 +331,7 @@ class Test_measureSiblings(unittest.TestCase): # {{{
         result = measureSiblings("bstate.fall.foo")
         golden = (
             "bstate.measure.foo",
-            "bstate.reflection.foo",
+            "bstate.refl.foo",
             "bstate.rise.foo",
             "bstate.fall.foo",
         )
@@ -342,7 +342,7 @@ class Test_measureSiblings(unittest.TestCase): # {{{
         result = measureSiblings("threshold.measure.foo.bar.baz")
         golden = (
             "threshold.measure.foo.bar.baz",
-            "threshold.reflection.foo.bar.baz",
+            "threshold.refl.foo.bar.baz",
             "threshold.rise.foo.bar.baz",
             "threshold.fall.foo.bar.baz",
         )

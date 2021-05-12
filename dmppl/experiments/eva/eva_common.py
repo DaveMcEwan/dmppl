@@ -237,8 +237,8 @@ def isUnitIntervalMeasure(name): # {{{
     Other VCD::real signals are not guaranteed to be in [0, 1].
     '''
     unitEventSiblings = ("measure",)
-    unitBstateSiblings = ("measure", "reflection", "rise", "fall",)
-    unitThresholdSiblings = ("measure", "reflection", "rise", "fall",)
+    unitBstateSiblings = ("measure", "refl", "rise", "fall",)
+    unitThresholdSiblings = ("measure", "refl", "rise", "fall",)
     unitNormalSiblings = ("measure",)
 
     measureType, siblingType, baseName = measureNameParts(name)
@@ -525,7 +525,7 @@ def rdEvs(names, startTime, finishTime, fxbits=0): # {{{
 
 mapSiblingTypeToHtml = {
     "measure":      utf8NameToHtml("MIDDLE DOT"),
-    "reflection":   utf8NameToHtml("NOT SIGN"),
+    "refl":         utf8NameToHtml("NOT SIGN"),
     "rise":         utf8NameToHtml("UPWARDS ARROW"),
     "fall":         utf8NameToHtml("DOWNWARDS ARROW"),
 }
@@ -533,15 +533,15 @@ nSibsMax = len(mapSiblingTypeToHtml.keys())
 
 mapMeasureTypeToSiblingTypes = {
     "event":     ("measure",),
-    "bstate":    ("measure", "reflection", "rise", "fall",),
-    "threshold": ("measure", "reflection", "rise", "fall",),
+    "bstate":    ("measure", "refl", "rise", "fall",),
+    "threshold": ("measure", "refl", "rise", "fall",),
     "normal":    ("measure",),
 }
 
 def measureNameParts(nm): # {{{
     '''measurement name --> measure type, sibling type, base name
 
-    E.g: "bstate.reflection.foo" -> ("bstate", "reflection", "foo")
+    E.g: "bstate.refl.foo" -> ("bstate", "refl", "foo")
     E.g: "event.measure.foo.bar" -> ("event", "measure", "foo.bar")
     '''
 
@@ -566,10 +566,10 @@ def measureSiblings(nm): # {{{
     '''Take a measurement name and return a tuple of sibling/related
        measurements which can be used with eva metrics.
 
-    E.g: "bstate.reflection.foo" -> ("bstate.fall.foo",
-                                     "bstate.measure.foo",
-                                     "bstate.reflection.foo",
-                                     "bstate.rise.foo")
+    E.g: "bstate.refl.foo" -> ("bstate.measure.foo",
+                               "bstate.refl.foo",
+                               "bstate.fall.foo",
+                               "bstate.rise.foo")
 
     E.g: "event.measure.foo" -> ("event.measure.foo",)
     '''

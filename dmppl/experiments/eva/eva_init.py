@@ -488,7 +488,7 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
     Extract measurements of interest, at times of interest.
     Perform interpolation for normal measurements.
     Time becomes a straightforward sample index.
-    Hierarchy shows raw measures and reflection/rise/fall.
+    Hierarchy shows raw measures and refl/rise/fall.
 
     NOTE: This initial extraction to filter/clean the dataset is probably the
     most complex part of eva!
@@ -526,9 +526,9 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
 
         # Sibling measurements denoted by prefix.
         prefixesEvent =  ("measure",)
-        prefixesBstate = ("measure", "reflection", "rise", "fall",)
+        prefixesBstate = ("measure", "refl", "rise", "fall",)
         prefixesNormal = ("raw", "smooth", "measure",)
-        prefixesThreshold = ("measure", "reflection", "rise", "fall",)
+        prefixesThreshold = ("measure", "refl", "rise", "fall",)
 
         namesEvent = \
             ('.'.join(("event", pfx, nm)) \
@@ -630,7 +630,7 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
         # Or rise/fall on bstate.
         # [ (time, name, value) ... ]
         # Initialise all measurements to 0, except reflections to 1.
-        fq_ = [(0, nm, int(re.match(r"^[^\.]*\.reflection\.", nm) is not None)) \
+        fq_ = [(0, nm, int(re.match(r"^[^\.]*\.refl\.", nm) is not None)) \
                for nm in vcdo.varNames]
 
         # Work through vcdi timechunks putting values into vcdo.
@@ -706,7 +706,7 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
 
                             if prevValue != newValue:
                                 nq_.append(("bstate.measure." + nm, int(newValue)))
-                                nq_.append(("bstate.reflection." + nm, int(not newValue)))
+                                nq_.append(("bstate.refl." + nm, int(not newValue)))
 
                                 if newValue:
                                     nq_.append(("bstate.rise." + nm, 1))
@@ -752,7 +752,7 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
 
                             if prevValue != newValue:
                                 nq_.append(("threshold.measure." + nm, int(newValue)))
-                                nq_.append(("threshold.reflection." + nm, int(not newValue)))
+                                nq_.append(("threshold.refl." + nm, int(not newValue)))
 
                                 if newValue:
                                     nq_.append(("threshold.rise." + nm, 1))

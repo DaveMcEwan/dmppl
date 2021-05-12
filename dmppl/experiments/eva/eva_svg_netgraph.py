@@ -32,9 +32,9 @@ sibgrpSeparation = 100 # Space between groups of sibling nodes. HEURISTIC
 sibSeparation = 60 # Space between sibling nodes. HEURISTIC
 mapSiblingTypeToLocalCenter = { # heuristic
     "measure":    (0, 0),
-    "reflection": (0, sibSeparation),
-    "rise":       (sibSeparation, 0),
-    "fall":       (sibSeparation, sibSeparation),
+    "refl": (0, sibSeparation),
+    "rise": (sibSeparation, 0),
+    "fall": (sibSeparation, sibSeparation),
 }
 
 # Title provides mouseover information and should apply to all elements
@@ -109,9 +109,9 @@ nodeFmts = {
       '<text x="-25" y="35">{baseName}</text>',
     ] + _nodeFmt[-1:]
   ),
-  "reflection": ' '.join(_nodeFmt),
-  "rise":       ' '.join(_nodeFmt),
-  "fall":       ' '.join(_nodeFmt),
+  "refl": ' '.join(_nodeFmt),
+  "rise": ' '.join(_nodeFmt),
+  "fall": ' '.join(_nodeFmt),
 }
 
 mapMeasureTypeToTombstoneFill = {

@@ -30,7 +30,7 @@ $var bit 1 S twovalFromWireB  $end
 $var bit 1 W twovalFromWireVecA  $end
 $var bit 1 [ twovalFromWireVecB  $end
 $upscope $end
-$scope module reflection $end
+$scope module refl $end
 $var bit 1 0 twovalFromBitA  $end
 $var bit 1 4 twovalFromBitB  $end
 $var bit 1 8 twovalFromBitVecA  $end
@@ -130,7 +130,7 @@ $var bit 1 s threshLeqFromIntegerB  $end
 $var bit 1 w threshOutsideFromWireVecA  $end
 $var bit 1 { threshOutsideFromWireVecB  $end
 $upscope $end
-$scope module reflection $end
+$scope module refl $end
 $var bit 1 ` threshGeqFromRealA  $end
 $var bit 1 d threshGeqFromRealB  $end
 $var bit 1 h threshInsideFromBitVecA  $end

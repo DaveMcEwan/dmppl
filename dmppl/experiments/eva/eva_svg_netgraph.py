@@ -359,9 +359,9 @@ def calculateEdges(a, b, u,
 
 # }}} def calculateEdges
 
-def svgNodes(exs): # {{{
+def svgNodes(stats): # {{{
 
-    measureNames = list(exs.keys())
+    measureNames = list(stats.keys())
     nameParts = [measureNameParts(nm) for nm in measureNames]
 
     baseNames = set(bn for mt,st,bn in nameParts) # One sibgrp per base name.
@@ -398,8 +398,8 @@ def svgNodes(exs): # {{{
             centerY=nodeCenters[nm][1],
             symbolFill=mapMeasureTypeToSymbolFill[mt],
             tombstoneFill=mapMeasureTypeToTombstoneFill[mt],
-            exRgb=rgb1D(exs[nm]),
-            exValue=exs[nm],
+            exRgb=rgb1D(stats[nm][0]),
+            exValue=stats[nm][0],
             symbol=mapSiblingTypeToHtml[st]) \
          for nm,(mt,st,bn) in zip(measureNames, nameParts))
 
@@ -468,12 +468,39 @@ def svgEdges(edges, nodeCenters): # {{{
 
 def svgNetgraph(u, cfg, vcdInfo, edges): # {{{
     measureNames = vcdInfo["unitIntervalVarNames"]
+    nameParts = [measureNameParts(nm) for nm in measureNames]
 
     evs = rdEvs(measureNames, u, u + cfg.windowsize, cfg.fxbits)
-    expectation = metric("Ex", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
-    exs = {nm: expectation(evs[nm]) for nm in measureNames}
+    metEx = metric("Ex", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
+    metCov = metric("Cov", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
+    metCex = metric("Cex", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
 
-    nodeStrs, (canvasWidth, canvasHeight), nodeCenters = svgNodes(exs)
+    def edgePartner(mt, st, bn):
+        assert st in ("rise", "fall")
+        return {
+            "rise": '.'.join([mt, "orig", bn]),
+            "fall": '.'.join([mt, "refl", bn]),
+        }[st]
+
+    # TODO WIP
+    # Each node displays blob with 2D color.
+    #   orig nodes display colorspace(E[orig], Cov(orig,orig))
+    #   refl nodes display colorspace(E[refl], Cov(refl,refl))
+    #   rise nodes display colorspace(2E[rise], Cex(rise,orig))
+    #   fall nodes display colorspace(2E[fall], Cex(fall,refl))
+    # However, stats contains numbers to be displayed which are slightly
+    # different.
+    #   orig nodes print E[orig] and Cov(orig,orig)
+    #   refl nodes print E[refl] and Cov(refl,refl)
+    #   rise nodes print E[rise] and Cex(rise,orig)
+    #   fall nodes print E[fall] and Cex(fall,refl)
+    stats = {nm: (
+            metEx(evs[nm]),
+            metCov(evs[nm], evs[nm]) if st in ("orig", "refl") else \
+                metCex(evs[nm], evs[edgePartner(mt,st,bn)]) \
+        ) for nm,(mt,st,bn) in zip(measureNames, nameParts)}
+
+    nodeStrs, (canvasWidth, canvasHeight), nodeCenters = svgNodes(stats)
 
     # Clip the max dimensions to for zooming to work with browsers.
     # 300 is just a reasonable value for 1080p screen.

@@ -539,7 +539,7 @@ mapMeasureTypeToSiblingTypes = {
 }
 
 def measureNameParts(nm): # {{{
-    '''Take a measurement name and return the measure type and sibling type.
+    '''measurement name --> measure type, sibling type, base name
 
     E.g: "bstate.reflection.foo" -> ("bstate", "reflection", "foo")
     E.g: "event.measure.foo.bar" -> ("event", "measure", "foo.bar")

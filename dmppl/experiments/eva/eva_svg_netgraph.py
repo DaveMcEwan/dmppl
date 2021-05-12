@@ -62,7 +62,7 @@ else:
         ' fill="#{exRgb}"',
       '/>'))
 
-# Tombstone (colored rectangle) is quick to recognise measurement type.
+# Tombstone (colored rectangle) shows measurement type.
 tombstoneWidth, tombstoneHeight = 20, 20
 tombstoneX, tombstoneY = tombstoneWidth / -2, tombstoneHeight / -2
 if cssProps:

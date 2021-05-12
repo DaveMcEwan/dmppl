@@ -537,8 +537,9 @@ def _vcdVarDefs(self): # {{{
     #       #descent = 2
     # }}} ascent/descent
     prevScope = [] #[(None, None)]
+    vL_ = 0
     for varDtName,varScope,varType,varSize,varId in vs:
-        vL = len(varScope) - 1
+        vL_ = len(varScope) - 1
         pL = len(prevScope)
         cPL = 0
         for (pType,pName),(vType,vName) in zip(prevScope, varScope[:-1]):
@@ -547,13 +548,13 @@ def _vcdVarDefs(self): # {{{
             else:
                 cPL += 1
         assert cPL <= pL
-        assert cPL <= vL
+        assert cPL <= vL_
         nAscent = pL - cPL
-        nDescent = vL - cPL
+        nDescent = vL_ - cPL
 
         #print()
         #print(varDtName,varScope,varType,varSize,varId)
-        #print("  vL=%d, pL=%d, cPL=%d" % (vL, pL, cPL))
+        #print("  vL_=%d, pL=%d, cPL=%d" % (vL_, pL, cPL))
         #print("  nAscent=%d, nDescent=%d" % (nAscent, nDescent))
 
         # Calculate number of ascents ($upscope $end)
@@ -577,7 +578,7 @@ def _vcdVarDefs(self): # {{{
               (varType, varSize, varId, varLocalName, varRange), file=self.fd)
 
     # Calculate number of ascents ($upscope $end) after final var.
-    for _ in range(vL):
+    for _ in range(vL_):
         print(u"$upscope $end", file=self.fd)
 
     return

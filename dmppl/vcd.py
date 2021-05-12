@@ -915,19 +915,21 @@ def vcdClean(fnamei, fnameo, comment=None): # {{{
             else:
                 # Merge all timechunks in the queue.
                 _merge = dict(zip(wrqChangedVars_, wrqNewValues_))
-                mrgdChangedVars, mrgdNewValues = \
-                    zip(*[(k,v) for k,v in _merge.items()])
-                vdo.wrTimechunk((wrqTime_, mrgdChangedVars, mrgdNewValues))
+                if 0 < len(_merge):
+                    mrgdChangedVars, mrgdNewValues = \
+                        zip(*[(k,v) for k,v in _merge.items()])
+                    vdo.wrTimechunk((wrqTime_, mrgdChangedVars, mrgdNewValues))
                 wrqChangedVars_, wrqNewValues_ = changedVars, newValues
 
             wrqTime_ = newTime
 
         # Merge last lot of timechunks in the queue.
         _merge = dict(zip(wrqChangedVars_, wrqNewValues_))
-        mrgdChangedVars, mrgdNewValues = \
-            zip(*[(k,v) for k,v in _merge.items()])
-        tco = (wrqTime_, mrgdChangedVars, mrgdNewValues)
-        vdo.wrTimechunk((wrqTime_, mrgdChangedVars, mrgdNewValues))
+        if 0 < len(_merge):
+            mrgdChangedVars, mrgdNewValues = \
+                zip(*[(k,v) for k,v in _merge.items()])
+            tco = (wrqTime_, mrgdChangedVars, mrgdNewValues)
+            vdo.wrTimechunk((wrqTime_, mrgdChangedVars, mrgdNewValues))
 
     rmtree(tmpd)
 

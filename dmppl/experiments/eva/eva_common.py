@@ -236,6 +236,11 @@ mapMeasureTypeToSiblingTypes = {
     "threshold": ("orig", "refl", "rise", "fall",),
     "normal":    ("orig",),
 }
+def siblingIs0thDer(st):
+    # NOTE: normal.raw|smooth are only intermediates.
+    return st in ("orig", "refl")
+def siblingIs1stDer(st):
+    return st in ("rise", "fall")
 
 def isUnitIntervalMeasure(name): # {{{
     '''All VCD::bit signals in signals.vcd are usable, but of the VCD::real

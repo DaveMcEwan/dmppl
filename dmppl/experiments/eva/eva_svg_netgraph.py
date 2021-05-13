@@ -17,7 +17,8 @@ from dmppl.color import rgb1D, rgb2D, identiconSpriteSvg
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
 from dmppl.experiments.eva.eva_common import paths, measureNameParts, \
-    mapSiblingTypeToHtml, metricNames, metric, mapMetricNameToHtml, \
+    mapSiblingTypeToHtml, siblingIs1stDer, \
+    metricNames, metric, mapMetricNameToHtml, \
     timeToEvsIdx, rdEvs
 
 # {{{ Static format strings
@@ -42,7 +43,7 @@ mapSiblingTypeToLocalCenter = { # heuristic
 nodeTitleFmt = '\n'.join((
   '<title>{measureName}',
   '',
-  mapMetricNameToHtml["Ex"] + ' = {exValue:.2%}',
+  '{statsTitle}',
   '</title>',
 ))
 
@@ -51,7 +52,7 @@ blobX, blobY = 0, 0
 blobRadius = 25
 blobStroke = 'style="stroke:black; stroke-width:0.2; stroke-opacity:1;"'
 if cssProps:
-    blobFmt = '<circle class="node" fill="#{exRgb}"/>'
+    blobFmt = '<circle class="node" fill="#{blobRgb}"/>'
 else:
     blobFmt = ' '.join((
       '<circle',
@@ -59,7 +60,7 @@ else:
         'cx="%d" cy="%d"' % (blobX, blobY),
         'r="%d"' % blobRadius,
         blobStroke,
-        ' fill="#{exRgb}"',
+        ' fill="#{blobRgb}"',
       '/>'))
 
 # Tombstone (colored rectangle) shows measurement type.
@@ -130,6 +131,7 @@ mapMeasureTypeToSymbolFill = {
 
 
 identiconX, identiconY = -7.5, -7.5 # HEURISTIC
+identiconSeparationMul = 1.2
 identiconScale = 3.0 # 3*5=15
 identiconFmt = ' '.join((
   '<g',
@@ -359,9 +361,9 @@ def calculateEdges(a, b, u,
 
 # }}} def calculateEdges
 
-def svgNodes(stats): # {{{
+def svgNodes(cfg, evs): # {{{
 
-    measureNames = list(stats.keys())
+    measureNames = list(evs.keys())
     nameParts = [measureNameParts(nm) for nm in measureNames]
 
     baseNames = set(bn for mt,st,bn in nameParts) # One sibgrp per base name.
@@ -388,6 +390,135 @@ def svgNodes(stats): # {{{
         {nm: ptShift(nodeSibgrpCenters[nm], nodeLocalCenters[nm]) \
          for nm in measureNames}
 
+    metEx = metric("Ex", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
+    metCov = metric("Cov", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
+    metCex = metric("Cex", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
+
+    # Each node displays blob with 2D color.
+    #   orig nodes display colorspace1D( E[orig] )
+    #     except normal.orig nodes which display colorspace2D( E[orig], Cov(orig,orig) )
+    #   refl nodes display colorspace1D( E[refl] )
+    #     except normal.refl nodes which display colorspace2D( E[refl], Cov(refl,refl) )
+    #   rise nodes display colorspace2D( 2*E[rise], Cex(rise,orig) )
+    #   fall nodes display colorspace2D( 2*E[fall], Cex(fall,refl) )
+    # However, stats contains numbers to be displayed which are slightly
+    # different.
+    #   orig nodes print E[orig]
+    #     normal.orig nodes also print Cov(orig,orig)
+    #   refl nodes print E[refl]
+    #     normal.refl nodes also print Cov(refl,refl)
+    #   rise nodes print E[rise] and Cex(rise,orig)
+    #   fall nodes print E[fall] and Cex(fall,refl)
+
+    def secondStat(nm, mt, st, bn): # {{{
+        # NOTE: Logic paired with statsToBlobRgb().
+        # NOTE: Logic paired with statsToTitle().
+        if "normal" == mt:
+            ret = metCov(evs[nm], evs[nm])
+        elif siblingIs1stDer(st):
+            assert mt in ("bstate", "threshold")
+            assert st in ("rise", "fall")
+            partner = {
+                "rise": '.'.join([mt, "orig", bn]),
+                "fall": '.'.join([mt, "refl", bn]),
+            }[st]
+            ret = metCex(evs[nm], evs[partner])
+        else:
+            ret = None
+
+        return ret
+    # }}} def secondStat
+
+    stats = {nm: ( metEx(evs[nm]), secondStat(nm, mt, st, bn) ) \
+             for nm,(mt,st,bn) in zip(measureNames, nameParts)}
+
+    def statsToBlobRgb(nm, mt, st, bn): # {{{
+        statA, statB = stats[nm]
+        assert 0 <= statA <= 1, statA
+
+        # NOTE: Logic paired with secondStat().
+        # NOTE: Logic paired with statsToTitle().
+        if "normal" == mt:
+            assert 0 <= statB <= 1, statB
+            ret = rgb2D(statA, statB)
+        elif siblingIs1stDer(st):
+            # stat = ( E[rise], E[rise | orig] )
+            #   OR   ( E[fall], E[fall | refl] )
+            assert mt in ("bstate", "threshold")
+            assert st in ("rise", "fall")
+            assert 0 <= statA <= 0.5
+            assert 0 <= statB <= 1, statB
+            ret = rgb2D(2*statA, statB)
+        else:
+            assert mt in ("event", "bstate", "threshold")
+            assert st in ("orig", "refl")
+            assert statB is None
+            ret = rgb1D(statA)
+
+        return ret
+    # }}} def statsToBlobRgb
+
+    def statsToTitle(nm, mt, st, bn): # {{{
+        statA, statB = stats[nm]
+        assert 0 <= statA <= 1, statA
+
+        # NOTE: Logic paired with secondStat().
+        # NOTE: Logic paired with statsToBlobRgb().
+        if "normal" == mt:
+            assert 0 <= statB <= 1, statB
+
+            # E[rise] = 12.34%
+            # Cov[rise|rise] = 45.67%
+            ret = '\n'.join((
+                "%s[%s] = %.2f%%" % (
+                    mapMetricNameToHtml["Ex"],
+                    mapSiblingTypeToHtml[st],
+                    100*statA,
+                ),
+                "%s(%s,%s) = %.2f%%" % (
+                    mapMetricNameToHtml["Cov"],
+                    mapSiblingTypeToHtml[st],
+                    mapSiblingTypeToHtml[st],
+                    100*statB,
+                ),
+            ))
+        elif siblingIs1stDer(st):
+            # stat = ( E[rise], E[rise | orig] )
+            #   OR   ( E[fall], E[fall | refl] )
+            assert mt in ("bstate", "threshold")
+            assert st in ("rise", "fall")
+            assert 0 <= statA <= 0.5
+            assert 0 <= statB <= 1, statB
+
+            # E[rise] = 12.34%
+            # E[rise|orig] = 45.67%
+            ret = '\n'.join((
+                "%s[%s] = %.2f%%" % (
+                    mapMetricNameToHtml["Ex"],
+                    mapSiblingTypeToHtml[st],
+                    100*statA
+                ),
+                "%s[%s|%s] = %.2f%%" % (
+                    mapMetricNameToHtml["Cex"],
+                    mapSiblingTypeToHtml[st],
+                    mapSiblingTypeToHtml[{"rise": "orig", "fall": "refl"}[st]],
+                    100*statB,
+                ),
+            ))
+        else:
+            assert mt in ("event", "bstate", "threshold")
+            assert st in ("orig", "refl")
+            assert statB is None
+            # E[orig] = 12.34%
+            ret = "%s[%s] = %.2f%%" % (
+                mapMetricNameToHtml["Ex"],
+                mapSiblingTypeToHtml[st],
+                100*statA,
+            )
+
+        return ret
+    # }}} def statsToBlobRgb
+
     nodes = \
         (nodeFmts[st].format(
             measureName=nm,
@@ -398,8 +529,8 @@ def svgNodes(stats): # {{{
             centerY=nodeCenters[nm][1],
             symbolFill=mapMeasureTypeToSymbolFill[mt],
             tombstoneFill=mapMeasureTypeToTombstoneFill[mt],
-            exRgb=rgb1D(stats[nm][0]),
-            exValue=stats[nm][0],
+            blobRgb=statsToBlobRgb(nm, mt, st, bn),
+            statsTitle=statsToTitle(nm, mt, st, bn),
             symbol=mapSiblingTypeToHtml[st]) \
          for nm,(mt,st,bn) in zip(measureNames, nameParts))
 
@@ -407,7 +538,7 @@ def svgNodes(stats): # {{{
 
     # {{{ identicons
     # One per sibling group.
-    identiconRadius = sibgrpRadius + 1.2*sibgrpSeparation
+    identiconRadius = sibgrpRadius + identiconSeparationMul*sibgrpSeparation
 
     _identiconCenters = \
         list(ptsMkPolygon(nPts=len(baseNames), radius=[identiconRadius]))
@@ -468,39 +599,10 @@ def svgEdges(edges, nodeCenters): # {{{
 
 def svgNetgraph(u, cfg, vcdInfo, edges): # {{{
     measureNames = vcdInfo["unitIntervalVarNames"]
-    nameParts = [measureNameParts(nm) for nm in measureNames]
 
     evs = rdEvs(measureNames, u, u + cfg.windowsize, cfg.fxbits)
-    metEx = metric("Ex", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
-    metCov = metric("Cov", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
-    metCex = metric("Cex", cfg.windowsize, cfg.windowalpha, nBits=cfg.fxbits)
 
-    def edgePartner(mt, st, bn):
-        assert st in ("rise", "fall")
-        return {
-            "rise": '.'.join([mt, "orig", bn]),
-            "fall": '.'.join([mt, "refl", bn]),
-        }[st]
-
-    # TODO WIP
-    # Each node displays blob with 2D color.
-    #   orig nodes display colorspace(E[orig], Cov(orig,orig))
-    #   refl nodes display colorspace(E[refl], Cov(refl,refl))
-    #   rise nodes display colorspace(2E[rise], Cex(rise,orig))
-    #   fall nodes display colorspace(2E[fall], Cex(fall,refl))
-    # However, stats contains numbers to be displayed which are slightly
-    # different.
-    #   orig nodes print E[orig] and Cov(orig,orig)
-    #   refl nodes print E[refl] and Cov(refl,refl)
-    #   rise nodes print E[rise] and Cex(rise,orig)
-    #   fall nodes print E[fall] and Cex(fall,refl)
-    stats = {nm: (
-            metEx(evs[nm]),
-            metCov(evs[nm], evs[nm]) if st in ("orig", "refl") else \
-                metCex(evs[nm], evs[edgePartner(mt,st,bn)]) \
-        ) for nm,(mt,st,bn) in zip(measureNames, nameParts)}
-
-    nodeStrs, (canvasWidth, canvasHeight), nodeCenters = svgNodes(stats)
+    nodeStrs, (canvasWidth, canvasHeight), nodeCenters = svgNodes(cfg, evs)
 
     # Clip the max dimensions to for zooming to work with browsers.
     # 300 is just a reasonable value for 1080p screen.
@@ -552,8 +654,6 @@ def svgNetgraph(u, cfg, vcdInfo, edges): # {{{
     )))
     ret_ += list(svgEdges(edges, nodeCenters))
     ret_.append('</g>')
-
-    # TODO: Layer of self-duty for multi-sibling measures.
 
     ret_.append('</svg>')
     return ret_

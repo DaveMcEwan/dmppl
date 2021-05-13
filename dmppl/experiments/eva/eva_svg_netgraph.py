@@ -274,7 +274,7 @@ def calculateEdges(a, b, u,
 
     nDeltas = len(sfDeltas)
     m = len(measureNames)
-    nPossibleEdges = nDeltas * (m**2 - m) / 2 # TODO: Report progress.
+    nPossibleEdges = nDeltas * (m**2 - m) / 2 # TODO? Report progress.
 
     # Track downsample factor changes in order to perform the sampling only once.
     sfPrev = -1 # non-init
@@ -304,7 +304,14 @@ def calculateEdges(a, b, u,
             sfEvs = {nm: subsample(evs[nm], sf) for nm in measureNames}
 
             # Get metric implementations for this window.
-            # TODO: LRU cache wrappers for fnEx.
+            # NOTE: LRU cache is difficult because NumPy arrays aren't hashable.
+            # Arrays are used read-only so I could do something with the name,
+            # index, and whatever else which are hashable, but performance
+            # increase is probably not worth it right now.
+            #@lru_cache(maxsize=2048)
+            #def fnEx(*args, **kwargs):
+            #    return metric("Ex", sfWinSize, cfg.windowalpha,
+            #                  nBits=cfg.fxbits)(*args, **kwargs)
             fnEx = metric("Ex", sfWinSize, cfg.windowalpha, nBits=cfg.fxbits)
             fnA = metric(a, sfWinSize, cfg.windowalpha, nBits=cfg.fxbits)
             fnB = metric(b, sfWinSize, cfg.windowalpha, nBits=cfg.fxbits) \

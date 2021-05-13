@@ -1,6 +1,7 @@
 
 from __future__ import print_function
 
+import argparse
 import errno
 import functools
 import itertools
@@ -636,6 +637,38 @@ def mkDirP(path): # {{{
             raise
     return
 # }}} def mkDirP
+
+def argparse_positiveInteger(nm, s): # {{{
+    i = int(s)
+    if not (0 < i):
+        msg = "%s must be positive integer" % nm
+        raise argparse.ArgumentTypeError(msg)
+    return i
+# }}} def argparse_positiveInteger
+
+def argparse_nonNegativeInteger(nm, s): # {{{
+    i = int(s)
+    if not (0 <= i):
+        msg = "%s must be non-negative integer" % nm
+        raise argparse.ArgumentTypeError(msg)
+    return i
+# }}} def argparse_nonNegativeInteger
+
+def argparse_positiveReal(nm, s): # {{{
+    i = float(s)
+    if not (0.0 < i):
+        msg = "%s must be positive real/float" % nm
+        raise argparse.ArgumentTypeError(msg)
+    return i
+# }}} def argparse_positiveReal
+
+def argparse_nonNegativeReal(nm, s): # {{{
+    i = float(s)
+    if not (0.0 <= i):
+        msg = "%s must be non-negative real/float" % nm
+        raise argparse.ArgumentTypeError(msg)
+    return i
+# }}} def argparse_nonNegativeReal
 
 joinP = os.path.join # Just a convenient alias
 

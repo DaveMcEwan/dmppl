@@ -251,38 +251,6 @@ def argparse_PwmSelect(s): # {{{
     return PwmSelect(i)
 # }}} def argparse_PwmSelect
 
-def argparse_positiveInteger(nm, s): # {{{
-    i = int(s)
-    if not (0 < i):
-        msg = "%s must be positive integer" % nm
-        raise argparse.ArgumentTypeError(msg)
-    return i
-# }}} def argparse_positiveInteger
-
-def argparse_nonNegativeInteger(nm, s): # {{{
-    i = int(s)
-    if not (0 <= i):
-        msg = "%s must be non-negative integer" % nm
-        raise argparse.ArgumentTypeError(msg)
-    return i
-# }}} def argparse_nonNegativeInteger
-
-def argparse_positiveReal(nm, s): # {{{
-    i = float(s)
-    if not (0.0 < i):
-        msg = "%s must be positive real/float" % nm
-        raise argparse.ArgumentTypeError(msg)
-    return i
-# }}} def argparse_positiveReal
-
-def argparse_nonNegativeReal(nm, s): # {{{
-    i = float(s)
-    if not (0.0 <= i):
-        msg = "%s must be non-negative real/float" % nm
-        raise argparse.ArgumentTypeError(msg)
-    return i
-# }}} def argparse_nonNegativeReal
-
 class SerialDevice(object): # {{{
     '''Context manager around PySerial to attempt connection until resource is
        free.

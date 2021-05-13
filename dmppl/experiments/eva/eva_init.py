@@ -638,6 +638,8 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
         fq_ = [(0, nm, int(re.match(r"^[^\.]*\.refl\.", nm) is not None)) \
                for nm in vcdo.varNames]
 
+        lastTime_ = 0
+
         # Work through vcdi timechunks putting values into vcdo.
         for iTc in vcdi.timechunks:
             iTime, iChangedVarIds, iNewValues = iTc
@@ -809,7 +811,7 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
 
             # }}} for iVarId,iNewValue in zip(iChangedVarIds, iNewValues)
 
-            # Interpolate normal/smooth values up to, current timechunk for
+            # Interpolate normal/smooth values up to current timechunk for
             # measurements which aren't sampled in this timechunk.
             for iVarId,(prevIpolTime, prevIpolValues_) in mapVarIdToHistory_.items():
                 if prevIpolTime == oTime:
@@ -825,6 +827,10 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
 
 
 
+            # Resolve conflicts from fq_/bq_.
+            # Forward queue is speculative so a proper value from the current
+            # timechunk will take precedence.
+            # I.e. Always use the last appended change.
             bq_.sort()
             for fqTime, fqGroup in groupby(bq_, key=(lambda x: x[0])):
                 fqChangedVars, fqNewValues = \
@@ -832,16 +838,31 @@ def meaVcd(instream, evcx, cfg, infoFlag): # {{{
                 assert fqTime < oTime, (fqTime, oTime)
                 vcdo.wrTimechunk((fqTime, fqChangedVars, fqNewValues))
 
-            # Resolve conflicts from fq_/bq_.
-            # Forward queue is speculative so a proper value from the current
-            # timechunk will take precedence.
-            # I.e. Always use the last appended change.
+            # Flush out current (now) queue.
             if 0 < len(nq_):
                 dedupVars = []
                 for nm,v in nq_:
                     dedupVars = appendNonDuplicate(dedupVars, (nm,v), replace=True)
                 nqChangedVars, nqNewValues = zip(*dedupVars)
                 vcdo.wrTimechunk((oTime, nqChangedVars, nqNewValues))
+
+            lastTime_ = oTime
+
+        # Events from oneBitTypes cannot be interpolated until after last
+        # timechunk.
+        fq_ += [(lastTime_+1, nm, 0) \
+                for nm in vcdo.varNames \
+                if re.match(r"^event.orig\.", nm) is not None]
+
+        # Flush out forward queue after input VCD has been fully processed.
+        # Time is set to only one greater than last time in input VCD,
+        # regardless of what the time in each fq_ item says.
+        if 0 < len(fq_):
+            dedupVars = []
+            for _,nm,v in fq_:
+                dedupVars = appendNonDuplicate(dedupVars, (nm,v), replace=True)
+            nqChangedVars, nqNewValues = zip(*dedupVars)
+            vcdo.wrTimechunk((lastTime_+1, nqChangedVars, nqNewValues))
 
         verb("Done") # with
 

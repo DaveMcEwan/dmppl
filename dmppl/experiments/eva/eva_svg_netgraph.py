@@ -436,7 +436,7 @@ def svgNodes(cfg, evs): # {{{
         return ret
     # }}} def secondStat
 
-    stats = {nm: ( metEx(evs[nm]), secondStat(nm, mt, st, bn) ) \
+    stats = {nm: ( metEx(evs[nm]), np.nan_to_num(secondStat(nm, mt, st, bn)) ) \
              for nm,(mt,st,bn) in zip(measureNames, nameParts)}
 
     def statsToBlobRgb(nm, mt, st, bn): # {{{
@@ -453,7 +453,7 @@ def svgNodes(cfg, evs): # {{{
             #   OR   ( E[fall], E[fall | refl] )
             assert mt in ("bstate", "threshold")
             assert st in ("rise", "fall")
-            assert 0 <= statA <= 0.5
+            assert 0 <= statA <= 0.5, (statA, nm)
             assert 0 <= statB <= 1, statB
             ret = rgb2D(2*statA, statB)
         else:
@@ -524,7 +524,7 @@ def svgNodes(cfg, evs): # {{{
             )
 
         return ret
-    # }}} def statsToBlobRgb
+    # }}} def statsToTitle
 
     nodes = \
         (nodeFmts[st].format(

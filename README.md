@@ -27,6 +27,10 @@ parts of the library modules.
     extract information, or cleanup dodgy VCDs using the forgiving reader
     with strict writer.
   - svg2png - Simple wrapper around inkscape to export SVGs to PNGs.
+  - plotCsv - Quick and simple matplotlib wrapper for CSV-like data.
+  - plotDistBytes - Quick and simple plotting of distribution of byte values.
+  - lineFilter - Filter lines from STDIN to STDOUT via regexes.
+    Useful for signing off warnings in large logfiles.
   - bindump - Dump byte content of files as numbers, similar to od,hexdump,xxd.
 
 
@@ -38,6 +42,7 @@ to most people.
   - eva - (EVent Analysis) Measure and visualize correlations between
     measurements.
     Part of my PhD project.
+  - colorspace - Make full plots of 2D unit-interval colorspace in my thesis.
   - correlator - Interface to USB/serial/ACM hardware controlling FPGA with
     SoC-correlation-accelerator.
     Part of my PhD project.

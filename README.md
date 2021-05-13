@@ -27,6 +27,7 @@ parts of the library modules.
     extract information, or cleanup dodgy VCDs using the forgiving reader
     with strict writer.
   - svg2png - Simple wrapper around inkscape to export SVGs to PNGs.
+  - bindump - Dump byte content of files as numbers, similar to od,hexdump,xxd.
 
 
 Some experiments are given in `dmppl/experiments` which are likely not useful

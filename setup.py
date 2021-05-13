@@ -247,6 +247,7 @@ setup(
             "plotCsv=dmppl.scripts.plotCsv:entryPoint",
             "plotDistBytes=dmppl.scripts.plotDistBytes:entryPoint",
             "lineFilter=dmppl.scripts.lineFilter:entryPoint",
+            "bindump=dmppl.scripts.bindump:entryPoint",
 
             # Correlator experiment included so that dmpvl can rely on these
             # utilities and makes demos look more professional.

@@ -1,0 +1,35 @@
+# EVent Configuration for probsys0.
+# EVC syntax is a TOML-based DSL.
+
+[config]
+vcdhierprefix = "module:tinn." # Prepend to all VCD hooks.
+timestep = 1                  # Number time ticks per clock cycle.
+windowalpha = 2               # Power-of-Sine Windowing function power.
+windowsize = 3000             # Length of time window.
+windowoverlap = 0             # Overlap of windows.
+                              #   +ve overlaps windows
+                              #   0
+                              #   -ve leaves gaps between windows
+deltabk = 8                   # Delta cycles backward to search for E(X|Y<d>).
+deltazoom = 10
+
+
+[[signal]]
+type = "bstate"
+name = "small.{}"
+hook = "acpu.{}"
+subs = [
+  ["wait_until", "wait_until",
+    "prepare_batch", "report"]
+]
+
+
+[[signal]]
+type = "bstate"
+name = "big.{}"
+hook = "scpu.{}"
+subs = [
+  ["wait_until", "wait_until",
+    "bprop", "fprop", "xttrain", "train",
+    "infer", "xtpredict"]
+]

@@ -1,4 +1,4 @@
-# EVent Configuration for probsys0.
+# EVent Configuration for praxi (formerly probsys0).
 # EVC syntax is a TOML-based DSL.
 
 [config]

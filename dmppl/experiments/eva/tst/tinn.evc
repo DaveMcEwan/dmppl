@@ -16,20 +16,22 @@ deltazoom = 10
 
 [[signal]]
 type = "bstate"
-name = "small.{}"
+name = "A_CPU.{}"
 hook = "acpu.{}"
 subs = [
-  ["wait_until", "wait_until",
-    "prepare_batch", "report"]
+  ["wait_until", "wait_while",
+    "prepare_batch", "report",
+    "get_addr", "draw_infer_result", "draw_semeion_digit"]
 ]
 
 
 [[signal]]
 type = "bstate"
-name = "big.{}"
+name = "S_CPU.{}"
 hook = "scpu.{}"
 subs = [
-  ["wait_until", "wait_until",
+  ["wait_until", "wait_while",
     "bprop", "fprop", "xttrain", "train",
-    "infer", "xtpredict"]
+    "infer", "xtpredict",
+    "get_addr", "draw_tinn"]
 ]

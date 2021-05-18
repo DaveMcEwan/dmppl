@@ -1,6 +1,6 @@
 $comment UltraSoC Taygete ZC706 platform running Tinn $end
 $date Thu Feb 14 18:20:28 2019 $end
-$timescale 1s $end
+$timescale 1us $end
 $scope module tinn $end
 $var wire 1 ! scpu.fprop $end
 $var wire 1 " scpu.xttrain $end

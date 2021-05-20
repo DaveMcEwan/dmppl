@@ -151,6 +151,8 @@ def identiconSpriteSvg(x, **kwargs): # {{{
     unitSize = kwargs.get("unitSize", 1)
     sizeUnit = kwargs.get("sizeUnit", "mm") # {"mm", "px", "%", '', ...}
     cssProps = kwargs.get("cssProps", False)
+    fill = kwargs.get("fill", "black")
+    parentSvg = kwargs.get("parentSvg", True)
 
     bitFmtParts_ = [
         '<rect',
@@ -162,6 +164,7 @@ def identiconSpriteSvg(x, **kwargs): # {{{
         bitFmtParts_ += [
             'width="%d"' % unitSize,
             'height="%d"' % unitSize,
+            'fill="%s"' % fill,
         ]
     bitFmtParts_.append('/>')
     bitFmt = ' '.join(bitFmtParts_)
@@ -177,24 +180,29 @@ def identiconSpriteSvg(x, **kwargs): # {{{
     viewBoxWidth, viewBoxHeight = nRows*unitSize, nCols*unitSize
 
     ret_ = []
-    ret_ += [
-      '<svg',
-        'xmlns="http://www.w3.org/2000/svg"',
-        'xmlns:xlink="http://www.w3.org/1999/xlink"',
-        'viewBox="%d %d %d %d"' % (viewBoxMinX, viewBoxMinY, viewBoxWidth, viewBoxHeight),
-        'class="%s"' % ' '.join(classList),
-        'width="%d%s"' % (nCols, sizeUnit),
-        'height="%d%s"' % (nRows, sizeUnit),
-        '>',
-    ]
-    if cssProps:
-        ret_ += [
-            '<style>',
-            'rect.bit { width:%dpx; height:%dpx; }' % (unitSize, unitSize),
-            '</style>',
-        ]
+    if parentSvg:
+      ret_ += [
+        '<svg',
+          'xmlns="http://www.w3.org/2000/svg"',
+          'xmlns:xlink="http://www.w3.org/1999/xlink"',
+          'viewBox="%d %d %d %d"' % (viewBoxMinX, viewBoxMinY,
+                                     viewBoxWidth, viewBoxHeight),
+          'class="%s"' % ' '.join(classList),
+          'width="%d%s"' % (nCols, sizeUnit),
+          'height="%d%s"' % (nRows, sizeUnit),
+          '>',
+      ]
+      if cssProps:
+          ret_ += [
+              '<style>',
+              'rect.bit { width:%dpx; height:%dpx; }' % (unitSize, unitSize),
+              '</style>',
+          ]
+
     ret_ += [bitFmt % (x,y) for x,y in bitPositions]
-    ret_.append('</svg>')
+
+    if parentSvg:
+        ret_.append('</svg>')
 
     return '\n'.join(ret_)
 # }}} def identiconSpriteSvg

@@ -131,9 +131,9 @@ mapMeasureTypeToSymbolFill = {
 }
 
 
-identiconX, identiconY = -7.5, -7.5 # HEURISTIC
-identiconSeparationMul = 1.2
-identiconScale = 3.0 # 3*5=15
+identiconSeparationMul = 1.1
+identiconScale = 9.0 # HEURISTIC
+identiconX, identiconY = identiconScale*-0.5, identiconScale*-0.5
 identiconFmt = ' '.join((
   '<g',
     'transform="translate({centerX:.3f},{centerY:.3f}) scale(%0.03f)"' % \
@@ -556,13 +556,12 @@ def svgNodes(cfg, evs): # {{{
          for bn in baseNames}
 
     # Identicons are embedded SVGs scaled and translated into place.
-    identiconSvgs = \
-        {bn: rdTxt(joinP(paths.dname_identicon, bn + ".svg")) \
-         for bn in baseNames}
-    # Uncomment to regenerate/experiment.
     #identiconSvgs = \
-    #    {bn: identiconSpriteSvg(bn) \
+    #    {bn: rdTxt(joinP(paths.dname_identicon, bn + ".svg")) \
     #     for bn in baseNames}
+    identiconSvgs = \
+        {bn: identiconSpriteSvg(bn, fill="darkgray", parentSvg=False) \
+         for bn in baseNames}
 
     identicons = \
         (identiconFmt.format(

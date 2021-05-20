@@ -464,28 +464,29 @@ def subsample(x, factor, algorithm="xor", padding="reflect", prng=None): # {{{
     # Pad x to multiple of factor in length.
     nMissing = factor - (l % factor)
     xPadded = np.pad(x, (0, nMissing), padding)
-    assert 0 == (l % factor), (l, x.shape, factor, nMissing)
+    lPadded = xPadded.shape[0]
+    assert 0 == (lPadded % factor), (lPadded, xPadded.shape, factor, nMissing)
 
-    k = l // factor # Length of result.
+    k = lPadded // factor # Length of result.
     assert 0 < k, k
-    retShape = [k] + list(x.shape[1:])
+    retShape = [k] + list(xPadded.shape[1:])
 
     # Allocate uninitialized row in memory.
-    ret_ = np.empty(retShape, dtype=x.dtype)
+    ret_ = np.empty(retShape, dtype=xPadded.dtype)
 
     # Select and copy elements from x.
     if algorithm == "uniform":
         for i in range(k):
             offset = prng.next() % factor
             assert 0 <= offset < factor
-            ret_[i] = x[i*factor + offset]
+            ret_[i] = xPadded[i*factor + offset]
     elif algorithm == "xor":
         assert isPow2(factor), factor
         r = prng.next() & (factor - 1)
         for i in range(k):
-            offset = i ^ r
-            assert 0 <= offset < factor
-            ret_[i] = x[i*factor + offset]
+            offset = (i & (factor - 1)) ^ r
+            assert 0 <= offset < factor, (k, i, r, lPadded, offset, factor)
+            ret_[i] = xPadded[i*factor + offset]
     else:
         assert False, "Unsupported algorithm: %s" % algorithm
 
@@ -539,14 +540,15 @@ def downsample(x, factor, algorithm="mean", padding="reflect"): # {{{
     # Pad x to multiple of factor in length.
     nMissing = factor - (l % factor)
     xPadded = np.pad(x, (0, nMissing), padding)
-    assert 0 == (l % factor), (l, x.shape, factor, nMissing)
+    lPadded = xPadded.shape[0]
+    assert 0 == (lPadded % factor), (lPadded, xPadded.shape, factor, nMissing)
 
-    k = l // factor # Length of result.
+    k = lPadded // factor # Length of result.
     assert 0 < k, k
-    retShape = [k] + list(x.shape[1:])
+    retShape = [k] + list(xPadded.shape[1:])
 
     # Allocate uninitialized row in memory.
-    ret_ = np.empty(retShape, dtype=x.dtype)
+    ret_ = np.empty(retShape, dtype=xPadded.dtype)
 
     # Calculate averages from x to fill in result.
     if algorithm in ["mean", "median", "min", "max"]:

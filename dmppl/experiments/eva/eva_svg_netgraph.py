@@ -589,10 +589,11 @@ def svgEdges(edges, nodeCenters): # {{{
 
         normAB = l2Norm(metA, metB) if b else metA
 
+        # NOTE: stroke-width must be sufficient for easy mouseover.
         style = ';'.join((
             'stroke: #%s' % (rgb2D(metA, metB) if b else rgb1D(metA)),
-            'stroke-width: %0.2f' % normAB * 1,
-            'stroke-opacity: %0.2f' % normAB * 1,
+            'stroke-width: %0.2f' % (normAB * 2),
+            'stroke-opacity: %0.2f' % (normAB * 1),
         ))
 
         yield edgeFmt.format(

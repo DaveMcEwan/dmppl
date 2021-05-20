@@ -280,26 +280,25 @@ def calculateEdges(a, b, u,
     # Track downsample factor changes in order to perform the sampling only once.
     sfPrev = -1 # non-init
 
-    for dIdx, (sf, d) in enumerate(sfDeltas):
+    for sf, d in sfDeltas:
         dU, dV = u+d, v+d
 
         # Ignore negative deltas where relationship can't exist yet.
         if 0 > dU:
             continue
 
+        # Each X,Y window requires exactly 3 pieces of information which are
+        # derived from an integer floor division in sub/down-sampling.
+        # 1. Where X starts = u -> sfU
+        # 2. Where Y starts = u+d -> sfU+sfD
+        # 3. Size of window = v-u -> sfV-sfU
+        sfWinSize = cfg.windowsize // sf
+        sfD = d // sf
+        sfU = timeToEvsIdx(u, evsStartTime) // sf
+        sfV = sfU + sfWinSize
         # Downsample EVS to get X and Y.
         if sf != sfPrev:
             sfPrev = sf
-
-            # Each X,Y window requires exactly 3 pieces of information which are
-            # derived from an integer floor division in sub/down-sampling.
-            # 1. Where X starts = u -> sfU
-            # 2. Where Y starts = u+d -> sfU+sfD
-            # 3. Size of window = v-u -> sfV-sfU
-            sfWinSize = cfg.windowsize // sf
-            sfD = d // sf
-            sfU = timeToEvsIdx(u, evsStartTime) // sf
-            sfV = sfU + sfWinSize
 
             # Sub/downsample entire EVS since it will all be used.
             sfEvs = {nm: subsample(evs[nm], sf) for nm in measureNames}
@@ -322,11 +321,9 @@ def calculateEdges(a, b, u,
                  for nm in metricNames}
 
             xs = {nm: sfEvs[nm][sfU:sfV] for nm in measureNames}
-            # Pre-calculate (with LRU cache).
             xsEx = {nm: fnEx(xs[nm]) for nm in measureNames}
 
         ys = {nm: sfEvs[nm][sfU+sfD:sfV+sfD] for nm in measureNames}
-        # Pre-calculate (with LRU cache).
         ysEx = {nm: fnEx(ys[nm]) for nm in measureNames}
 
         for nmX in measureNames:

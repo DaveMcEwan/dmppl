@@ -16,10 +16,12 @@ from dmppl.base import dbg, info, verb, joinP, tmdiff, rdTxt
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
-from dmppl.experiments.eva.eva_common import appPaths, paths, \
-    metricNames, cfgDsfDeltas, loadCfg, evaLink
-from eva_html_table import calculateTableData, htmlTable, evaTitleText
-from eva_svg_netgraph import calculateEdges, svgNetgraph
+from dmppl.experiments.eva.eva_common import \
+    appPaths, paths, metricNames, cfgDsfDeltas, loadCfg, evaLink
+from dmppl.experiments.eva.eva_html_table import \
+    calculateTableData, htmlTable, evaTitleText
+from dmppl.experiments.eva.eva_svg_netgraph import \
+    calculateEdges, svgNetgraph
 
 # Version-specific imports
 version_help = "Python 2.7 or 3.4+ required."

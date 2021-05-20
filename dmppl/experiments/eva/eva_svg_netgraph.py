@@ -16,7 +16,8 @@ from dmppl.color import rgb1D, rgb2D, identiconSpriteSvg
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
-from dmppl.experiments.eva.eva_common import paths, measureNameParts, \
+from dmppl.experiments.eva.eva_common import \
+    paths, measureNameParts, \
     mapSiblingTypeToHtml, siblingIs1stDer, \
     metricNames, metric, mapMetricNameToHtml, \
     timeToEvsIdx, rdEvs

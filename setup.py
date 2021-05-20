@@ -249,6 +249,9 @@ setup(
             "lineFilter=dmppl.scripts.lineFilter:entryPoint",
             "bindump=dmppl.scripts.bindump:entryPoint",
 
+            # Eva experiment included for convenience.
+            "eva=dmppl.experiments.eva.eva:entryPoint",
+
             # Correlator experiment included so that dmpvl can rely on these
             # utilities and makes demos look more professional.
             "correlator-tui=dmppl.experiments.correlator.correlator_tui:entryPoint",

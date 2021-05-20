@@ -22,8 +22,8 @@ from dmppl.color import identiconSpriteSvg
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
-from dmppl.experiments.eva.eva_common import appPaths, paths, \
-    isUnitIntervalMeasure, measureNameParts, meaDbFromVcd
+from dmppl.experiments.eva.eva_common import \
+    appPaths, paths, isUnitIntervalMeasure, measureNameParts, meaDbFromVcd
 
 if sys.version_info[0] == 3:
     unicode = str # Compatability with Python2

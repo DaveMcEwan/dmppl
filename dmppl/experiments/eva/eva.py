@@ -10,8 +10,10 @@
 # TODO: Description and running instructions.
 # python eva.py -v init -i tst/basic2.vcd tst/basic2.evc
 # python eva.py -v httpd tst/basic2.evc
-# python eva.py -v init -i tst/probsys0_7k.vcd tst/basic2.evc
-# python eva.py -v httpd tst/probsys0_7k.evc
+# python eva.py -v init -i tst/praxi.vcd tst/praxi.evc
+# python eva.py -v httpd tst/praxi.evc
+# python eva.py -v init -i tst/tinn.vcd tst/tinn.evc
+# python eva.py -v httpd tst/tinn.evc
 
 # Standard library imports
 import argparse
@@ -25,8 +27,8 @@ from dmppl.base import run
 # NOTE: Roundabout import path for eva_common necessary for unittest.
 from dmppl.experiments.eva.eva_common import __version__, paths, initPaths, \
     metricNames
-from eva_init import evaInit
-from eva_httpd import evaHttpd
+from dmppl.experiments.eva.eva_init import evaInit
+from dmppl.experiments.eva.eva_httpd import evaHttpd
 
 # {{{ argparser
 

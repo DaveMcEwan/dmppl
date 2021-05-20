@@ -578,7 +578,7 @@ def svgNodes(cfg, evs): # {{{
         2*identiconRadius + 2*sibgrpSeparation, \
         2*identiconRadius + 2*sibgrpSeparation
 
-    return chain(nodes, identicons), (canvasWidth, canvasHeight), nodeCenters
+    return chain(identicons, nodes), (canvasWidth, canvasHeight), nodeCenters
 # }}} def svgNodes
 
 def svgEdges(edges, nodeCenters): # {{{

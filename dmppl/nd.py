@@ -19,6 +19,7 @@ def ndAssertScalarNorm(x, **kwargs): # {{{
         assert np.isscalar(x)
         assert 0.0 <= x <= 1.0, x
 
+    return True
 # }}} def ndAssertScalarNorm
 
 def ndAssert(*args, **kwargs): # {{{
@@ -27,61 +28,60 @@ def ndAssert(*args, **kwargs): # {{{
     Optionally set the eq,leq,geq,lt,gt keywords to an array of the same shape
     as the NumPy arrays in args to assert comparison properties.
     '''
-    if __debug__:
-        # Set to disable all elementwise numpy asserts, like when args is a
-        # dummy because data comes from correlation counters.
-        if kwargs.get("disable_ndAssert", False):
-            return
+    # Set to disable all elementwise numpy asserts, like when args is a
+    # dummy because data comes from correlation counters.
+    if kwargs.get("disable_ndAssert", False):
+        return
 
-        assertRange = kwargs.get("assertRange", True)
+    assertRange = kwargs.get("assertRange", True)
 
+    for i,a in enumerate(args):
+        b = args[i-1]
+        assert a.shape == b.shape, (a.shape, b.shape)
+
+        # NOTE: dtype assertions removed to allow forgiving type coercion.
+        #assert a.dtype == b.dtype, (a.dtype, b.dtype)
+
+        if assertRange:
+            assert np.all(np.logical_and(0.0 <= a, a <= 1.0))
+
+
+    eq = kwargs.get("eq")
+    if eq is not None:
+        #assert a.dtype == eq.dtype, (a.dtype, eq.dtype)
+        assert a.shape == eq.shape, (a.shape, eq.shape)
         for i,a in enumerate(args):
-            b = args[i-1]
-            assert a.shape == b.shape, (a.shape, b.shape)
+            assert np.all(a == eq), (a, eq)
 
-            # NOTE: dtype assertions removed to allow forgiving type coercion.
-            #assert a.dtype == b.dtype, (a.dtype, b.dtype)
+    leq = kwargs.get("leq")
+    if leq is not None:
+        #assert a.dtype == leq.dtype, (a.dtype, leq.dtype)
+        assert a.shape == leq.shape, (a.shape, leq.shape)
+        for i,a in enumerate(args):
+            assert np.all(a <= leq), (a, leq)
 
-            if assertRange:
-                assert np.all(np.logical_and(0.0 <= a, a <= 1.0))
+    geq = kwargs.get("geq")
+    if geq is not None:
+        #assert a.dtype == geq.dtype, (a.dtype, geq.dtype)
+        assert a.shape == geq.shape, (a.shape, geq.shape)
+        for i,a in enumerate(args):
+            assert np.all(a >= geq), (a, geq)
 
+    lt = kwargs.get("lt")
+    if lt is not None:
+        #assert a.dtype == lt.dtype, (a.dtype, lt.dtype)
+        assert a.shape == lt.shape, (a.shape, lt.shape)
+        for i,a in enumerate(args):
+            assert np.all(a < lt), (a, lt)
 
-        eq = kwargs.get("eq")
-        if eq is not None:
-            #assert a.dtype == eq.dtype, (a.dtype, eq.dtype)
-            assert a.shape == eq.shape, (a.shape, eq.shape)
-            for i,a in enumerate(args):
-                assert np.all(a == eq), (a, eq)
+    gt = kwargs.get("gt")
+    if gt is not None:
+        #assert a.dtype == gt.dtype, (a.dtype, gt.dtype)
+        assert a.shape == gt.shape, (a.shape, gt.shape)
+        for i,a in enumerate(args):
+            assert np.all(a > gt), (a, gt)
 
-        leq = kwargs.get("leq")
-        if leq is not None:
-            #assert a.dtype == leq.dtype, (a.dtype, leq.dtype)
-            assert a.shape == leq.shape, (a.shape, leq.shape)
-            for i,a in enumerate(args):
-                assert np.all(a <= leq), (a, leq)
-
-        geq = kwargs.get("geq")
-        if geq is not None:
-            #assert a.dtype == geq.dtype, (a.dtype, geq.dtype)
-            assert a.shape == geq.shape, (a.shape, geq.shape)
-            for i,a in enumerate(args):
-                assert np.all(a >= geq), (a, geq)
-
-        lt = kwargs.get("lt")
-        if lt is not None:
-            #assert a.dtype == lt.dtype, (a.dtype, lt.dtype)
-            assert a.shape == lt.shape, (a.shape, lt.shape)
-            for i,a in enumerate(args):
-                assert np.all(a < lt), (a, lt)
-
-        gt = kwargs.get("gt")
-        if gt is not None:
-            #assert a.dtype == gt.dtype, (a.dtype, gt.dtype)
-            assert a.shape == gt.shape, (a.shape, gt.shape)
-            for i,a in enumerate(args):
-                assert np.all(a > gt), (a, gt)
-
-    return
+    return True
 # }}} def ndAssert
 
 def ndAbsDiff(x, y): # {{{
@@ -129,7 +129,7 @@ def ndEx(w, x, **kwargs): # {{{
     https://en.wikipedia.org/wiki/Expected_value
     https://en.wikipedia.org/wiki/Window_function
     '''
-    ndAssert(w, x, **kwargs)
+    assert ndAssert(w, x, **kwargs)
 
     _w_Area = kwargs.get("w_Area", None)
     w_Area = np.sum(w) if _w_Area is None else _w_Area
@@ -142,7 +142,7 @@ def ndEx(w, x, **kwargs): # {{{
         assert wHadpX_Area <= w_Area, (wHadpX_Area, w_Area)
 
     ret = wHadpX_Area / w_Area if 0.0 < abs(w_Area) else w_Area
-    ndAssertScalarNorm(ret)
+    assert ndAssertScalarNorm(ret)
 
     return ret
 # }}} def ndEx
@@ -160,11 +160,11 @@ def ndCex(w, x, y, **kwargs): # {{{
     https://en.wikipedia.org/wiki/Expected_value
     https://en.wikipedia.org/wiki/Window_function
     '''
-    ndAssert(w, x, y, **kwargs)
+    assert ndAssert(w, x, y, **kwargs)
 
     _y_Ex = kwargs.get("y_Ex", None)
     y_Ex = ndEx(w, y, **kwargs) if _y_Ex is None else _y_Ex
-    ndAssertScalarNorm(y_Ex)
+    assert ndAssertScalarNorm(y_Ex)
 
     if 0.0 == y_Ex:
         ret = np.nan
@@ -172,11 +172,11 @@ def ndCex(w, x, y, **kwargs): # {{{
         _xHadpY_Ex = kwargs.get("xHadpY_Ex", None)
         xHadpY_Ex = ndEx(w, ndHadp(x, y), **kwargs) \
             if _xHadpY_Ex is None else _xHadpY_Ex
-        ndAssertScalarNorm(xHadpY_Ex)
+        assert ndAssertScalarNorm(xHadpY_Ex)
         assert xHadpY_Ex <= y_Ex, (xHadpY_Ex, y_Ex)
 
         ret = xHadpY_Ex / y_Ex
-        ndAssertScalarNorm(ret)
+        assert ndAssertScalarNorm(ret)
 
     assert np.isnan(ret) or np.isscalar(ret), type(ret)
 
@@ -195,15 +195,15 @@ def ndHam(w, x, y, **kwargs): # {{{
     https://en.wikipedia.org/wiki/Expected_value
     https://en.wikipedia.org/wiki/Window_function
     '''
-    ndAssert(w, x, y, **kwargs)
+    assert ndAssert(w, x, y, **kwargs)
 
     _xDiffY_Ex = kwargs.get("xDiffY_Ex", None)
     xDiffY_Ex = ndEx(w, ndAbsDiff(x, y), **kwargs) \
         if _xDiffY_Ex is None else _xDiffY_Ex
-    ndAssertScalarNorm(xDiffY_Ex)
+    assert ndAssertScalarNorm(xDiffY_Ex)
 
     ret = 1.0 - xDiffY_Ex
-    ndAssertScalarNorm(ret)
+    assert ndAssertScalarNorm(ret)
 
     return ret
 # }}} def ndHam
@@ -220,24 +220,24 @@ def ndTmt(w, x, y, **kwargs): # {{{
     https://en.wikipedia.org/wiki/Expected_value
     https://en.wikipedia.org/wiki/Window_function
     '''
-    ndAssert(w, x, y, **kwargs)
+    assert ndAssert(w, x, y, **kwargs)
 
     _y_Ex = kwargs.get("y_Ex", None)
     y_Ex = ndEx(w, y, **kwargs) if _y_Ex is None else _y_Ex
-    ndAssertScalarNorm(y_Ex)
+    assert ndAssertScalarNorm(y_Ex)
 
     _x_Ex = kwargs.get("x_Ex", None)
     x_Ex = ndEx(w, x, **kwargs) if _x_Ex is None else _x_Ex
-    ndAssertScalarNorm(x_Ex)
+    assert ndAssertScalarNorm(x_Ex)
 
     _xHadpY_Ex = kwargs.get("xHadpY_Ex", None)
     xHadpY_Ex = ndEx(w, ndHadp(x, y), **kwargs) \
             if _xHadpY_Ex is None else _xHadpY_Ex
-    ndAssertScalarNorm(xHadpY_Ex)
+    assert ndAssertScalarNorm(xHadpY_Ex)
 
     denominator = x_Ex + y_Ex - xHadpY_Ex
     ret = 0.0 if 0.0 == denominator else (xHadpY_Ex / denominator)
-    ndAssertScalarNorm(ret)
+    assert ndAssertScalarNorm(ret)
 
     return ret
 # }}} def ndTmt
@@ -255,15 +255,15 @@ def ndCls(w, x, y, **kwargs): # {{{
     https://en.wikipedia.org/wiki/Expected_value
     https://en.wikipedia.org/wiki/Window_function
     '''
-    ndAssert(w, x, y, **kwargs)
+    assert ndAssert(w, x, y, **kwargs)
 
     xDiffY = ndAbsDiff(x, y)
-    ndAssert(xDiffY, **kwargs)
+    assert ndAssert(xDiffY, **kwargs)
 
     xDiffY2_Ex = ndEx(w, ndHadp(xDiffY, xDiffY), **kwargs)
 
     ret = 1.0 - np.sqrt(xDiffY2_Ex)
-    ndAssertScalarNorm(ret)
+    assert ndAssertScalarNorm(ret)
 
     return ret
 # }}} def ndCls
@@ -280,25 +280,25 @@ def ndCos(w, x, y, **kwargs): # {{{
     https://en.wikipedia.org/wiki/Expected_value
     https://en.wikipedia.org/wiki/Window_function
     '''
-    ndAssert(w, x, y, **kwargs)
+    assert ndAssert(w, x, y, **kwargs)
 
     _xHadpY_Ex = kwargs.get("xHadpY_Ex", None)
     xHadpY_Ex = ndEx(w, ndHadp(x, y), **kwargs) \
             if _xHadpY_Ex is None else _xHadpY_Ex
-    ndAssertScalarNorm(xHadpY_Ex)
+    assert ndAssertScalarNorm(xHadpY_Ex)
 
     x_Ex2 = ndEx(w, ndHadp(x, x), **kwargs)
-    ndAssertScalarNorm(x_Ex2)
+    assert ndAssertScalarNorm(x_Ex2)
 
     y_Ex2 = ndEx(w, ndHadp(y, y), **kwargs)
-    ndAssertScalarNorm(y_Ex2)
+    assert ndAssertScalarNorm(y_Ex2)
 
     # Finite precision with very high dimensional vectors means ret can
     # sometimes slightly exceed 1.0.
     ret = np.minimum(1.0,
                      0.0 if 0.0 in [x_Ex2, y_Ex2] else
                         (xHadpY_Ex / (np.sqrt(x_Ex2) * np.sqrt(y_Ex2))))
-    ndAssertScalarNorm(ret)
+    assert ndAssertScalarNorm(ret)
 
     return ret
 # }}} def ndCos
@@ -316,23 +316,23 @@ def ndCov(w, x, y, **kwargs): # {{{
     https://en.wikipedia.org/wiki/Expected_value
     https://en.wikipedia.org/wiki/Window_function
     '''
-    ndAssert(w, x, y, **kwargs)
+    assert ndAssert(w, x, y, **kwargs)
 
     _y_Ex = kwargs.get("y_Ex", None)
     y_Ex = ndEx(w, y, **kwargs) if _y_Ex is None else _y_Ex
-    ndAssertScalarNorm(y_Ex)
+    assert ndAssertScalarNorm(y_Ex)
 
     _x_Ex = kwargs.get("x_Ex", None)
     x_Ex = ndEx(w, x, **kwargs) if _x_Ex is None else _x_Ex
-    ndAssertScalarNorm(x_Ex)
+    assert ndAssertScalarNorm(x_Ex)
 
     _xHadpY_Ex = kwargs.get("xHadpY_Ex", None)
     xHadpY_Ex = ndEx(w, ndHadp(x, y), **kwargs) \
             if _xHadpY_Ex is None else _xHadpY_Ex
-    ndAssertScalarNorm(xHadpY_Ex)
+    assert ndAssertScalarNorm(xHadpY_Ex)
 
     ret = 4 * np.fabs(xHadpY_Ex - (x_Ex * y_Ex))
-    ndAssertScalarNorm(ret)
+    assert ndAssertScalarNorm(ret)
 
     return ret
 # }}} def ndCov
@@ -351,18 +351,18 @@ def ndDep(w, x, y, **kwargs): # {{{
     https://en.wikipedia.org/wiki/Expected_value
     https://en.wikipedia.org/wiki/Window_function
     '''
-    ndAssert(w, x, y, **kwargs)
+    assert ndAssert(w, x, y, **kwargs)
 
     _x_Ex = kwargs.get("x_Ex", None)
     x_Ex = ndEx(w, x, **kwargs) if _x_Ex is None else _x_Ex
-    ndAssertScalarNorm(x_Ex)
+    assert ndAssertScalarNorm(x_Ex)
 
     _x_Cex_Y = kwargs.get("x_Cex_Y", None)
     x_Cex_Y = ndCex(w, x, y, **kwargs) if _x_Cex_Y is None else _x_Cex_Y
-    ndAssertScalarNorm(x_Cex_Y, allowNan=True)
+    assert ndAssertScalarNorm(x_Cex_Y, allowNan=True)
 
     ret = ((x_Cex_Y - x_Ex) / x_Cex_Y) if x_Cex_Y > x_Ex else 0.0
-    ndAssertScalarNorm(ret)
+    assert ndAssertScalarNorm(ret)
 
     return ret
 # }}} def ndDep

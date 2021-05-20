@@ -101,8 +101,6 @@ def evaHtmlString(args, cfg, request): # {{{
     a, b, u, x, y = \
         request['a'], request['b'], request['u'], request['x'], request['y']
 
-    verb("{a,b}(x|y;u) <-- {%s,%s}(%s|%s;%s)" % (a, b, x, y, u))
-
     # In debug mode (without `python -O`) assertions are caught before an
     # Exception can be raised giving a 404.
     if a is None and b is None:
@@ -329,8 +327,18 @@ class EvaHTTPRequestHandler(BaseHTTPRequestHandler): # {{{
 
             # Generate HTML string and send OK if inputs are valid.
             try:
-                response = evaHtmlString(self.args, self.cfg,
-                                         self.parseGetRequest(self.path))
+
+                request = self.parseGetRequest(self.path)
+
+                verb("Calculating {a,b}(x|y;u) <-- {%s,%s}(%s|%s;%s)..." % (
+                    request['a'],
+                    request['b'],
+                    request['x'],
+                    request['y'],
+                    request['u'],
+                ), end='')
+                response = evaHtmlString(self.args, self.cfg, request)
+                verb("DONE")
 
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")

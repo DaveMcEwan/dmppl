@@ -10,10 +10,12 @@
 # TODO: Description and running instructions.
 # python eva.py -v init -i tst/basic2.vcd tst/basic2.evc
 # python eva.py -v httpd tst/basic2.evc
-# python eva.py -v init -i tst/praxi.vcd tst/praxi.evc
-# python eva.py -v httpd tst/praxi.evc
-# python eva.py -v init -i tst/tinn.vcd tst/tinn.evc
-# python eva.py -v httpd tst/tinn.evc
+#
+# eva -v init -i tst/praxi.vcd tst/praxi.evc
+# eva -v httpd tst/praxi
+#
+# eva -rv init -i tst/tinn.vcd tst/tinn.evc
+# python -OO eva.py -v httpd tst/tinn
 
 # Standard library imports
 import argparse

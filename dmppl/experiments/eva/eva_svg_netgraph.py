@@ -266,6 +266,8 @@ def calculateEdges(a, b, u,
         implFloat(cfg.epsilon[a]), \
         implFloat(cfg.epsilon[b]) if b else None
 
+    otherMetricNames = set(metricNames) - {a, b}
+
     assert isinstance(u, int), type(u)
     v = u + cfg.windowsize
     evsStartTime = u - cfg.deltabk
@@ -278,10 +280,8 @@ def calculateEdges(a, b, u,
     m = len(measureNames)
     nPossibleEdges = nDeltas * (m**2 - m) / 2 # TODO? Report progress.
 
-    # Track downsample factor changes in order to perform the sampling only once.
-    sfPrev = -1 # non-init
-
-    for sf, d in sfDeltas:
+    sfPrev_ = -1 # init
+    for sf,d in sfDeltas:
         dU, dV = u+d, v+d
 
         # Ignore negative deltas where relationship can't exist yet.
@@ -299,8 +299,8 @@ def calculateEdges(a, b, u,
         sfV = sfU + sfWinSize
 
         # Downsample EVS to get X and Y.
-        if sf != sfPrev:
-            sfPrev = sf
+        if sf != sfPrev_:
+            sfPrev_ = sf
 
             # Sub/downsample entire EVS since it will all be used.
             sfEvs = {nm: subsample(evs[nm], sf) for nm in measureNames}
@@ -366,8 +366,10 @@ def calculateEdges(a, b, u,
                     continue
 
                 edge = {nm: fnMetrics[nm](xs[nmX], ys[nmY]) \
-                        for nm in metricNames}
+                        for nm in otherMetricNames}
                 edge.update({
+                    a: metA,
+                    b: metB,
                     'a': a,
                     'b': b,
                     "dstName": nmX,
@@ -379,6 +381,69 @@ def calculateEdges(a, b, u,
                 })
 
                 yield edge
+
+# NOTE: Parallelizing with joblib is seen to be slower than single core
+# implementation.
+#
+#        from joblib import Parallel, delayed
+#        def getEdgesPerX(nmX): # {{{
+#            mtX, stX, bnX = measureNameParts(nmX)
+#
+#            # Return list of significant edges.
+#            ret_ = []
+#
+#            x = xs[nmX]
+#            x_Ex = fnEx(x)
+#
+#            for nmY in measureNames:
+#                mtY, stY, bnY = measureNameParts(nmY)
+#
+#                if bnX == bnY:
+#                    continue
+#
+#                y = ys[nmY]
+#                y_Ex = y_Exs[nmY]
+#                xHadpY_Ex = fnEx(ndHadp(x, y))
+#
+#                metA = fnA(x, y,
+#                           x_Ex=x_Ex, y_Ex=y_Ex, xHadpY_Ex=xHadpY_Ex)
+#
+#                # Unusual structure only executes fnB() where it has a chance
+#                # of producing an overall significant result.
+#                if b is None:
+#                    isSignificant = epsilonA < metA
+#                elif epsilonA < metA:
+#                    metB = fnB(x, y,
+#                               x_Ex=x_Ex, y_Ex=y_Ex, xHadpY_Ex=xHadpY_Ex)
+#                    isSignificant = epsilonB < metB
+#                else:
+#                    isSignificant = False
+#
+#                if isSignificant:
+#                    mets = {nm: fnMetrics[nm](x, y) for nm in otherMetricNames}
+#                    mets[a] = metA
+#                    mets[b] = metB
+#                    ret_.append((nmX, nmY, mets))
+#
+#            return ret_
+#        # }}} def getEdgesPerX
+#        edges = chain(*Parallel(n_jobs=6)(delayed(getEdgesPerX)(nmX) \
+#                                          for nmX in measureNames))
+#        for nmX,nmY,mets in edges:
+#            assert all(nm in list(mets.keys()) for nm in metricNames)
+#            edge = {nm: mets[nm] for nm in metricNames}
+#            edge.update({
+#                'a': a,
+#                'b': b,
+#                "dstName": nmX,
+#                "srcName": nmY,
+#                "srcDelta": d,
+#                "sampleFactor": sf,
+#                "dstEx": x_Exs[nmX],
+#                "srcEx": y_Exs[nmY],
+#            })
+#
+#            yield edge
 
 # }}} def calculateEdges
 

@@ -31,7 +31,7 @@ from dmppl.experiments.eva.eva_common import \
 # attributes on each element.
 cssProps = False
 
-sibgrpSeparation = 100 # Space between groups of sibling nodes. HEURISTIC
+sibgrpSeparation = 110 # Space between groups of sibling nodes. HEURISTIC
 sibSeparation = 60 # Space between sibling nodes. HEURISTIC
 mapSiblingTypeToLocalCenter = { # heuristic
     "orig": (0, 0),
@@ -394,7 +394,7 @@ def svgNodes(cfg, evs): # {{{
 
     # {{{ nodes
 
-    sibgrpRadius = (len(measureNames) * sibgrpSeparation) / (2 * pi)
+    sibgrpRadius = len(baseNames)**0.5 * sibgrpSeparation
 
     sibgrpCenters = \
         list(ptsMkPolygon(nPts=len(baseNames), radius=[sibgrpRadius]))

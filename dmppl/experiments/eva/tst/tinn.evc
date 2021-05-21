@@ -5,13 +5,13 @@
 vcdhierprefix = "module:tinn." # Prepend to all VCD hooks.
 timestep = 1                  # Number time ticks per clock cycle.
 windowalpha = 2               # Power-of-Sine Windowing function power.
-windowsize = 3000             # Length of time window.
+windowsize = 1048576          # Length of time window.
 windowoverlap = 0             # Overlap of windows.
                               #   +ve overlaps windows
                               #   0
                               #   -ve leaves gaps between windows
-deltabk = 8                   # Delta cycles backward to search for E(X|Y<d>).
-deltazoom = 10
+deltabk = 1024                # Delta cycles backward to search for E[X|Y<d>].
+deltazoom = 2
 
 
 [[signal]]

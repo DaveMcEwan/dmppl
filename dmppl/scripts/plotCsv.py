@@ -9,13 +9,15 @@
 #    cat mydata.csv | plotCsv -o myplot
 
 import argparse
+import functools
 import matplotlib
 matplotlib.use("Agg") # Don't require X11.
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-from dmppl.base import fnameAppendExt, run, verb, rdLines
+from dmppl.base import fnameAppendExt, run, verb, rdLines, \
+    argparse_nonNegativeInteger
 
 __version__ = "0.1.0"
 
@@ -35,16 +37,12 @@ argparser.add_argument("input",
     type=str,
     help="CSV file, or STDIN if None.")
 
-argparser.add_argument("--title",
-    type=str,
-    default=None)
-
 argparser.add_argument("--pdf",
     action="store_true",
     help="Create PDF instead of PNG.")
 
 argparser.add_argument("--skiprows",
-    type=int,
+    type=functools.partial(argparse_nonNegativeInteger, "skiprows"),
     default=0,
     help="Skip this many lines, excluding comments.")
 
@@ -52,6 +50,11 @@ argparser.add_argument("--delimiter",
     type=str,
     default=',',
     help="Column delimiter.")
+
+argparser.add_argument("--figsize",
+    type=str,
+    default="16,10",
+    help="Horizontal,vertical (inches).")
 
 argparser.add_argument("--markers",
     type=str,
@@ -63,15 +66,9 @@ argparser.add_argument("--labels",
     default="1,2,3,4,5,6",
     help="Comma-separated list of labels")
 
-argparser.add_argument("--figsizeX",
-    type=int,
-    default=16,
-    help="Vertical (inches).")
-
-argparser.add_argument("--figsizeY",
-    type=int,
-    default=10,
-    help="Horizontal (inches).")
+argparser.add_argument("--title",
+    type=str,
+    default=None)
 
 argparser.add_argument("--xlabel",
     type=str,
@@ -103,11 +100,11 @@ argparser.add_argument("--hlines",
 
 argparser.add_argument("--baseX",
     action="store_true",
-    help="Set --addX to negative top value of left column.")
+    help="Set --addX to negative top value of leftmost column.")
 
 argparser.add_argument("--baseY",
     action="store_true",
-    help="Set --addY to negative top value of right column.")
+    help="Set --addY to negative top value of right columns.")
 
 argparser.add_argument("--addX",
     type=float,
@@ -163,13 +160,22 @@ def main(args) -> int: # {{{
     '''
     '''
 
+    ###########################################################################
+    # 1. Setup plot
+    ###########################################################################
+
     fignum = 0
 
     # figsize used to set dimensions in inches.
     # ax.set_aspect() doesn't work for KDE where Y-axis is scaled.
-    figsize = (args.figsizeX, args.figsizeY)
+    figsize = tuple(int(a) for a in args.figsize.split(','))
+    assert 2 == len(figsize)
+    assert all(0 < i for i in figsize)
 
     fig = plt.figure(fignum, figsize=figsize)
+
+    if args.title:
+        plt.title(args.title)
 
     if args.xlabel:
         plt.xlabel(args.xlabel)
@@ -185,12 +191,14 @@ def main(args) -> int: # {{{
         yLo, yHi = args.ylim.split(',')
         plt.ylim(float(yLo), float(yHi))
 
-    if args.title:
-        plt.title(args.title)
-
     markers = list(args.markers)
 
     labels = list(l for l in args.labels.split(',') if 0 < len(l))
+
+
+    ###########################################################################
+    # 2. Populate data
+    ###########################################################################
 
     a = np.loadtxt(rdLines(args.input),
                    skiprows=args.skiprows,
@@ -230,8 +238,6 @@ def main(args) -> int: # {{{
 
     ys = a[1:]
     for i,y in enumerate(ys):
-        marker = markers[i] if i < len(markers) else ''
-        label = labels[i] if i < len(labels) else None
 
         if args.baseY:
             args.addY = y[0] * -1
@@ -264,23 +270,36 @@ def main(args) -> int: # {{{
 
             y = prdX * prdY
 
+
+    ###########################################################################
+    # 3. Draw plot
+    ###########################################################################
+
+    for i,y in enumerate(ys):
+        marker = markers[i] if i < len(markers) else ''
+        label = labels[i] if i < len(labels) else None
+
         kwargsPlot = {"marker": marker}
         if label is not None:
             kwargsPlot.update({"label": label})
 
         plt.plot(x, y, **kwargsPlot)
 
-
     if 0 < len(labels):
         plt.legend()
 
     if args.vlines:
-         for line in args.vlines.split(',')
+         for line in args.vlines.split(','):
             plt.axvline(y=float(line), color="green", linestyle='-', linewidth=1)
 
     if args.hlines:
-         for line in args.hlines.split(',')
+         for line in args.hlines.split(','):
             plt.axhline(y=float(line), color="green", linestyle='-', linewidth=1)
+
+
+    ###########################################################################
+    # 4. Save plot to file
+    ###########################################################################
 
     if args.pdf:
         plt.savefig(fnameAppendExt(args.output, "pdf"), bbox_inches="tight")

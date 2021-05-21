@@ -10,6 +10,8 @@
 import argparse
 import subprocess
 
+# TODO: Explicit imports.
+#from dmppl.base import run, verb, fnameAppendExt, fnameStripExt
 from dmppl.base import *
 
 __version__ = "0.1.0"

@@ -61,7 +61,7 @@ argparser.add_argument("filterFile",
     nargs='?',
     default="lineFilter.regex",
     help="Text file containing one regex per line."
-         " Any input lines matching any regex are omitted from output."
+         " Input lines matching any given regex are filtered from output."
          " Lines beginning with '#' are ignored.")
 
 # }}} argparser

@@ -13,6 +13,7 @@ from dmppl.base import dbg, info, verb, rdTxt, joinP, utf8NameToHtml
 from dmppl.math import ptShift, ptsMkPolygon, subsample, downsample, l2Norm
 from dmppl.fx import fxFromFloat
 from dmppl.color import rgb1D, rgb2D, identiconSpriteSvg
+from dmppl.nd import ndHadp
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.
@@ -296,6 +297,7 @@ def calculateEdges(a, b, u,
         sfD = d // sf
         sfU = timeToEvsIdx(u, evsStartTime) // sf
         sfV = sfU + sfWinSize
+
         # Downsample EVS to get X and Y.
         if sf != sfPrev:
             sfPrev = sf
@@ -321,13 +323,18 @@ def calculateEdges(a, b, u,
                  for nm in metricNames}
 
             xs = {nm: sfEvs[nm][sfU:sfV] for nm in measureNames}
-            xsEx = {nm: fnEx(xs[nm]) for nm in measureNames}
+            x_Exs = {nm: fnEx(xs[nm]) for nm in measureNames}
 
         ys = {nm: sfEvs[nm][sfU+sfD:sfV+sfD] for nm in measureNames}
-        ysEx = {nm: fnEx(ys[nm]) for nm in measureNames}
+        y_Exs = {nm: fnEx(ys[nm]) for nm in measureNames}
 
         for nmX in measureNames:
             mtX, stX, bnX = measureNameParts(nmX)
+
+            # NOTE: Pre-calculating xHadpY_Ex doesn't significantly speedup
+            # tinn/Cov+Dep testcase, but doesn't slowdown either.
+            xHadpY_Exs = {nm: fnEx(ndHadp(xs[nmX], ys[nm])) \
+                          for nm in measureNames}
 
             for nmY in measureNames:
                 mtY, stY, bnY = measureNameParts(nmY)
@@ -337,11 +344,20 @@ def calculateEdges(a, b, u,
 
                 # Unusual structure only executes fnB() where it has a chance
                 # of producing an overall significant result.
-                metA = fnA(xs[nmX], ys[nmY])
+                metA = fnA(xs[nmX], ys[nmY],
+                           x_Ex=x_Exs[nmX],
+                           y_Ex=y_Exs[nmY],
+                           xHadpY_Ex=xHadpY_Exs[nmY],
+                          )
+
                 if b is None:
                     isSignificant = epsilonA < metA
                 elif epsilonA < metA:
-                    metB = fnB(xs[nmX], ys[nmY])
+                    metB = fnB(xs[nmX], ys[nmY],
+                               x_Ex=x_Exs[nmX],
+                               y_Ex=y_Exs[nmY],
+                               xHadpY_Ex=xHadpY_Exs[nmY],
+                              )
                     isSignificant = epsilonB < metB
                 else:
                     isSignificant = False
@@ -358,8 +374,8 @@ def calculateEdges(a, b, u,
                     "srcName": nmY,
                     "srcDelta": d,
                     "sampleFactor": sf,
-                    "dstEx": xsEx[nmX],
-                    "srcEx": ysEx[nmY],
+                    "dstEx": x_Exs[nmX],
+                    "srcEx": y_Exs[nmY],
                 })
 
                 yield edge

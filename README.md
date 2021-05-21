@@ -29,6 +29,7 @@ parts of the library modules.
   - svg2png - Simple wrapper around inkscape to export SVGs to PNGs.
   - plotCsv - Quick and simple matplotlib wrapper for CSV-like data.
   - plotDistBytes - Quick and simple plotting of distribution of byte values.
+  - plotX - Quick and simple plotting of expressions with single variable.
   - lineFilter - Filter lines from STDIN to STDOUT via regexes.
     Useful for signing off warnings in large logfiles.
   - bindump - Dump byte content of files as numbers, similar to od,hexdump,xxd.

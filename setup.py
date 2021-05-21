@@ -246,6 +246,7 @@ setup(
             "svg2png=dmppl.scripts.svg2png:entryPoint",
             "plotCsv=dmppl.scripts.plotCsv:entryPoint",
             "plotDistBytes=dmppl.scripts.plotDistBytes:entryPoint",
+            "plotX=dmppl.scripts.plotX:entryPoint",
             "lineFilter=dmppl.scripts.lineFilter:entryPoint",
             "bindump=dmppl.scripts.bindump:entryPoint",
 

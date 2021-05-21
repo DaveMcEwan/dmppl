@@ -58,7 +58,7 @@ argparser.add_argument("-n", "--index-numbers",
     help="Prefix each output line with index, starting at 0.")
 
 argparser.add_argument("-s", "--stride",
-    type=functools.partial(argparse_positiveInteger, "timeout"),
+    type=functools.partial(argparse_positiveInteger, "stride"),
     default=1,
     help="Number of values to print per line.")
 

@@ -653,7 +653,7 @@ def measureCompactHtml(name): # {{{
     return spanFmt % (mt, icon, mapSiblingTypeToHtml[st])
 # }}} def measureCompactHtml
 
-def tableDataRows(a, b, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
+def tableDataRows(a, b, u, x, y, cfg, vcdInfo, exSib, varCol, fnUXY): # {{{
     measureNames = vcdInfo["unitIntervalVarNames"]
 
     if x and y:
@@ -673,13 +673,16 @@ def tableDataRows(a, b, u, x, y, vcdInfo, exSib, varCol, fnUXY): # {{{
     def varColTds(values, timesNotNames): # {{{
 
         if timesNotNames:
-            ret = ['<td class="varying"> %s </td>' % str(v) for v in values]
+            ret = ['<td class="varying"> %s </td>' % str(v+cfg.timestart) \
+                   for v in values]
         else: # Represent measureType.siblingType compactly.
-            nmParts = [measureNameParts(v) for v in values]
+            texts = [bn if "orig" == st else '' \
+                     for mt,st,bn in [measureNameParts(v) \
+                                      for v in values]]
             compacts = [measureCompactHtml(v) for v in values]
 
-            ret = ['<td class="varying"> %s %s </td>' % (c, bn) \
-                   for c,(_,_,bn) in zip(compacts, nmParts)]
+            ret = ['<td class="varying"> %s %s </td>' % (c, t) \
+                   for c,t in zip(compacts, texts)]
 
         return ret
     # }}} def varColTds
@@ -719,17 +722,17 @@ def htmlTable(a, b, u, x, y,
 
     # Top-most row with title (with nav popovers), and prev/next.
     ret_.append(tableTitleRow(a, b, u, x, y,
-                               cfg, dsfDeltas, vcdInfo))
+                              cfg, dsfDeltas, vcdInfo))
 
     # Column headers with delta values. Both hi and lo rows.
     ret_.append(tableHeaderRows(a, b, u, x, y,
-                                 dsfDeltas,
-                                 exSibRow))
+                                dsfDeltas,
+                                exSibRow))
 
     # Main data rows.
     ret_.append(tableDataRows(a, b, u, x, y,
-                               vcdInfo,
-                               exSib, varCol, fnUXY))
+                              cfg, vcdInfo,
+                              exSib, varCol, fnUXY))
 
     ret_.append('</table>')
 

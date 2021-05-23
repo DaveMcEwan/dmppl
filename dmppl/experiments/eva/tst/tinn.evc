@@ -3,6 +3,7 @@
 
 [config]
 vcdhierprefix = "module:tinn." # Prepend to all VCD hooks.
+timestart = 70000000          # Number time ticks per clock cycle.
 timestep = 1                  # Number time ticks per clock cycle.
 windowalpha = 2               # Power-of-Sine Windowing function power.
 windowsize = 1048576          # Length of time window.

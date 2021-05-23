@@ -5,7 +5,7 @@
 vcdhierprefix = "module:TOP.probsys0." # Prepend to all VCD hooks.
 timestep = 10                 # Number time ticks per clock cycle.
 windowalpha = 2               # Power-of-Sine Windowing function power.
-windowsize = 3000             # Length of time window.
+windowsize = 512              # Length of time window.
 windowoverlap = 0             # Overlap of windows.
                               #   +ve overlaps windows
                               #   0
@@ -35,25 +35,25 @@ subs = [
   ["aw", "b", "ar", "r"]
 ]
 
-# Six events specified with the cross product of two substitutions.
-[[signal]]
-type = "event"
-name = "axi.{}.{}"
-hook = "mon_{}_{}"
-subs = [
-  ["r", "b"],
-  ["decerr", "slverr", "okay"],
-]
-
-
-# Eight events specified using range shorthand which is similar to Python.
-# <start>..<stop>[..<step>]
-[[signal]]
-type = "event"
-name = "axi.{}.page{}"
-hook = "mon_{}_pagenum[{}]"
-subs = [
-  ["aw", "ar"],
-  ["0..4"],
-]
+## Six events specified with the cross product of two substitutions.
+#[[signal]]
+#type = "event"
+#name = "axi.{}.{}"
+#hook = "mon_{}_{}"
+#subs = [
+#  ["r", "b"],
+#  ["decerr", "slverr", "okay"],
+#]
+#
+#
+## Eight events specified using range shorthand which is similar to Python.
+## <start>..<stop>[..<step>]
+#[[signal]]
+#type = "event"
+#name = "axi.{}.page{}"
+#hook = "mon_{}_pagenum[{}]"
+#subs = [
+#  ["aw", "ar"],
+#  ["0..4"],
+#]
 

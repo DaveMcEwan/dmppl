@@ -124,7 +124,7 @@ def identiconSprite(x, nRows=5, nCols=5): # {{{
     # Replicate columns to make full image.
     columns = columnsHalf + columnsHalf[::-1][nCols % 2:]
 
-    # Transpose columnns to make rows to make it look "the right way up",
+    # Transpose columns to make rows to make it look "the right way up",
     # because horizontally symmetrical isn't as personable.
     rows = [[col[r] for col in columns] for r in range(nRows)]
 

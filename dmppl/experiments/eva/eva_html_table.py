@@ -227,7 +227,7 @@ def tableTitleRow(a, b, u, x, y, cfg, dsfDeltas, vcdInfo): # {{{
 def tableHeaderRows(a, b, u, x, y, dsfDeltas, exSibRow): # {{{
     '''Return a string with HTML one or more <tr>.
     '''
-    sibThTxtFmt = mapMetricNameToHtml["Ex"] + "[%s]<sub>%s</sub>" # symbol, x/y
+    sibThTxtFmt = mapMetricNameToHtml["Ex"] + "[%s<sub>%s</sub>]" # symbol, x/y
 
     def sibHiThs(nm, xNotY, rowspan, values=None): # {{{
 

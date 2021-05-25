@@ -369,7 +369,6 @@ def calculateEdges(a, b, u,
                         for nm in otherMetricNames}
                 edge.update({
                     a: metA,
-                    b: metB,
                     'a': a,
                     'b': b,
                     "dstName": nmX,
@@ -379,6 +378,8 @@ def calculateEdges(a, b, u,
                     "dstEx": x_Exs[nmX],
                     "srcEx": y_Exs[nmY],
                 })
+                if b is not None:
+                  edge[b] = metB
 
                 yield edge
 
@@ -422,7 +423,8 @@ def calculateEdges(a, b, u,
 #                if isSignificant:
 #                    mets = {nm: fnMetrics[nm](x, y) for nm in otherMetricNames}
 #                    mets[a] = metA
-#                    mets[b] = metB
+#                    if b is not None:
+#                       mets[b] = metB
 #                    ret_.append((nmX, nmY, mets))
 #
 #            return ret_

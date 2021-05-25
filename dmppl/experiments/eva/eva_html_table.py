@@ -327,7 +327,7 @@ def tableHeaderRows(a, b, u, x, y, dsfDeltas, exSibRow): # {{{
         rowVar = 'u'
         #     +--------+--------+--------+--------+--------+--------+--------+--------+
         # hi  |        |        |        |        |        |        |        |        |
-        #     + E[.]_x + E[¬]_x + E[↑]_x + E[↓]_x + E[.]_y + E[¬]_y + E[↑]_y + E[↓]_y +
+        #     + E[f]_x + E[¬]_x + E[↑]_x + E[↓]_x + E[f]_y + E[¬]_y + E[↑]_y + E[↓]_y +
         # lo  |        |        |        |        |        |        |        |        |
         #     +--------+--------+--------+--------+--------+--------+--------+--------+
         #
@@ -346,18 +346,18 @@ def tableHeaderRows(a, b, u, x, y, dsfDeltas, exSibRow): # {{{
 
         # 1. CASE: x has max number of siblings.
         #     +--------+--------+--------+--------+
-        # hi  + E[.]_x | E[¬]_x | E[↑]_x | E[↓]_x | clickable, to x siblings
+        # hi  + E[f_x] | E[¬_x] | E[↑_x] | E[↓_x] | clickable, to x siblings
         #     + 0.1234 | 0.1234 | 0.1234 | 0.1234 |
         #     +--------+--------+--------+--------+
-        # lo  | E[.]_y | E[¬]_y | E[↑]_y | E[↓]_y | non-clickable column heads
+        # lo  | E[f_y] | E[¬_y] | E[↑_y] | E[↓_y] | non-clickable column heads
         #     +--------+--------+--------+--------+
         #
         # 2. CASE: x has fewer siblings than max.
         #     +--------+--------+--------+--------+
-        # hi  + E[.]_x |                          |  clickable, to x siblings
+        # hi  + E[f_x] |                          |  clickable, to x siblings
         #     + 0.1234 |                          |
         #     +--------+--------+--------+--------+
-        # lo  | E[.]_y | E[¬]_y | E[↑]_y | E[↓]_y | non-clickable column heads
+        # lo  | E[f_y] | E[¬_y] | E[↑_y] | E[↓_y] | non-clickable column heads
         #     +--------+--------+--------+--------+
         #
         # NOTE: Values of x sibling's expectation by number and bgcolor.
@@ -372,18 +372,18 @@ def tableHeaderRows(a, b, u, x, y, dsfDeltas, exSibRow): # {{{
 
         # 1. CASE: y has max number of siblings.
         #     +--------+--------+--------+--------+
-        # hi  + E[.]_y | E[¬]_y | E[↑]_y | E[↓]_y | clickable, to y siblings
+        # hi  + E[f_y] | E[¬_y] | E[↑_y] | E[↓_y] | clickable, to y siblings
         #     + 0.1234 | 0.1234 | 0.1234 | 0.1234 |
         #     +--------+--------+--------+--------+
-        # lo  | E[.]_x | E[¬]_x | E[↑]_x | E[↓]_x | non-clickable column heads
+        # lo  | E[f_x] | E[¬_x] | E[↑_x] | E[↓_x] | non-clickable column heads
         #     +--------+--------+--------+--------+
         #
         # 2. CASE: y has fewer siblings than max.
         #     +--------+--------+--------+--------+
-        # hi  + E[.]_y |                          |  clickable, to y siblings
+        # hi  + E[f_y] |                          |  clickable, to y siblings
         #     + 0.1234 |                          |
         #     +--------+--------+--------+--------+
-        # lo  | E[.]_x | E[¬]_x | E[↑]_x | E[↓]_x | non-clickable column heads
+        # lo  | E[f_x] | E[¬_x] | E[↑_x] | E[↓_x] | non-clickable column heads
         #     +--------+--------+--------+--------+
         #
         # NOTE: Values of y sibling's expectation by number and bgcolor.

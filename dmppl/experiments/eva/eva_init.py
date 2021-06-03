@@ -18,7 +18,7 @@ from dmppl.math import dotp, clipNorm, saveNpy
 from dmppl.toml import loadToml, saveToml
 from dmppl.vcd import VcdReader, VcdWriter, oneBitTypes, detypeVarName
 from dmppl.scripts.vcd_utils import vcdClean
-from dmppl.color import identiconSpriteSvg
+from dmppl.identicon import identiconSpriteSvg
 
 # Project imports
 # NOTE: Roundabout import path for eva_common necessary for unittest.

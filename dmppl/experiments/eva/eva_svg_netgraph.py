@@ -12,7 +12,8 @@ import numpy as np
 from dmppl.base import dbg, info, verb, rdTxt, joinP, utf8NameToHtml
 from dmppl.math import ptShift, ptsMkPolygon, subsample, downsample, l2Norm
 from dmppl.fx import fxFromFloat
-from dmppl.color import rgb1D, rgb2D, identiconSpriteSvg
+from dmppl.color import rgb1D, rgb2D
+from dmppl.identicon import identiconSpriteSvg
 from dmppl.nd import ndHadp
 
 # Project imports

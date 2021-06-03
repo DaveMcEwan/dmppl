@@ -40,7 +40,6 @@ venv3.8:
 	python3.8 -m venv venv3.8
 	$(VENV3.8) pip install -e .
 
-venv: venv2.7
 venv: venv3.6
 venv: venv3.7
 venv: venv3.8
@@ -50,7 +49,6 @@ venv: venv3.8
 #   python -m unittest tests.test_math              # One module
 #   python -m unittest tests.test_math.isPow2       # One function
 unittest: venv
-	$(VENV2.7) python -m unittest tests
 	$(VENV3.6) python -m unittest tests
 	$(VENV3.7) python -m unittest tests
 	$(VENV3.8) python -m unittest tests
@@ -58,8 +56,6 @@ unittest: venv
 # Collect coverage and produces HTML reports from unit tests.
 COVRC = --rcfile=tests/.coveragerc_
 unittest-coverage: venv
-	$(VENV2.7) coverage run $(COVRC)2.7 -m unittest tests && \
-		coverage html $(COVRC)2.7
 	$(VENV3.6) coverage run $(COVRC)3.6 -m unittest tests && \
 		coverage html $(COVRC)3.6
 	$(VENV3.7) coverage run $(COVRC)3.7 -m unittest tests && \

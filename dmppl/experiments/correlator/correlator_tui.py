@@ -36,7 +36,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 from dmppl.base import run, verb, dbg, \
     argparse_nonNegativeInteger, argparse_nonNegativeReal
 from dmppl.bytePipe import bpReadSequential, bpWriteSequential, bpWriteAddr
-from dmppl.color import CursesWindow, cursesInitPairs, \
+from dmppl.curses import CursesWindow, cursesInitPairs, \
     whiteBlue, whiteRed, greenBlack, yellowBlack
 
 from dmppl.experiments.correlator.correlator_common import __version__, \

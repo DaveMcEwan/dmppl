@@ -3,6 +3,7 @@
 build/*
 dist/*
 *.egg-info/*
+pip-wheel-*
 
 # Python temporary files.
 */__pycache__/*

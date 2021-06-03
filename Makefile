@@ -21,23 +21,29 @@ VENV3.8 = source venv3.8/bin/activate &&
 # with something like:
 #    ...download CPython tarball, extract, cd to there...
 #	 ./configure && make && sudo make altinstall
+# NOTE: TOML module is installed first to read pyproject.toml
 venv2.7:
 	python2.7 -m pip install --user virtualenv
 	python2.7 -m virtualenv --no-wheel venv2.7
+	$(VENV2.7) pip install toml
 	$(VENV2.7) pip install -e .
 venv3.5:
 	python3.5 -m pip install --user virtualenv
 	python3.5 -m virtualenv --no-wheel venv3.5
+	$(VENV3.5) pip install toml
 	$(VENV3.5) pip install -e .
 venv3.6:
 	python3.6 -m venv venv3.6
+	$(VENV3.6) pip install toml
 	$(VENV3.6) pip install -e .
 venv3.7:
 	python3.7 -m venv venv3.7
+	$(VENV3.7) pip install toml
 	$(VENV3.7) pip install -e .
-	$(VENV3.7) pip install 'tensorflow~=2.0.0'
+#	$(VENV3.7) pip install 'tensorflow~=2.4.1'
 venv3.8:
 	python3.8 -m venv venv3.8
+	$(VENV3.8) pip install toml
 	$(VENV3.8) pip install -e .
 
 venv: venv3.6

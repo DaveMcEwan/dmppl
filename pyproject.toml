@@ -1,0 +1,99 @@
+[project]
+name = "dmppl"
+version = "0.3.0"
+description = "Dave McEwan's Personal Python Library"
+authors = [
+  "Dave McEwan <cogitocumimpune@hotmail.com>",
+]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/DaveMcEwan/dmppl/"
+repository = "https://github.com/DaveMcEwan/dmppl/"
+
+# https://pypi.org/classifiers/
+# https://www.python.org/dev/peps/pep-0301/#distutils-trove-classification
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+
+  #   1 - Planning
+  #   2 - Pre-Alpha
+  #   3 - Alpha
+  #   4 - Beta
+  #   5 - Production/Stable
+  "Development Status :: 3 - Alpha",
+
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Mathematics",
+  "Topic :: Software Development",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+
+  # These classifiers are *not* checked by 'pip install'.
+  "Programming Language :: Python :: 2.7",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.6",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+]
+
+# https://www.python.org/dev/peps/pep-0440/
+python_requires = ">=3.6"
+
+
+# https://setuptools.readthedocs.io/en/latest/userguide/package_discovery.html
+[options.packages.find]
+exclude = [
+  "tests",
+  "dmppl.*",
+]
+
+
+[dependencies.install]
+joblib          = "~=0.14.1"  # 2019-12-10
+numpy           = "~=1.19.5"  # 2019-08-28 # TensorFlow 2.4.1
+prettytable     = "~=0.7.2"   # 2013-04-07
+pyserial        = "~=3.4"     # 2017-07-23
+pyyaml          = "~=5.3.1"   # 2020-03-18
+toml            = "~=0.10.0"  # 2018-10-04
+matplotlib      = "~=3.2.1"   # 2020-03-18
+seaborn         = "~=0.10.0"  # 2020-01-24
+tinyprog        = "==1.0.21"  # 2018-08-29
+#matplotlib      = "~=2.2.5"   # 2020-03-05  Compatible with Python2.7
+#tensorflow      = "~=2.4.1"   # 2021-01-21  Massive
+#graphviz        = "~=0.13.2"  # 2019-11-08
+#pydot           = "~=1.4.1"   # 2018-12-12
+
+
+[dependencies.dev]
+coverage        = "~=5.0.4"   # 2020-03-16
+mypy            = ">=0.770"   # 2020-11-03
+
+
+[entry_points.console_scripts]
+bytePipe-utils    = "dmppl.scripts.bytePipe_utils:entryPoint"
+vcd-utils         = "dmppl.scripts.vcd_utils:entryPoint"
+parvec            = "dmppl.scripts.parvec:entryPoint"
+beamer-times      = "dmppl.scripts.beamer_times:entryPoint"
+svg2png           = "dmppl.scripts.svg2png:entryPoint"
+plotCsv           = "dmppl.scripts.plotCsv:entryPoint"
+plotDistBytes     = "dmppl.scripts.plotDistBytes:entryPoint"
+plotX             = "dmppl.scripts.plotX:entryPoint"
+lineFilter        = "dmppl.scripts.lineFilter:entryPoint"
+bindump           = "dmppl.scripts.bindump:entryPoint"
+
+# Eva experiment included for convenience.
+eva               = "dmppl.experiments.eva.eva:entryPoint"
+
+# Correlator experiment included so that dmpvl can rely on these
+# utilities and makes demos look more professional.
+correlator-tui    = "dmppl.experiments.correlator.correlator_tui:entryPoint"
+correlator-record = "dmppl.experiments.correlator.correlator_record:entryPoint"
+
+
+# These are the assumed default build requirements from pip:
+# https://pip.pypa.io/en/stable/reference/pip/#pep-517-and-518-support
+# https://packaging.python.org/tutorials/packaging-projects/
+[build-system]
+requires = ["setuptools>=41", "wheel", "toml"]
+build-backend = "setuptools.build_meta"
